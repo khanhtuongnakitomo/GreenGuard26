@@ -1,0 +1,28 @@
+import express from 'express';
+import cors from 'cors';
+import detectionRoutes from './routes/detection.routes';
+import machineRoutes   from './routes/machine.routes';
+import statsRoutes     from './routes/stats.routes';
+
+const app = express();
+
+// ─── Middleware ───────────────────────────────────────────────────────────────
+app.use(cors());
+app.use(express.json());
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
+app.use('/api/detections', detectionRoutes);
+app.use('/api/machines',   machineRoutes);
+app.use('/api/stats',      statsRoutes);
+
+// ─── Health check ─────────────────────────────────────────────────────────────
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', ts: new Date().toISOString() });
+});
+
+// ─── 404 fallback ────────────────────────────────────────────────────────────
+app.use((_req, res) => {
+  res.status(404).json({ success: false, message: 'Route not found' });
+});
+
+export default app;
