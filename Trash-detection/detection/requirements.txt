@@ -1,7 +1,0 @@
-ultralytics
-albumentations
-roboflow
-opencv-python
-matplotlib
-seaborn
-wandb

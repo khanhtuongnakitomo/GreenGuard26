@@ -1,0 +1,10 @@
+path: dataset/
+train: images/train
+val: images/val
+test: images/test
+
+nc: 3  # number of classes
+names:
+  0: plastic_bottle
+  1: milk_carton
+  2: tin_can

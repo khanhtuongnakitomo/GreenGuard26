@@ -24,8 +24,12 @@ __pycache__/
 .DS_Store
 *.swp
 
-# Model weights and exports
+# Model weights and exports (ignore auto-generated, allow committed models)
 *.pt
 *.tflite
 *.onnx
 *.engine
+# Exception: keep the final trained models folder in git
+!models/
+!models/*.pt
+!models/*.tflite
