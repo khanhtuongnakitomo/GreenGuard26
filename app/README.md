@@ -32,7 +32,23 @@ npm install
 npm run dev
 ```
 
-The frontend expects the API at `VITE_API_URL`, defaulting to `http://localhost:4000/api`.
+The frontend expects the API at `VITE_API_URL`, defaulting to `http://localhost:3003/api`.
+
+## Quality Checks
+
+```bash
+npm run typecheck
+npm test
+npm run build
+```
+
+Local defaults:
+
+```text
+Backend:  http://localhost:3003
+Frontend: http://localhost:5173
+API URL:  http://localhost:3003/api
+```
 
 ## Core Rule
 

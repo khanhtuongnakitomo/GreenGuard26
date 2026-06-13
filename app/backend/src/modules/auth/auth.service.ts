@@ -18,6 +18,12 @@ function authPayload(user: { id: string; role: UserRole; displayName: string; ph
   };
 }
 
+function serializeAuthUser(user: any) {
+  const raw = typeof user.toObject === "function" ? user.toObject() : { ...user };
+  delete raw.passwordHash;
+  return raw;
+}
+
 function loginResponse(user: any) {
   const payload = authPayload({
     id: user.id,
@@ -26,7 +32,7 @@ function loginResponse(user: any) {
     phoneNumber: user.phoneNumber
   });
   return {
-    user,
+    user: serializeAuthUser(user),
     accessToken: generateAccessToken(payload),
     refreshToken: generateRefreshToken(payload)
   };
