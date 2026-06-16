@@ -1,52 +1,180 @@
-from ultralytics import YOLO
-import cv2
+import argparse
 import os
+from pathlib import Path
 
-# Đường dẫn tới file model bạn vừa tải về
-model_path = '../models/best.pt'
 
-# Kiểm tra xem file best.pt đã được copy vào cùng thư mục chưa
-if not os.path.exists(model_path) and os.path.exists('models/best.pt'):
-    model_path = 'models/best.pt'
-    
-if not os.path.exists(model_path):
-    print("❌ LỖI: Không tìm thấy file model!")
-    print("Vui lòng đảm bảo file 'best.pt' nằm trong thư mục 'models/'.")
-    exit()
+REPO_ROOT = Path(__file__).resolve().parents[1]
+Path(os.environ.setdefault("YOLO_CONFIG_DIR", os.fspath(REPO_ROOT / ".ultralytics"))).mkdir(parents=True, exist_ok=True)
+Path(os.environ.setdefault("MPLCONFIGDIR", os.fspath(REPO_ROOT / ".matplotlib"))).mkdir(parents=True, exist_ok=True)
 
-print("📥 Đang tải mô hình AI...")
-model = YOLO(model_path)
+import cv2
+from ultralytics import YOLO
 
-print("📷 Đang kết nối với Webcam...")
-# Khởi động webcam (0 là ID của camera mặc định trên máy tính)
-cap = cv2.VideoCapture(0)
+from telemetry import TelemetryLogger, decide, normalize_bbox, now_ms
 
-if not cap.isOpened():
-    print("❌ LỖI: Không thể mở webcam. Vui lòng kiểm tra lại camera.")
-    exit()
 
-print("✅ Đã mở Webcam thành công. Đưa vỏ chai/hộp sữa/lon vào trước camera để test nghiệm!")
-print("🛑 Bấm phím 'q' trên bàn phím để thoát chương trình.")
+def resolve_path(path):
+    candidate = Path(path)
+    if candidate.exists():
+        return candidate
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        print("Lỗi khi đọc khung hình từ webcam.")
-        break
-        
-    # Cho model dự đoán trên khung hình (chỉ hiện kết quả có độ tin cậy >= 65%)
-    results = model.predict(source=frame, conf=0.65, verbose=False)
-    
-    # Vẽ hộp (bounding box) và tên vật thể lên khung hình
-    annotated_frame = results[0].plot()
-    
-    # Hiển thị cửa sổ
-    cv2.imshow("Test AI Phân Loại Rác Tái Chế (Bấm 'q' để thoát)", annotated_frame)
-    
-    # Đợi phím 'q' để thoát
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+    repo_candidate = REPO_ROOT / path
+    if repo_candidate.exists():
+        return repo_candidate
 
-# Giải phóng bộ nhớ camera và đóng cửa sổ
-cap.release()
-cv2.destroyAllWindows()
+    return candidate
+
+
+def class_name(names, class_id):
+    if isinstance(names, dict):
+        return names.get(class_id, str(class_id))
+    if 0 <= class_id < len(names):
+        return names[class_id]
+    return str(class_id)
+
+
+def detections_from_result(result):
+    boxes = result.boxes
+    if boxes is None or len(boxes) == 0:
+        return []
+
+    names = result.names
+    xyxy = boxes.xyxy.cpu().tolist()
+    confidences = boxes.conf.cpu().tolist()
+    classes = boxes.cls.cpu().tolist()
+
+    detections = []
+    for bbox, confidence, class_id in zip(xyxy, confidences, classes):
+        class_id = int(class_id)
+        detections.append(
+            {
+                "class_name": class_name(names, class_id),
+                "confidence": float(confidence),
+                "bbox": normalize_bbox(bbox),
+            }
+        )
+    return detections
+
+
+def draw_accepted(frame, detections, conf_threshold):
+    annotated = frame.copy()
+    for detection in detections:
+        if detection["confidence"] < conf_threshold:
+            continue
+
+        x1, y1, x2, y2 = [int(value) for value in detection["bbox"]]
+        label = f"{detection['class_name']} {detection['confidence']:.1%}"
+        cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 180, 0), 2)
+        cv2.putText(
+            annotated,
+            label,
+            (x1, max(24, y1 - 8)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (0, 180, 0),
+            2,
+        )
+    return annotated
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run YOLO trash detection with webcam telemetry.")
+    parser.add_argument("--model", default="models/best.pt", help="Path to YOLO .pt model")
+    parser.add_argument("--camera", type=int, default=0, help="Webcam device index")
+    parser.add_argument("--conf", type=float, default=0.65, help="Accepted detection confidence threshold")
+    parser.add_argument(
+        "--min-log-conf",
+        type=float,
+        default=0.05,
+        help="Minimum confidence to keep in telemetry before applying the accepted threshold",
+    )
+    parser.add_argument("--telemetry", default="logs/telemetry.jsonl", help="Telemetry JSONL output path")
+    parser.add_argument("--errors", default="logs/errors.jsonl", help="Error JSONL output path")
+    parser.add_argument("--snapshot-dir", default="logs/snapshots", help="Snapshot output directory")
+    parser.add_argument("--device-id", default="local-dev", help="Device identifier included in telemetry")
+    parser.add_argument("--save-rejects", action="store_true", help="Save rejected frames to snapshot directory")
+    parser.add_argument("--no-telemetry", action="store_true", help="Disable telemetry writes")
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    model_path = resolve_path(args.model)
+
+    telemetry = TelemetryLogger(
+        telemetry_path=args.telemetry,
+        error_path=args.errors,
+        snapshot_dir=args.snapshot_dir,
+        device_id=args.device_id,
+        enabled=not args.no_telemetry,
+    )
+
+    if not model_path.exists():
+        message = f"Model not found at {model_path}"
+        print(f"Error: {message}")
+        telemetry.error(source="webcam", model_path=os.fspath(model_path), model_type="yolo_pt", message=message)
+        return
+
+    print(f"Loading model from {model_path}...")
+    model = YOLO(os.fspath(model_path))
+
+    print(f"Opening webcam index {args.camera}...")
+    cap = cv2.VideoCapture(args.camera)
+    if not cap.isOpened():
+        message = f"Could not open webcam index {args.camera}"
+        print(f"Error: {message}")
+        telemetry.error(source="webcam", model_path=os.fspath(model_path), model_type="yolo_pt", message=message)
+        return
+
+    print("Starting detection. Press 'q' in the webcam window to quit.")
+    frame_id = 0
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                message = "Failed to read frame from webcam"
+                print(message)
+                telemetry.error(
+                    source="webcam",
+                    model_path=os.fspath(model_path),
+                    model_type="yolo_pt",
+                    message=message,
+                    frame_id=frame_id,
+                )
+                break
+
+            frame_id += 1
+            start_ms = now_ms()
+            results = model.predict(source=frame, conf=args.min_log_conf, verbose=False)
+            inference_ms = now_ms() - start_ms
+            fps = 1000.0 / inference_ms if inference_ms > 0 else 0.0
+
+            detections = detections_from_result(results[0])
+            decision, _ = decide(detections, args.conf)
+            snapshot_path = None
+            if args.save_rejects and decision != "accepted":
+                snapshot_path = telemetry.save_snapshot(frame, frame_id, decision)
+
+            telemetry.event(
+                source="webcam",
+                model_path=os.fspath(model_path),
+                model_type="yolo_pt",
+                frame_id=frame_id,
+                detections=detections,
+                conf_threshold=args.conf,
+                inference_ms=inference_ms,
+                fps=fps,
+                snapshot_path=snapshot_path,
+            )
+
+            annotated_frame = draw_accepted(frame, detections, args.conf)
+            cv2.imshow("Trash Detection - press q to quit", annotated_frame)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+    finally:
+        cap.release()
+        cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    main()

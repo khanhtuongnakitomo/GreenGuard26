@@ -2,6 +2,9 @@
 dataset/
 runs/
 failed/
+logs/
+.ultralytics/
+.matplotlib/
 
 # Python Virtual Environments
 venv/

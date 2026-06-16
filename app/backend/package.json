@@ -6,7 +6,10 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/utils/pointRules.test.ts",
     "start": "node dist/server.js",
     "seed": "tsx src/seeds/runSeeds.ts"
   },
