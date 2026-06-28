@@ -1,21 +1,40 @@
-export type UserRole = "user" | "operator" | "admin" | "partner_admin";
+/**
+ * GreenGuard — TypeScript Types: User
+ */
 
-export type User = {
-  _id: string;
-  id?: string;
-  phoneNumber: string;
-  displayName: string;
+export type MemberTier = 'Green Member' | 'Silver Member' | 'Gold Member' | 'Platinum Member';
+export type RankingTier = 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond';
+
+export interface User {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
   avatarUrl?: string;
-  role: UserRole;
-  university?: string;
-  faculty?: string;
+  dateOfBirth: string;    // "17.12.2007"
+  location: string;       // "Ho Chi Minh City, Vietnam"
   totalPoints: number;
-  lifetimeEarnedPoints: number;
-  lifetimeRedeemedPoints: number;
-  totalBottles: number;
-  totalCans: number;
-  totalItems: number;
-  currentStreak: number;
-  longestStreak: number;
-  membershipTier: string;
-};
+  memberTier: MemberTier;
+  rankingTier: RankingTier;
+  rankingPoints: number;
+  rankingMaxPoints: number;
+}
+
+export interface UserStats {
+  monthlyBottles: number;
+  yearlyBottles: number;
+  allTimeBottles: number;
+  monthlyCans: number;
+}
+
+export interface HistoryEntry {
+  id: string;
+  items: HistoryItem[];
+  createdAt: string;  // ISO date string
+}
+
+export interface HistoryItem {
+  type: string;       // "Plastic Bottles", "Metal Cans"
+  quantity: number;
+  pointsEarned: number;
+}
