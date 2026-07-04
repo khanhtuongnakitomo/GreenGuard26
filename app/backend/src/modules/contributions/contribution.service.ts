@@ -2,6 +2,8 @@ import { TOKEN_EXPIRY } from "../../config/constants";
 import { calculateContributionItems } from "../../utils/pointRules";
 import { generateSessionCode } from "../../utils/generateCode";
 import { generateClaimToken, hashQrToken } from "../../utils/qrToken";
+import { calculateMembershipTier } from "../../utils/membershipTier";
+import { buildSignedQrPayload } from "../../utils/qrPayload";
 import { HttpError } from "../../utils/httpError";
 import { validateMachineApiKey } from "../machines/machine.service";
 import { UserModel } from "../users/user.model";
@@ -22,7 +24,9 @@ export async function createSessionFromMachine(input: {
   const session = await ContributionSessionModel.create({
     sessionCode: generateSessionCode(),
     machineId: machine._id,
+    machineName: machine.name,
     items: calculated.items,
+    totalItems: calculated.items.reduce((sum, i) => sum + i.quantity, 0),
     totalPoints: calculated.totalPoints,
     claimTokenHash: hashQrToken(claimToken),
     expiresAt
@@ -33,7 +37,15 @@ export async function createSessionFromMachine(input: {
   machine.status = "online";
   await machine.save();
 
-  return { session, claimToken, expiresAt };
+  const qrPayload = buildSignedQrPayload({
+    claimToken,
+    totalItems: session.totalItems,
+    totalPoints: session.totalPoints,
+    items: input.items,
+    expiresAt: expiresAt.toISOString()
+  });
+
+  return { session, qrPayload, expiresAt };
 }
 
 export async function claimSessionForUser(userId: string, claimToken: string) {
@@ -51,21 +63,25 @@ export async function claimSessionForUser(userId: string, claimToken: string) {
 
   let bottles = 0;
   let cans = 0;
+  let cartons = 0;
   for (const item of session.items) {
     if (item.itemType === "plastic_bottle") bottles += item.quantity;
     if (item.itemType === "can") cans += item.quantity;
+    if (item.itemType === "carton") cartons += item.quantity;
   }
 
   const transaction = await createEarnTransaction({
     userId,
     points: session.totalPoints,
-    description: `Claimed ${bottles} bottles and ${cans} cans`,
+    description: `Claimed ${bottles} bottles, ${cans} cans, and ${cartons} cartons`,
     contributionSessionId: session._id
   });
 
   user.totalBottles += bottles;
   user.totalCans += cans;
-  user.totalItems += bottles + cans;
+  user.totalCarton += cartons;
+  user.totalItems += bottles + cans + cartons;
+  user.membershipTier = calculateMembershipTier(user.totalItems);
   user.lastContributionAt = new Date();
   await user.save();
 

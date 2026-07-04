@@ -14,7 +14,9 @@ const ContributionSessionSchema = new Schema(
   {
     sessionCode: { type: String, required: true, unique: true, index: true },
     machineId: { type: Schema.Types.ObjectId, ref: "Machine", required: true, index: true },
+    machineName: { type: String },
     items: { type: [ContributionItemSchema], required: true },
+    totalItems: { type: Number, required: true, min: 0 },
     totalPoints: { type: Number, required: true, min: 0 },
     claimTokenHash: { type: String, required: true, index: true },
     status: {

@@ -13,5 +13,5 @@ export const POINT_TRANSACTION_SOURCES = [
 ] as const;
 export type PointTransactionSource = (typeof POINT_TRANSACTION_SOURCES)[number];
 
-export const ITEM_TYPES = ["plastic_bottle", "can"] as const;
+export const ITEM_TYPES = ["plastic_bottle", "can", "carton"] as const;
 export type ItemType = (typeof ITEM_TYPES)[number];

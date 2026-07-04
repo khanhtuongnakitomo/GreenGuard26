@@ -64,6 +64,7 @@ function getConditionValue(user: any, conditionType: string) {
   if (conditionType === "total_items") return user.totalItems;
   if (conditionType === "total_bottles") return user.totalBottles;
   if (conditionType === "total_cans") return user.totalCans;
+  if (conditionType === "total_carton") return user.totalCarton;
   if (conditionType === "streak") return user.currentStreak;
   return user.lifetimeEarnedPoints;
 }
