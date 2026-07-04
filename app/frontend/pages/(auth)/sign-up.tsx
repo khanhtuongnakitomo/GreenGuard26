@@ -98,15 +98,13 @@ export default function SignUpScreen() {
 
         {/* Form area */}
         <View style={[styles.formSection, isLargeScreen && styles.formSectionDesktop]}>
-          {isLargeScreen && (
-             <View style={styles.desktopLogoContainer}>
-               <Image 
-                 source={require('../../assets/BKI LOGO/Horiziontal.png')} 
-                 style={styles.desktopLogoImage} 
-                 resizeMode="cover" 
-               />
-             </View>
-          )}
+          <View style={styles.logoContainer}>
+            <Image 
+              source={require('../../assets/BKI LOGO/Horiziontal.png')} 
+              style={[styles.logoImage, isLargeScreen && styles.logoImageDesktop]} 
+              resizeMode="contain" 
+            />
+          </View>
           <Text style={styles.title}>Create new account</Text>
 
           {/* Email */}
@@ -262,13 +260,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
   },
-  desktopLogoContainer: {
+  logoContainer: {
     alignItems: 'center',
     marginBottom: Spacing.xl,
+    marginTop: -Spacing.xl,
   },
-  desktopLogoImage: {
+  logoImage: {
+    width: 200,
+    height: 50,
+    transform: [{ scale: 1.8 }],
+  },
+  logoImageDesktop: {
     width: 280,
     height: 80,
+    marginTop: Spacing.xl,
+    transform: [{ scale: 1.5 }],
   },
   title: {
     fontSize: FontSize['3xl'],

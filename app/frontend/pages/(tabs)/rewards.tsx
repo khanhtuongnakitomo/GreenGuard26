@@ -139,7 +139,7 @@ export default function RewardsScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.backgroundWhite,
+    backgroundColor: Colors.backgroundScreen,
   },
   scroll: {
     flex: 1,

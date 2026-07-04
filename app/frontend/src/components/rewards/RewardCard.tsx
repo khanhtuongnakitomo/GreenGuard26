@@ -1,7 +1,12 @@
 /**
  * GreenGuard — RewardCard Component (Rewards / Get Rewarded horizontal scroll)
  *
- * Figma: Card with brand logo, reward title, "Claim Voucher" button, expiry
+ * Figma:
+ * - White card with soft shadow
+ * - Brand logo circle at top-left
+ * - Reward title + expiry date
+ * - "Claim Voucher" green pill button at bottom
+ * - Claimed state: grayed out
  */
 import React, { memo } from 'react';
 import {
@@ -25,6 +30,7 @@ interface RewardCardProps {
 export const RewardCard = memo<RewardCardProps>(({ reward, onPress, style }) => {
   const brandInitial = reward.brandName.charAt(0).toUpperCase();
   const brandColor = reward.brandColor ?? Colors.primary;
+  const isClaimed = reward.status === 'claimed';
 
   const handleClaim = () => {
     Alert.alert('Claim Voucher', `Claim ${reward.title}?`, [
@@ -35,22 +41,38 @@ export const RewardCard = memo<RewardCardProps>(({ reward, onPress, style }) => 
 
   return (
     <TouchableOpacity
-      style={[styles.container, style]}
+      style={[styles.container, isClaimed && styles.containerClaimed, style]}
       onPress={handleClaim}
       activeOpacity={0.85}
+      disabled={isClaimed}
     >
-      {/* Brand logo */}
-      <View style={[styles.brandCircle, { backgroundColor: brandColor }]}>
+      {/* Brand logo circle */}
+      <View style={[
+        styles.brandCircle, 
+        { backgroundColor: isClaimed ? Colors.borderMuted : brandColor }
+      ]}>
         <Text style={styles.brandInitial}>{brandInitial}</Text>
       </View>
 
       {/* Text info */}
-      <Text style={styles.title} numberOfLines={2}>{reward.title}</Text>
+      <Text 
+        style={[styles.title, isClaimed && styles.titleClaimed]} 
+        numberOfLines={2}
+      >
+        {reward.title}
+      </Text>
       <Text style={styles.expiry}>{formatExpiry(reward.expiresAt)}</Text>
 
       {/* Claim button */}
-      <TouchableOpacity style={styles.claimButton} onPress={handleClaim}>
-        <Text style={styles.claimLabel}>Claim Voucher</Text>
+      <TouchableOpacity 
+        style={[styles.claimButton, isClaimed && styles.claimButtonClaimed]} 
+        onPress={handleClaim}
+        disabled={isClaimed}
+        activeOpacity={0.8}
+      >
+        <Text style={[styles.claimLabel, isClaimed && styles.claimLabelClaimed]}>
+          {isClaimed ? 'Claimed' : 'Claim Voucher'}
+        </Text>
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -60,18 +82,23 @@ RewardCard.displayName = 'RewardCard';
 
 const styles = StyleSheet.create({
   container: {
-    width: 150,
-    backgroundColor: Colors.backgroundCard,
+    width: 152,
+    backgroundColor: Colors.backgroundWhite,
     borderRadius: Radius.card,
     padding: Spacing.md,
     alignItems: 'flex-start',
     ...Shadows.card,
-    marginRight: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  containerClaimed: {
+    backgroundColor: Colors.claimedBg,
+    borderColor: Colors.borderMuted,
   },
   brandCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
@@ -86,21 +113,35 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.semiBold,
     color: Colors.textPrimary,
     marginBottom: Spacing.xs,
+    lineHeight: 18,
+    minHeight: 36,
+  },
+  titleClaimed: {
+    color: Colors.claimedText,
   },
   expiry: {
     fontSize: FontSize.xs,
     color: Colors.textMuted,
     marginBottom: Spacing.sm,
+    fontWeight: FontWeight.medium,
   },
   claimButton: {
     backgroundColor: Colors.primary,
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
+    paddingVertical: Spacing.xs + 2,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
+  claimButtonClaimed: {
+    backgroundColor: Colors.borderMuted,
   },
   claimLabel: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semiBold,
     color: Colors.textWhite,
+  },
+  claimLabelClaimed: {
+    color: Colors.claimedText,
   },
 });

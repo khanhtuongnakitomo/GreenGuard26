@@ -2,7 +2,7 @@
  * GreenGuard — Custom Bottom Tab Bar
  *
  * Layout from Figma:
- * [ Home ] [ Map ] [  FAB  ] [ Rewards ] [ Profile ]
+ * [ Home ] [ Map ] [  FAB (QR scan)  ] [ Rewards ] [ Profile ]
  *
  * The FAB (dark green circle) is raised in the center and opens the QR Scanner modal.
  * Active tab: icon + label in primary green.
@@ -51,10 +51,10 @@ const FABButton = memo(() => {
   }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.92, { damping: 15, stiffness: 300 });
+    scale.value = withSpring(0.9, { damping: 12, stiffness: 350 });
   };
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+    scale.value = withSpring(1, { damping: 12, stiffness: 350 });
   };
 
   return (
@@ -65,7 +65,7 @@ const FABButton = memo(() => {
       onPressOut={handlePressOut}
       activeOpacity={0.85}
     >
-      <Ionicons name="scan-outline" size={28} color={Colors.textWhite} />
+      <Ionicons name="scan-outline" size={26} color={Colors.textWhite} />
     </AnimatedTouchable>
   );
 });
@@ -115,11 +115,13 @@ export const BottomTabBar = memo<BottomTabBarProps>(({ state, navigation }) => {
         onPress={() => handleTabPress(tab.name, routeKey, routeIndex)}
         activeOpacity={0.7}
       >
-        <Ionicons
-          name={isActive ? tab.iconActive : tab.icon}
-          size={22}
-          color={isActive ? Colors.primary : Colors.textMuted}
-        />
+        <View style={[styles.iconWrapper, isActive && styles.iconWrapperActive]}>
+          <Ionicons
+            name={isActive ? tab.iconActive : tab.icon}
+            size={22}
+            color={isActive ? Colors.primary : Colors.textMuted}
+          />
+        </View>
         <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
           {tab.label}
         </Text>
@@ -153,7 +155,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundWhite,
     borderTopWidth: 1,
     borderTopColor: Colors.divider,
-    paddingTop: Spacing.sm,
+    paddingTop: Spacing.xs,
     ...Shadows.modal,
   },
   tabGroup: {
@@ -167,6 +169,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: Spacing.xs,
   },
+  iconWrapper: {
+    width: 36,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+  },
+  iconWrapperActive: {
+    // Subtle highlight for active tab icon
+  },
   tabLabel: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
@@ -178,10 +190,10 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.semiBold,
   },
   fabContainer: {
-    width: 70,
+    width: 72,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -28,
+    marginTop: -26,
   },
   fab: {
     width: Spacing.fabSize,
@@ -191,5 +203,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadows.fab,
+    borderWidth: 3,
+    borderColor: Colors.backgroundWhite,
   },
 });

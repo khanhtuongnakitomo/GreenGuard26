@@ -112,7 +112,7 @@ export default function TaskListScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.backgroundWhite,
+    backgroundColor: Colors.backgroundScreen,
   },
   container: {
     flex: 1,
@@ -137,15 +137,17 @@ const styles = StyleSheet.create({
   rowCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.backgroundCard,
+    backgroundColor: Colors.backgroundWhite,
     borderRadius: Radius.card,
     padding: Spacing.base,
     gap: Spacing.md,
-    ...Shadows.xs,
+    ...Shadows.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   rowCardClaimed: {
     backgroundColor: Colors.backgroundScreen,
-    opacity: 0.75,
+    opacity: 0.8,
   },
   brandCircle: {
     width: 44,

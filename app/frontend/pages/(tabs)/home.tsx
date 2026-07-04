@@ -14,6 +14,9 @@ import { PointsBanner } from '@/components/home/PointsBanner';
 import { ScanQRBanner } from '@/components/home/ScanQRBanner';
 import { StatCard } from '@/components/home/StatCard';
 import { RewardListItem } from '@/components/home/RewardListItem';
+import { BottleIcon } from '@/components/icons/BottleIcon';
+import { PaperIcon } from '@/components/icons/PaperIcon';
+import { CalendarIcon } from '@/components/icons/CalendarIcon';
 import { Colors, Spacing, FontSize, FontWeight } from '@/theme';
 import { useUserStore } from '@/store/userStore';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -73,21 +76,19 @@ export default function HomeScreen() {
                    label="Month"
                    value={stats.monthlyBottles}
                    unit="bottles"
-                   icon="water-outline"
+                   icon={<BottleIcon size={24} color={Colors.primary} />}
                  />
-                 <View style={styles.statsDivider} />
                  <StatCard
                    label="Year"
                    value={stats.yearlyBottles}
                    unit="bottles"
-                   icon="archive-outline"
+                   icon={<PaperIcon size={24} color={Colors.primary} />}
                  />
-                 <View style={styles.statsDivider} />
                  <StatCard
                    label="All time"
                    value={stats.allTimeBottles}
                    unit="bottles"
-                   icon="trending-up-outline"
+                   icon={<CalendarIcon size={24} color={Colors.primary} />}
                  />
                </View>
              </View>
@@ -123,7 +124,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.backgroundWhite,
+    backgroundColor: Colors.backgroundScreen,
   },
   scroll: {
     flex: 1,
@@ -146,14 +147,15 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   greeting: {
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.semiBold,
+    fontSize: FontSize['2xl'],
+    fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
     marginTop: Spacing.sm,
+    letterSpacing: 0.1,
   },
   pointsBanner: {
-    marginBottom: Spacing.base,
+    marginBottom: Spacing.md,
   },
   scanBanner: {
     marginBottom: Spacing.xl,
@@ -181,9 +183,6 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
-  },
-  statsDivider: {
-    width: Spacing.sm,
   },
   bottomSpacer: {
     height: Spacing.base,

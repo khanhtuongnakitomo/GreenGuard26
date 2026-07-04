@@ -15,7 +15,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { Colors, FontSize, FontWeight, Spacing } from '@/theme';
 
-const WAVE_HEIGHT = 220;
+const WAVE_HEIGHT = 140;
 
 interface WaveHeaderProps {
   style?: ViewStyle;
@@ -44,14 +44,7 @@ export const WaveHeader = memo<WaveHeaderProps>(({ style }) => {
         <Path d={wavePath} fill={Colors.primaryDark} />
       </Svg>
 
-      {/* Logo content */}
-      <View style={styles.content}>
-        <Image 
-          source={require('../../../assets/BKI LOGO/White On Dark.png')} 
-          style={styles.logoImage} 
-          resizeMode="cover" 
-        />
-      </View>
+
 
       {/* Small leaf icon bottom right */}
       <View style={styles.leafCorner}>
@@ -68,15 +61,7 @@ const styles = StyleSheet.create({
     width: '100%',
     overflow: 'visible',
   },
-  content: {
-    alignItems: 'center',
-    paddingTop: Spacing['3xl'],
-  },
-  logoImage: {
-    width: 220,
-    height: 60,
-    marginBottom: Spacing.sm,
-  },
+
   leafCorner: {
     position: 'absolute',
     bottom: 20,

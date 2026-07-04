@@ -1,8 +1,8 @@
 /**
  * GreenGuard — RankingCard Component (Profile Screen)
  *
- * Figma: Silver medal icon + "Silver" text + progress bar + gold trophy
- * Shows current tier and points toward next tier
+ * Figma: White card with "Ranking" label, medal icon + tier name, progress bar, trophy, points
+ * Silver tier: gray medal — progress toward Gold
  */
 import React, { memo } from 'react';
 import {
@@ -38,7 +38,7 @@ export const RankingCard = memo<RankingCardProps>(({ user, style }) => {
         <View style={styles.tierSection}>
           <Ionicons
             name="medal-outline"
-            size={28}
+            size={26}
             color={tierColor}
           />
           <Text style={[styles.tierName, { color: tierColor }]}>
@@ -50,14 +50,15 @@ export const RankingCard = memo<RankingCardProps>(({ user, style }) => {
         <View style={styles.progressSection}>
           <ProgressBar
             progress={progress}
-            height={10}
+            height={8}
             color={tierColor}
             trackColor={Colors.backgroundCard}
+            style={styles.progressBar}
           />
         </View>
 
         {/* Right: Trophy */}
-        <Ionicons name="trophy-outline" size={24} color={Colors.rankingGold} />
+        <Ionicons name="trophy-outline" size={22} color={Colors.rankingGold} />
       </View>
 
       {/* Points value right-aligned */}
@@ -70,14 +71,17 @@ RankingCard.displayName = 'RankingCard';
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.backgroundCard,
+    backgroundColor: Colors.backgroundWhite,
     borderRadius: Radius.card,
     padding: Spacing.base,
-    ...Shadows.xs,
+    ...Shadows.card,
     marginBottom: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    width: '100%',
   },
   sectionTitle: {
-    fontSize: FontSize.lg,
+    fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
@@ -86,13 +90,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   tierSection: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    minWidth: 70,
+    minWidth: 68,
   },
   tierName: {
     fontSize: FontSize.base,
@@ -100,6 +104,9 @@ const styles = StyleSheet.create({
   },
   progressSection: {
     flex: 1,
+  },
+  progressBar: {
+    borderRadius: Radius.pill,
   },
   pointsValue: {
     fontSize: FontSize.base,
