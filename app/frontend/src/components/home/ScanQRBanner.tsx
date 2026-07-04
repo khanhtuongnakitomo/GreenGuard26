@@ -1,7 +1,7 @@
 /**
  * GreenGuard — ScanQRBanner Component (Home Screen)
  *
- * Figma: Dark green full-width banner with QR icon + text + right arrow
+ * Figma: Dark green full-width banner with QR icon + "Scan QR / to claim points" + right arrow circle
  * Tappable → navigates to QR scanner modal
  */
 import React, { memo } from 'react';
@@ -33,7 +33,7 @@ export const ScanQRBanner = memo<ScanQRBannerProps>(({ style }) => {
     >
       {/* QR icon */}
       <View style={styles.iconContainer}>
-        <Ionicons name="qr-code-outline" size={28} color={Colors.textWhite} />
+        <Ionicons name="qr-code-outline" size={26} color={Colors.textWhite} />
       </View>
 
       {/* Text content */}
@@ -44,7 +44,7 @@ export const ScanQRBanner = memo<ScanQRBannerProps>(({ style }) => {
 
       {/* Right arrow in circle */}
       <View style={styles.arrowCircle}>
-        <Ionicons name="chevron-forward" size={20} color={Colors.textWhite} />
+        <Ionicons name="chevron-forward" size={18} color={Colors.textWhite} />
       </View>
     </TouchableOpacity>
   );
@@ -58,17 +58,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.primary,
     borderRadius: Radius.lg,
-    padding: Spacing.base,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.md,
     gap: Spacing.md,
-    ...Shadows.card,
+    ...Shadows.button,
   },
   iconContainer: {
-    width: 44,
-    height: 44,
+    width: 46,
+    height: 46,
     borderRadius: Radius.md,
     backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   textContainer: {
     flex: 1,
@@ -77,19 +80,23 @@ const styles = StyleSheet.create({
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
     color: Colors.textWhite,
-    lineHeight: 20,
+    lineHeight: 22,
+    letterSpacing: 0.1,
   },
   subtitle: {
     fontSize: FontSize.sm,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 2,
+    color: 'rgba(255,255,255,0.78)',
+    marginTop: 1,
+    fontWeight: FontWeight.medium,
   },
   arrowCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
 });

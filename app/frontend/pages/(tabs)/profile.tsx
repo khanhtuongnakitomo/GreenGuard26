@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { AvatarIcon } from '@/components/icons/AvatarIcon';
 
 import { AppHeader } from '@/components/common/AppHeader';
 import { Badge } from '@/components/common/Badge';
@@ -104,19 +105,20 @@ export default function ProfileScreen() {
           
           {/* Left Column on Desktop */}
           <View style={[styles.column, isLargeScreen && styles.columnLeft]}>
-            <View style={isLargeScreen && styles.leftColumnContent}>
+            <View style={styles.profileInfoContainer}>
               {/* Green Member badge */}
               <View style={styles.badgeRow}>
                 <Badge
-                  label={`✦ ${user.memberTier || 'New Member'}`}
+                  label={`🌱 ${user.memberTier || 'New Member'}`}
                   color={Colors.primary}
-                  backgroundColor={Colors.backgroundCard}
+                  backgroundColor={Colors.backgroundWhite}
+                  style={styles.memberBadge}
                 />
               </View>
 
               {/* Avatar */}
               <View style={styles.avatarContainer}>
-                <Ionicons name="person-circle-outline" size={80} color={Colors.primary} />
+                <AvatarIcon size={90} />
               </View>
 
               {/* User info */}
@@ -184,7 +186,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.backgroundWhite,
+    backgroundColor: Colors.backgroundScreen,
   },
   scroll: {
     flex: 1,
@@ -224,10 +226,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
-  leftColumnContent: {
+  profileInfoContainer: {
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
+    alignSelf: 'center',
   },
   columnRight: {
     flex: 2,
@@ -237,25 +240,28 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   avatarContainer: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     backgroundColor: Colors.backgroundCard,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.md,
     ...Shadows.sm,
+    borderWidth: 3,
+    borderColor: Colors.backgroundWhite,
   },
   userName: {
     fontSize: FontSize['3xl'],
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
+    color: '#154124',
     marginBottom: Spacing.xs,
   },
   userInfo: {
-    fontSize: FontSize.base,
-    color: Colors.textMuted,
+    fontSize: FontSize.lg,
+    color: '#398C49',
     marginBottom: Spacing.xs / 2,
+    fontWeight: FontWeight.medium,
   },
   editButton: {
     marginTop: Spacing.base,
@@ -314,5 +320,9 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: FontWeight.semiBold,
     color: Colors.error,
+  },
+  memberBadge: {
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
   },
 });

@@ -1,12 +1,11 @@
 /**
  * GreenGuard — StatCard Component (My Impact section, Home)
  *
- * Figma: Small card with icon, large number, and label
- * e.g. "34 / bottles" (Month), "286 / bottles" (Year)
+ * Figma: Small white card with icon label on top, large number center, unit below
+ * e.g. "34 / bottles" (Month), "286 / bottles" (Year), "1,248 / bottles" (All time)
  */
 import React, { memo } from 'react';
 import { StyleSheet, View, Text, ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
 import { formatNumber } from '@/utils/formatters';
 
@@ -14,11 +13,11 @@ interface StatCardProps {
   label: string;
   value: number;
   unit: string;
-  icon?: keyof typeof Ionicons.glyphMap;
+  icon?: React.ReactNode;
   style?: ViewStyle;
 }
 
-export const StatCard = memo<StatCardProps>(({
+export const StatCard = memo<StatCardProps>((({
   label,
   value,
   unit,
@@ -28,46 +27,51 @@ export const StatCard = memo<StatCardProps>(({
   return (
     <View style={[styles.container, style]}>
       <View style={styles.iconRow}>
-        <Ionicons name={icon} size={16} color={Colors.primary} />
+        {icon}
         <Text style={styles.label}>{label}</Text>
       </View>
       <Text style={styles.value}>{formatNumber(value)}</Text>
       <Text style={styles.unit}>{unit}</Text>
     </View>
   );
-});
+}));
 
 StatCard.displayName = 'StatCard';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.backgroundCard,
+    backgroundColor: Colors.backgroundWhite,
     borderRadius: Radius.cardSm,
-    padding: Spacing.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
     alignItems: 'center',
-    ...Shadows.xs,
+    ...Shadows.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   iconRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: 4,
     marginBottom: Spacing.xs,
   },
   label: {
-    fontSize: FontSize.xs,
+    fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
-    color: Colors.textMuted,
+    color: '#89A08E',
   },
   value: {
-    fontSize: FontSize['3xl'],
-    fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-    lineHeight: 28,
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#000000',
+    lineHeight: 34,
+    letterSpacing: -0.5,
   },
   unit: {
-    fontSize: FontSize.xs,
-    color: Colors.textMuted,
+    fontSize: FontSize.sm,
+    color: '#89A08E',
     marginTop: 2,
+    fontWeight: FontWeight.medium,
   },
 });

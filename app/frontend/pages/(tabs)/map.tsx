@@ -176,7 +176,7 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.backgroundWhite,
+    backgroundColor: Colors.backgroundScreen,
   },
   container: {
     flex: 1,
@@ -246,6 +246,8 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.md,
     ...Shadows.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   searchBar: {
     flexDirection: 'row',

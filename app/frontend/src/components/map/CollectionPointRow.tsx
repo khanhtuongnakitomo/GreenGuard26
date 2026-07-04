@@ -1,7 +1,8 @@
 /**
  * GreenGuard — CollectionPointRow Component (Map Screen)
  *
- * Figma: Location pin icon + "#CocaCola1" name + address text
+ * Figma: Brand-colored location pin + "#CocaCola1" name + address text
+ * Matches the list items below the map in the Figma design
  */
 import React, { memo } from 'react';
 import {
@@ -12,7 +13,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, FontSize, FontWeight, Radius } from '@/theme';
+import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
 import { CollectionPoint } from '@/types/collection.types';
 
 interface CollectionPointRowProps {
@@ -31,11 +32,17 @@ export const CollectionPointRow = memo<CollectionPointRowProps>(({ point, onPres
       onPress={onPress}
       activeOpacity={0.75}
     >
-      <Ionicons name="location" size={28} color={pinColor} />
+      {/* Brand-colored pin circle */}
+      <View style={[styles.pinCircle, { backgroundColor: `${pinColor}18` }]}>
+        <Ionicons name="location" size={22} color={pinColor} />
+      </View>
+
       <View style={styles.info}>
         <Text style={styles.name}>{point.name}</Text>
         <Text style={styles.address} numberOfLines={1}>{point.address}</Text>
       </View>
+
+      <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
     </TouchableOpacity>
   );
 });
@@ -46,11 +53,19 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
     paddingHorizontal: Spacing.base,
     gap: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.divider,
+    backgroundColor: Colors.backgroundWhite,
+  },
+  pinCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   info: {
     flex: 1,
@@ -64,5 +79,6 @@ const styles = StyleSheet.create({
   address: {
     fontSize: FontSize.sm,
     color: Colors.textMuted,
+    fontWeight: FontWeight.medium,
   },
 });

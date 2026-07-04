@@ -83,12 +83,11 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Dark green background (replaces forest photo until real asset is available) */}
-      <View style={styles.background}>
-        {/* Simulated leaf/forest overlay using color layers */}
-        <View style={styles.overlayDark} />
-        <View style={styles.overlayGreen} />
-
+      <ImageBackground
+        source={require('../assets/BKI LOGO/background welcome.png')}
+        style={styles.background}
+        resizeMode="cover"
+      >
         {/* Decorative dot pattern */}
         <View style={styles.dotsPattern}>
           {Array.from({ length: 80 }).map((_, i) => (
@@ -105,7 +104,7 @@ export default function SplashScreen() {
             />
           ))}
         </View>
-      </View>
+      </ImageBackground>
 
       <SafeAreaView style={styles.safeArea}>
         {/* Center content */}
@@ -177,14 +176,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingBottom: 140, // Move it up significantly
   },
   logoContainer: {
     alignItems: 'center',
     marginBottom: Spacing.xl,
   },
   splashLogo: {
-    width: 320,
-    height: 90,
+    width: 260,
+    height: 70,
   },
   welcomeContainer: {
     alignItems: 'center',

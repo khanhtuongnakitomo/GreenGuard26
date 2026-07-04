@@ -82,7 +82,8 @@ export const DonutChart = memo<DonutChartProps>(({
 
       {/* Center label */}
       <View style={[styles.centerLabel, { width: size, height: size }]}>
-        <Text style={styles.kgValue}>{totalKg}Kg</Text>
+        <Text style={styles.kgValue}>{totalKg}</Text>
+        <Text style={styles.kgUnit}>Kg</Text>
       </View>
 
       {/* Legend */}
@@ -114,6 +115,13 @@ const styles = StyleSheet.create({
     fontSize: FontSize['5xl'],
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
+    lineHeight: 36,
+    letterSpacing: -1,
+  },
+  kgUnit: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.semiBold,
+    color: Colors.textMuted,
   },
   legend: {
     marginTop: 16,

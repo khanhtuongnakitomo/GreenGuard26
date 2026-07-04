@@ -1,10 +1,11 @@
 /**
  * GreenGuard — RewardListItem Component (Home Screen Rewards section)
  *
- * Figma: Row with colored brand logo, name, and right-side points/icon
- * e.g. HCMUT (blue) — "Digital parking ticket" — "2k"
- *      CocaCola (red bg) — "Promocode" — gift icon
- *      AquaFina (blue) — "Free drink at Circle K" — gift icon
+ * Figma: Row with colored brand logo circle, reward name, right-side points/gift icon
+ * e.g. HCMUT (blue circle) — "Digital parking ticket" — "2k"
+ *      CocaCola (red circle) — "Promocode" — gift icon
+ *      AquaFina (blue circle) — "Free drink at Circle K" — gift icon
+ * Background tinted with brand color at very low opacity
  */
 import React, { memo } from 'react';
 import {
@@ -32,7 +33,7 @@ export const RewardListItem = memo<RewardListItemProps>(({ reward, onPress, styl
     <TouchableOpacity
       style={[
         styles.container,
-        { backgroundColor: `${brandColor}15` },
+        { backgroundColor: `${brandColor}12` },
         style,
       ]}
       onPress={onPress}
@@ -51,9 +52,11 @@ export const RewardListItem = memo<RewardListItemProps>(({ reward, onPress, styl
       {/* Right: points value or gift icon */}
       <View style={styles.rightSection}>
         {reward.pointsValue ? (
-          <Text style={styles.pointsValue}>{(reward.pointsValue / 1000).toFixed(0)}k</Text>
+          <Text style={[styles.pointsValue, { color: brandColor }]}>
+            {(reward.pointsValue / 1000).toFixed(0)}k
+          </Text>
         ) : (
-          <Ionicons name="gift-outline" size={18} color={Colors.primary} />
+          <Ionicons name="gift-outline" size={18} color={brandColor} />
         )}
       </View>
     </TouchableOpacity>
@@ -67,15 +70,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: Radius.cardSm,
-    padding: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
     gap: Spacing.md,
     marginBottom: Spacing.sm,
     ...Shadows.xs,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
   },
   brandCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -87,17 +93,17 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
+    fontWeight: FontWeight.semiBold,
     color: Colors.textPrimary,
+    lineHeight: 18,
   },
   rightSection: {
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 30,
+    minWidth: 28,
   },
   pointsValue: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
-    color: Colors.primary,
   },
 });

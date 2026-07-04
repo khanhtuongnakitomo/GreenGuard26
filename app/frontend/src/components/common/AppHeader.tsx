@@ -53,7 +53,7 @@ export const AppHeader = memo<AppHeaderProps>(({
           <Image 
             source={require('../../../assets/BKI LOGO/Horiziontal.png')} 
             style={styles.headerLogo} 
-            resizeMode="cover" 
+            resizeMode="contain" 
           />
         ) : null}
       </View>
@@ -84,8 +84,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.screenHorizontal,
-    paddingVertical: Spacing.md,
-    backgroundColor: Colors.backgroundWhite,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.backgroundScreen,
   },
   logoContainer: {
     flexDirection: 'row',
@@ -93,8 +93,10 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   headerLogo: {
-    width: 220,
-    height: 55,
+    width: 180,
+    height: 70,
+    marginLeft: -10,
+    transform: [{ scale: 1.6 }],
   },
   iconButton: {
     width: 36,
