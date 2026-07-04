@@ -18,5 +18,5 @@ export async function updateMachine(req: Request, res: Response) {
 }
 
 export async function machineHeartbeat(req: Request, res: Response) {
-  res.json(await service.updateMachineHeartbeat(req.params.machineId));
+  res.json(await service.updateMachineHeartbeat(req.params.machineId, req.body?.bins));
 }

@@ -36,12 +36,14 @@ export async function updateMachine(machineId: string, patch: Record<string, unk
   return machine;
 }
 
-export async function updateMachineHeartbeat(machineId: string) {
-  const machine = await MachineModel.findByIdAndUpdate(
-    machineId,
-    { status: "online", lastSeenAt: new Date() },
-    { new: true }
-  );
+export async function updateMachineHeartbeat(
+  machineId: string,
+  bins?: Array<{ binType: string; capacityPercent: number }>
+) {
+  const update: any = { status: "online", lastSeenAt: new Date() };
+  if (bins) update.bins = bins;
+  
+  const machine = await MachineModel.findByIdAndUpdate(machineId, update, { new: true });
   if (!machine) throw new HttpError(404, "Machine not found");
   return machine;
 }

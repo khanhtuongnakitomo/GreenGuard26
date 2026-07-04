@@ -5,7 +5,8 @@ import * as service from "./contribution.service";
 export async function createContributionSession(req: Request, res: Response) {
   const apiKey = req.header("x-machine-api-key");
   if (!apiKey) throw new HttpError(401, "Missing machine API key");
-  res.status(201).json(await service.createSessionFromMachine({ ...req.body, machineApiKey: apiKey }));
+  const result = await service.createSessionFromMachine({ ...req.body, machineApiKey: apiKey });
+  res.status(201).json(result);
 }
 
 export async function claimContributionSession(req: Request, res: Response) {

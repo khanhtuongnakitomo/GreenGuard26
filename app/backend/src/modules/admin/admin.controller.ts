@@ -5,6 +5,7 @@ import * as milestoneService from "../milestones/milestone.service";
 import * as partnerService from "../partners/partner.service";
 import * as pointService from "../points/point.service";
 import * as rewardService from "../rewards/reward.service";
+import * as analyticsService from "./admin.analytics";
 
 export async function getOverview(_req: Request, res: Response) {
   res.json(await adminService.getOverview());
@@ -24,6 +25,21 @@ export async function getUserReport(_req: Request, res: Response) {
 
 export async function getPartnerReport(_req: Request, res: Response) {
   res.json(await adminService.getPartnerReport());
+}
+
+export async function getAnalyticsByMachine(req: Request, res: Response) {
+  const { startDate, endDate } = req.query as any;
+  res.json(await analyticsService.getContributionsByMachine(startDate ? new Date(startDate) : undefined, endDate ? new Date(endDate) : undefined));
+}
+
+export async function getVolumeTrend(req: Request, res: Response) {
+  const { startDate, endDate, period } = req.query as any;
+  res.json(await analyticsService.getCollectionVolumeTrend(period, startDate ? new Date(startDate) : undefined, endDate ? new Date(endDate) : undefined));
+}
+
+export async function getTrashTypeBreakdown(req: Request, res: Response) {
+  const { startDate, endDate } = req.query as any;
+  res.json(await analyticsService.getTrashTypeBreakdown(startDate ? new Date(startDate) : undefined, endDate ? new Date(endDate) : undefined));
 }
 
 export async function createPartner(req: Request, res: Response) {

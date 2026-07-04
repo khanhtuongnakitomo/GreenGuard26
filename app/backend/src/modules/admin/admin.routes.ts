@@ -17,6 +17,7 @@ import {
   updatePartnerSchema,
   updateRewardSchema
 } from "./admin.validation";
+import { analyticsQuerySchema } from "./admin.analytics.validation";
 
 export const adminRoutes = Router();
 
@@ -27,6 +28,10 @@ adminRoutes.get("/reports/contributions", controller.getContributionReport);
 adminRoutes.get("/reports/rewards", controller.getRewardReport);
 adminRoutes.get("/reports/users", controller.getUserReport);
 adminRoutes.get("/reports/partners", controller.getPartnerReport);
+
+adminRoutes.get("/analytics/machines", validate(analyticsQuerySchema), controller.getAnalyticsByMachine);
+adminRoutes.get("/analytics/volume-trend", validate(analyticsQuerySchema), controller.getVolumeTrend);
+adminRoutes.get("/analytics/trash-types", validate(analyticsQuerySchema), controller.getTrashTypeBreakdown);
 
 adminRoutes.post("/partners", validate(createPartnerSchema), controller.createPartner);
 adminRoutes.patch("/partners/:partnerId", validate(updatePartnerSchema), controller.updatePartner);

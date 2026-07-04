@@ -47,11 +47,12 @@ export async function getUserImpactStats(userId: string) {
       for (const item of session.items) {
         if (item.itemType === "plastic_bottle") acc.bottles += item.quantity;
         if (item.itemType === "can") acc.cans += item.quantity;
+        if (item.itemType === "carton") acc.cartons += item.quantity;
       }
       acc.points += session.totalPoints;
       return acc;
     },
-    { bottles: 0, cans: 0, points: 0 }
+    { bottles: 0, cans: 0, cartons: 0, points: 0 }
   );
 
   return {
@@ -59,6 +60,7 @@ export async function getUserImpactStats(userId: string) {
     allTime: {
       bottles: user.totalBottles,
       cans: user.totalCans,
+      cartons: user.totalCarton,
       items: user.totalItems,
       points: user.lifetimeEarnedPoints
     },

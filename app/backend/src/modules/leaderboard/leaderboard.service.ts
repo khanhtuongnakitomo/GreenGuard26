@@ -14,18 +14,11 @@ export async function getUserLeaderboard(period: Period) {
     { $limit: 50 },
     { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "user" } },
     { $unwind: "$user" },
-    { $project: { points: 1, "user.displayName": 1, "user.faculty": 1, "user.totalBottles": 1 } }
+    { $project: { points: 1, "user.displayName": 1, "user.totalBottles": 1 } }
   ]);
 }
 
-export async function getFacultyLeaderboard() {
-  return UserModel.aggregate([
-    { $match: { role: "user" } },
-    { $group: { _id: "$faculty", points: { $sum: "$lifetimeEarnedPoints" }, bottles: { $sum: "$totalBottles" } } },
-    { $sort: { points: -1 } },
-    { $limit: 25 }
-  ]);
-}
+
 
 export async function getCampaignLeaderboard(campaignId: string) {
   return { campaignId, users: await getUserLeaderboard("month") };
