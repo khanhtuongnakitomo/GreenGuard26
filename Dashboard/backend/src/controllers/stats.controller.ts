@@ -1,61 +1,111 @@
 import { Request, Response } from 'express';
-import { Detection } from '../models/Detection';
-import type { DetectedType, TargetBin, SummaryResponse } from '../types';
+import { ContributionSession } from '../models/ContributionSession';
+import { User } from '../models/User';
+import { Machine } from '../models/Machine';
+import type { ItemType, SummaryResponse } from '../types';
 
 // ─── GET /api/stats/summary ──────────────────────────────────────────────────
 // Dashboard lấy tổng hợp thống kê (polling 5s)
 export const getSummary = async (req: Request, res: Response): Promise<void> => {
-  const { machineId } = req.query;
+  const { machineCode } = req.query;
 
   try {
-    const filter: Record<string, unknown> = {};
-    if (machineId) filter.machineId = machineId;
+    let totalSessions = 0;
+    let totalItems = 0;
+    const byType: Record<ItemType, number> = {
+      plastic_bottle: 0,
+      can: 0,
+      carton: 0
+    };
+    let claimedSessions = 0;
+    let unclaimedSessions = 0;
+    let totalPointsAwarded = 0;
 
-    // TODO: Có thể aggregate trực tiếp trong MongoDB thay vì fetch all
-    const [total, byTypeAgg, byBinAgg, confidenceAgg, successAgg] = await Promise.all([
-      Detection.countDocuments(filter),
+    if (!machineCode || machineCode === 'ALL') {
+      // Global stats
+      const [userTotals] = await User.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalBottles: { $sum: '$totalBottles' },
+            totalCans: { $sum: '$totalCans' },
+            totalCarton: { $sum: '$totalCarton' },
+            totalItems: { $sum: '$totalItems' }
+          }
+        }
+      ]);
 
-      // Count theo detectedType
-      Detection.aggregate([
-        { $match: filter },
-        { $group: { _id: '$detectedType', count: { $sum: 1 } } },
-      ]),
+      if (userTotals) {
+        byType.plastic_bottle = userTotals.totalBottles || 0;
+        byType.can = userTotals.totalCans || 0;
+        byType.carton = userTotals.totalCarton || 0;
+        totalItems = userTotals.totalItems || 0;
+      }
 
-      // Count theo targetBin
-      Detection.aggregate([
-        { $match: filter },
-        { $group: { _id: '$targetBin', count: { $sum: 1 } } },
-      ]),
+      totalSessions = await ContributionSession.countDocuments();
+      claimedSessions = await ContributionSession.countDocuments({ status: 'claimed' });
+      unclaimedSessions = await ContributionSession.countDocuments({ status: 'unclaimed' });
 
-      // Average confidence
-      Detection.aggregate([
-        { $match: filter },
-        { $group: { _id: null, avg: { $avg: '$confidence' } } },
-      ]),
+      const [pointsAgg] = await ContributionSession.aggregate([
+        { $match: { status: 'claimed' } },
+        { $group: { _id: null, total: { $sum: '$totalPoints' } } }
+      ]);
+      totalPointsAwarded = pointsAgg?.total || 0;
 
-      // Success rate
-      Detection.countDocuments({ ...filter, sortingStatus: 'success' }),
-    ]);
+    } else {
+      // Per-machine stats
+      const machine = await Machine.findOne({ machineCode });
+      if (machine) {
+        const filter = { machineId: machine._id };
+        
+        totalSessions = await ContributionSession.countDocuments(filter);
+        claimedSessions = await ContributionSession.countDocuments({ ...filter, status: 'claimed' });
+        unclaimedSessions = await ContributionSession.countDocuments({ ...filter, status: 'unclaimed' });
+        
+        const [itemsAgg] = await ContributionSession.aggregate([
+            { $match: filter },
+            { $unwind: "$items" },
+            { $group: {
+                _id: "$items.itemType",
+                total: { $sum: "$items.quantity" }
+            }}
+        ]);
+        
+        // This query actually returns an array of groups, we need to map them to byType
+        const itemsAggs = await ContributionSession.aggregate([
+            { $match: filter },
+            { $unwind: "$items" },
+            { $group: {
+                _id: "$items.itemType",
+                total: { $sum: "$items.quantity" }
+            }}
+        ]);
 
-    // Build byType map
-    const byType = {} as Record<DetectedType, number>;
-    for (const item of byTypeAgg) {
-      byType[item._id as DetectedType] = item.count;
-    }
+        itemsAggs.forEach(agg => {
+            if (agg._id === 'plastic_bottle') byType.plastic_bottle = agg.total;
+            if (agg._id === 'can') byType.can = agg.total;
+            if (agg._id === 'carton') byType.carton = agg.total;
+        });
+        
+        totalItems = byType.plastic_bottle + byType.can + byType.carton;
 
-    // Build byBin map
-    const byBin = {} as Record<TargetBin, number>;
-    for (const item of byBinAgg) {
-      byBin[item._id as TargetBin] = item.count;
+        const [pointsAgg] = await ContributionSession.aggregate([
+          { $match: { ...filter, status: 'claimed' } },
+          { $group: { _id: null, total: { $sum: '$totalPoints' } } }
+        ]);
+        totalPointsAwarded = pointsAgg?.total || 0;
+      }
     }
 
     const summary: SummaryResponse = {
-      machineId: (machineId as string) ?? 'ALL',
-      total,
+      machineCode: (machineCode as string) ?? 'ALL',
+      totalSessions,
+      totalItems,
       byType,
-      byBin,
-      avgConfidence: confidenceAgg[0]?.avg ?? 0,
-      successRate: total > 0 ? successAgg / total : 0,
+      claimedSessions,
+      unclaimedSessions,
+      claimRate: totalSessions > 0 ? claimedSessions / totalSessions : 0,
+      totalPointsAwarded
     };
 
     res.json(summary);

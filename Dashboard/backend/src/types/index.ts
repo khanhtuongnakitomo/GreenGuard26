@@ -1,103 +1,56 @@
-// ─── Shared Types — dùng chung cho models, controllers, frontend ──────────────
+export type ItemType = 'plastic_bottle' | 'can' | 'carton';
+export type SessionStatus = 'unclaimed' | 'claimed' | 'expired' | 'cancelled';
+export type MachineStatus = 'online' | 'offline' | 'maintenance' | 'disabled';
 
-/** Loại rác được AI phân loại */
-export type DetectedType =
-  | 'plastic_bottle'
-  | 'aluminum_can'
-  | 'paper_carton'
-  | 'unknown_object';
-
-/** Ngăn phân loại */
-export type TargetBin = 'bin_1' | 'bin_2' | 'bin_3' | 'unknown_bin';
-
-/** Command gửi ESP32 */
-export type SortCommand =
-  | 'SORT_BIN_1'
-  | 'SORT_BIN_2'
-  | 'SORT_BIN_3'
-  | 'SORT_UNKNOWN';
-
-/** Kết quả phân loại */
-export type SortingStatus = 'success' | 'failed' | 'unknown';
-
-/** Trạng thái vận hành của robot */
-export type MachineState = 'IDLE' | 'SORTING' | 'SYNCING' | 'ERROR';
-
-// ─── Detection ────────────────────────────────────────────────────────────────
-
-/** Payload Jetson gửi lên qua POST /api/detections */
-export interface CreateDetectionDto {
-  eventId: string;
-  machineId: string;
-  deviceModel: string;
-  detectedType: DetectedType;
-  confidence: number;
-  targetBin: TargetBin;
-  sortCommand: SortCommand;
-  sortingStatus: SortingStatus;
-  createdAt: string; // ISO 8601 từ Jetson
+export interface SessionItem {
+  itemType: ItemType;
+  quantity: number;
+  pointsPerItem: number;
 }
 
-/** Shape trả về cho dashboard (GET /api/detections) */
-export interface DetectionResponse extends CreateDetectionDto {
-  serverReceivedAt: string;
-}
-
-// ─── Machine ─────────────────────────────────────────────────────────────────
-
-/** Payload Jetson gửi heartbeat */
-export interface HeartbeatDto {
+export interface SessionResponse {
+  _id: string;
+  sessionCode: string;
   machineId: string;
-  state: MachineState;
-  lastEventId?: string;
+  machineName: string;
+  items: SessionItem[];
+  totalItems: number;
+  totalPoints: number;
+  status: SessionStatus;
+  claimedBy?: string;
+  claimedAt?: string;
+  expiresAt: string;
   createdAt: string;
 }
 
-/** Shape machine trả về dashboard */
 export interface MachineResponse {
-  machineId: string;
+  _id: string;
+  machineCode: string;
   name: string;
-  location: string;
-  hardware: {
-    edgeComputer: string;
-    controller: string;
-  };
-  currentState: MachineState;
-  lastEventId: string | null;
+  locationName: string;
+  locationType: string;
+  status: MachineStatus;
   lastSeenAt: string | null;
+  totalSessions: number;
+  bins: Array<{ binType: string; capacityPercent: number }>;
 }
 
-// ─── Stats ────────────────────────────────────────────────────────────────────
-
-/** Response của GET /api/stats/summary */
 export interface SummaryResponse {
-  machineId: string;
-  total: number;
-  byType: Record<DetectedType, number>;
-  byBin: Record<TargetBin, number>;
-  avgConfidence: number;
-  successRate: number;
+  machineCode: string;       // or "ALL"
+  totalSessions: number;
+  totalItems: number;
+  byType: Record<ItemType, number>;
+  claimedSessions: number;
+  unclaimedSessions: number;
+  claimRate: number;
+  totalPointsAwarded: number;
 }
 
-// ─── Pagination ───────────────────────────────────────────────────────────────
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  limit: number;
-  offset: number;
+export interface SessionFilters {
+  status: SessionStatus | '';
+  itemType: ItemType | '';
+  startDate: string;
+  endDate: string;
 }
 
-// ─── API Generic ──────────────────────────────────────────────────────────────
-
-export interface ApiSuccess<T = unknown> {
-  success: true;
-  message?: string;
-  data?: T;
-}
-
-export interface ApiError {
-  success: false;
-  message: string;
-  errors?: string[];
-}
+export interface PaginatedResponse<T> { data: T[]; total: number; limit: number; offset: number; }
