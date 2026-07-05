@@ -1,41 +1,42 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import type { MachineState } from '../types';
+import mongoose, { Schema } from "mongoose";
 
-/**
- * Machine — trạng thái hiện tại của robot.
- * Upsert mỗi khi Jetson gửi heartbeat.
- */
-export interface IMachine extends Document {
-  machineId: string;
-  name: string;
-  location: string;
-  hardware: {
-    edgeComputer: string;
-    controller: string;
-  };
-  currentState: MachineState;
-  lastEventId: string | null;
-  lastSeenAt: Date | null;
-}
-
-const machineSchema = new Schema<IMachine>(
+const BinCapacitySchema = new Schema(
   {
-    machineId:    { type: String, required: true, unique: true },
-    name:         { type: String, default: '' },
-    location:     { type: String, default: '' },
-    hardware: {
-      edgeComputer: { type: String, default: '' },
-      controller:   { type: String, default: '' },
+    binType: { 
+      type: String, 
+      required: true 
     },
-    currentState: {
+    capacityPercent: { type: Number, default: 0, min: 0, max: 100 }
+  },
+  { _id: false }
+);
+
+const MachineSchema = new Schema(
+  {
+    machineCode: { 
+      type: String, 
+      required: true, 
+      unique: true, 
+      index: true
+    },
+    name: { type: String, required: true },
+    locationName: { type: String, required: true },
+    locationType: {
       type: String,
-      enum: ['IDLE', 'SORTING', 'SYNCING', 'ERROR'],
-      default: 'IDLE',
+      default: "other"
     },
-    lastEventId:  { type: String, default: null },
-    lastSeenAt:   { type: Date, default: null },
+    apiKeyHash: { type: String, required: true, select: false },
+    status: {
+      type: String,
+      enum: ["online", "offline", "maintenance", "disabled"],
+      default: "offline",
+      index: true
+    },
+    lastSeenAt: Date,
+    totalSessions: { type: Number, default: 0 },
+    bins: { type: [BinCapacitySchema], default: [] }
   },
   { timestamps: true }
 );
 
-export const Machine = mongoose.model<IMachine>('Machine', machineSchema);
+export const Machine = mongoose.model("Machine", MachineSchema);

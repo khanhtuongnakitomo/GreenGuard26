@@ -3,7 +3,7 @@ import { getSummary } from '../controllers/stats.controller';
 
 const router = Router();
 
-// GET /api/stats/summary?machineId=BK_BIN_01
+// GET /api/stats/summary?machineCode=0001
 router.get('/summary', getSummary);
 
 export default router;

@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import detectionRoutes from './routes/detection.routes';
+import sessionRoutes from './routes/session.routes';
 import machineRoutes   from './routes/machine.routes';
 import statsRoutes     from './routes/stats.routes';
 
@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/detections', detectionRoutes);
+app.use('/api/sessions', sessionRoutes);
 app.use('/api/machines',   machineRoutes);
 app.use('/api/stats',      statsRoutes);
 

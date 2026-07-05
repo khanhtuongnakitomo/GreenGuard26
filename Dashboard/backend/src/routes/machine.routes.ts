@@ -1,12 +1,12 @@
 import { Router } from 'express';
-import { receiveHeartbeat, getMachine } from '../controllers/machine.controller';
+import { getMachines, getMachine } from '../controllers/machine.controller';
 
 const router = Router();
 
-// POST /api/machines/heartbeat          — Jetson gửi heartbeat (PHẢI TRƯỚC /:machineId)
-router.post('/heartbeat', receiveHeartbeat);
+// GET  /api/machines                    — Dashboard lấy danh sách machine
+router.get('/', getMachines);
 
-// GET  /api/machines/:machineId         — Dashboard lấy trạng thái machine
-router.get('/:machineId', getMachine);
+// GET  /api/machines/:machineCode       — Dashboard lấy trạng thái machine
+router.get('/:machineCode', getMachine);
 
 export default router;
