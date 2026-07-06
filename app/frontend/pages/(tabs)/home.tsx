@@ -69,7 +69,7 @@ export default function HomeScreen() {
                <SectionHeader
                  title="My Impact"
                  linkLabel="View details ›"
-                 onLinkPress={() => {}}
+                 onLinkPress={() => router.push('/impact')}
                />
                <View style={styles.statsRow}>
                  <StatCard
@@ -106,7 +106,7 @@ export default function HomeScreen() {
                  <RewardListItem
                    key={reward.id}
                    reward={reward}
-                   onPress={() => router.push('/(tabs)/rewards')}
+                   onPress={() => router.push({ pathname: '/rewards/voucher-claim', params: { id: reward.id } })}
                  />
                ))}
              </View>

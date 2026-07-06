@@ -33,10 +33,14 @@ export const RewardCard = memo<RewardCardProps>(({ reward, onPress, style }) => 
   const isClaimed = reward.status === 'claimed';
 
   const handleClaim = () => {
-    Alert.alert('Claim Voucher', `Claim ${reward.title}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Claim', onPress: () => onPress?.() },
-    ]);
+    if (onPress) {
+      onPress();
+    } else {
+      Alert.alert('Claim Voucher', `Claim ${reward.title}?`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Claim', onPress: () => {} },
+      ]);
+    }
   };
 
   return (

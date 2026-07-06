@@ -20,9 +20,10 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useAuthStore } from '@/store/authStore';
+import { NotificationProvider } from '@/components/common/NotificationProvider';
 
 // Keep splash visible until fonts are loaded
 SplashScreen.preventAutoHideAsync();
@@ -98,14 +99,19 @@ export default function RootLayout() {
           />
           <Stack.Screen name="rewards/tasks" />
           <Stack.Screen name="rewards/brand-task" />
-          <Stack.Screen 
-            name="edit-profile" 
+          <Stack.Screen name="rewards/voucher-claim" />
+          <Stack.Screen
+            name="edit-profile"
             options={{
               presentation: 'modal',
               animation: 'slide_from_bottom',
-            }} 
+            }}
           />
+          <Stack.Screen name="impact" />
+          <Stack.Screen name="history" />
         </Stack>
+        {/* Global notification overlay */}
+        <NotificationProvider />
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

@@ -91,7 +91,11 @@ export default function RewardsScreen() {
               {isLargeScreen ? (
                 <View style={styles.rewardGrid}>
                   {claimableRewards.map((reward) => (
-                    <RewardCard key={reward.id} reward={reward} />
+                    <RewardCard
+                      key={reward.id}
+                      reward={reward}
+                      onPress={() => router.push({ pathname: '/rewards/voucher-claim', params: { id: reward.id } })}
+                    />
                   ))}
                 </View>
               ) : (
@@ -101,7 +105,11 @@ export default function RewardsScreen() {
                   contentContainerStyle={styles.rewardScroll}
                 >
                   {claimableRewards.map((reward) => (
-                    <RewardCard key={reward.id} reward={reward} />
+                    <RewardCard
+                      key={reward.id}
+                      reward={reward}
+                      onPress={() => router.push({ pathname: '/rewards/voucher-claim', params: { id: reward.id } })}
+                    />
                   ))}
                 </ScrollView>
               )}
