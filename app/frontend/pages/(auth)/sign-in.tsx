@@ -79,7 +79,7 @@ export default function SignInScreen() {
   };
 
   const handleForgotPassword = () => {
-    Alert.alert('Forgot Password', 'Password reset feature coming soon.');
+    router.push('/(auth)/forgot-password');
   };
 
   return (

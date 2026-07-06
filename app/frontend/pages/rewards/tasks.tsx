@@ -16,7 +16,6 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -36,10 +35,7 @@ function RewardClaimRow({ reward }: { reward: Reward }) {
   const brandColor = isClaimed ? Colors.borderMuted : (reward.brandColor ?? Colors.primary);
 
   const handleClaim = () => {
-    Alert.alert('Claim Reward', `Claim "${reward.title}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Claim', style: 'default' },
-    ]);
+    router.push({ pathname: '/rewards/voucher-claim', params: { id: reward.id } });
   };
 
   return (

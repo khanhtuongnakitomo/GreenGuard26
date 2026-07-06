@@ -153,7 +153,7 @@ export default function ProfileScreen() {
             <SectionHeader
               title="History"
               linkLabel="View more"
-              onLinkPress={() => {}}
+              onLinkPress={() => router.push('/history')}
               style={styles.historySectionHeader}
             />
 
