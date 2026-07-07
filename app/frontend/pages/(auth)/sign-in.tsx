@@ -66,7 +66,8 @@ export default function SignInScreen() {
       setIsLoading(true);
       const response = await authService.signIn(values);
       await login(response.tokens.accessToken, response.tokens.refreshToken, response.userId);
-      router.replace('/(tabs)/home');
+      // Navigation is handled by the auth gate in pages/_layout.tsx, which
+      // watches `isAuthenticated` and redirects out of the (auth) group.
     } catch (error: any) {
       if (Platform.OS === 'web') {
         window.alert(error.message || 'Please check your credentials and try again.');
