@@ -5,3 +5,5 @@ opencv-python
 matplotlib
 seaborn
 wandb
+requests
+tensorflow # Used for TFLite model inference on PC
