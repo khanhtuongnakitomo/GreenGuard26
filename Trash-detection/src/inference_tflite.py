@@ -5,7 +5,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from telemetry import TelemetryLogger, decide, normalize_bbox, now_ms
+from telemetry import TelemetryLogger, normalize_bbox, now_ms
+from session import RecyclingSession
+from ui import draw_session_ui
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -146,6 +148,8 @@ def main():
         telemetry.error(source="webcam", model_path=os.fspath(model_path), model_type="tflite_int8", message=message)
         return
 
+    session = RecyclingSession(countdown_time=5.0, qr_display_time=30.0)
+
     print("Starting TFLite inference. Press 'q' in the webcam window to quit.")
     frame_id = 0
     try:
@@ -168,10 +172,13 @@ def main():
             detections = classifier.predict(frame)
             inference_ms = now_ms() - start_ms
             fps = 1000.0 / inference_ms if inference_ms > 0 else 0.0
-            decision, best = decide(detections, args.conf)
+            
+            # Process frame through session state machine
+            state = session.process_frame(detections, args.conf)
+            decision = "accepted" if state == "accepted" else "low_conf" # map for telemetry
 
             snapshot_path = None
-            if args.save_rejects and decision != "accepted":
+            if args.save_rejects and state not in ("accepted", "qr_display", "loading"):
                 snapshot_path = telemetry.save_snapshot(frame, frame_id, decision)
 
             telemetry.event(
@@ -186,18 +193,9 @@ def main():
                 snapshot_path=snapshot_path,
             )
 
-            if best and best["confidence"] >= args.conf:
-                cv2.putText(
-                    frame,
-                    f"[{best['class_name']}] {best['confidence']:.1%}",
-                    (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,
-                    (0, 255, 0),
-                    2,
-                )
-
-            cv2.imshow("TFLite Inference - press q to quit", frame)
+            annotated_frame = draw_session_ui(frame, session, fps)
+            cv2.imshow("TFLite Inference - press q to quit", annotated_frame)
+            
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
     finally:

@@ -10,7 +10,9 @@ Path(os.environ.setdefault("MPLCONFIGDIR", os.fspath(REPO_ROOT / ".matplotlib"))
 import cv2
 from ultralytics import YOLO
 
-from telemetry import TelemetryLogger, decide, normalize_bbox, now_ms
+from telemetry import TelemetryLogger, normalize_bbox, now_ms
+from session import RecyclingSession
+from ui import draw_session_ui
 
 
 def resolve_path(path):
@@ -56,91 +58,6 @@ def detections_from_result(result):
     return detections
 
 
-def draw_accepted(frame, detections, conf_threshold):
-    annotated = frame.copy()
-    for detection in detections:
-        if detection["confidence"] < conf_threshold:
-            continue
-
-        x1, y1, x2, y2 = [int(value) for value in detection["bbox"]]
-        label = f"{detection['class_name']} {detection['confidence']:.1%}"
-        cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 180, 0), 2)
-        cv2.putText(
-            annotated,
-            label,
-            (x1, max(24, y1 - 8)),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            (0, 180, 0),
-            2,
-        )
-    return annotated
-
-
-def draw_hud_panel(frame, decision, best_detection, fps, inference_ms):
-    annotated = frame.copy()
-    h, w = annotated.shape[:2]
-
-    # Panel dimensions
-    panel_w, panel_h = 280, 100
-    margin = 20
-    x1 = w - panel_w - margin
-    y1 = h - panel_h - margin
-    x2 = w - margin
-    y2 = h - margin
-
-    # Draw semi-transparent background
-    overlay = annotated.copy()
-    cv2.rectangle(overlay, (x1, y1), (x2, y2), (25, 25, 25), -1)
-    cv2.addWeighted(overlay, 0.85, annotated, 0.15, 0, annotated)
-    
-    # Border
-    cv2.rectangle(annotated, (x1, y1), (x2, y2), (100, 100, 100), 1)
-
-    # State colors and text
-    if decision == "accepted":
-        dot_color = (0, 220, 0)  # Green
-        status_text = "DETECTED"
-    elif decision == "low_conf":
-        dot_color = (0, 200, 255)  # Yellow
-        status_text = "LOW CONFIDENCE"
-    else:
-        dot_color = (150, 150, 150)  # Gray
-        status_text = "SCANNING..."
-
-    # Top row: Status indicator and FPS
-    # Dot
-    cv2.circle(annotated, (x1 + 25, y1 + 25), 6, dot_color, -1)
-    # Status text
-    cv2.putText(annotated, status_text, (x1 + 40, y1 + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (220, 220, 220), 1)
-    # FPS
-    fps_text = f"{int(fps)} FPS"
-    cv2.putText(annotated, fps_text, (x2 - 60, y1 + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 150), 1)
-
-    # Middle row: Waste type
-    waste_type = best_detection["class_name"].title().replace("_", " ") if best_detection else "---"
-    cv2.putText(annotated, waste_type, (x1 + 25, y1 + 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-
-    # Bottom row: Confidence bar
-    bar_w = 170
-    bar_h = 10
-    bar_x = x1 + 25
-    bar_y = y1 + 75
-    
-    # Background bar
-    cv2.rectangle(annotated, (bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h), (50, 50, 50), -1)
-    
-    conf = best_detection["confidence"] if best_detection else 0.0
-    if conf > 0:
-        # Foreground bar
-        fill_w = int(bar_w * conf)
-        cv2.rectangle(annotated, (bar_x, bar_y), (bar_x + fill_w, bar_y + bar_h), dot_color, -1)
-        
-    # Confidence text
-    conf_text = f"{conf:.1%}" if conf > 0 else "---"
-    cv2.putText(annotated, conf_text, (bar_x + bar_w + 10, bar_y + 9), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (200, 200, 200), 1)
-
-    return annotated
 
 
 def parse_args():
@@ -192,6 +109,8 @@ def main():
         telemetry.error(source="webcam", model_path=os.fspath(model_path), model_type="yolo_pt", message=message)
         return
 
+    session = RecyclingSession(countdown_time=5.0, qr_display_time=30.0)
+
     print("Starting detection. Press 'q' in the webcam window to quit.")
     frame_id = 0
     try:
@@ -216,9 +135,13 @@ def main():
             fps = 1000.0 / inference_ms if inference_ms > 0 else 0.0
 
             detections = detections_from_result(results[0])
-            decision, best = decide(detections, args.conf)
+            
+            # Process frame through session state machine
+            state = session.process_frame(detections, args.conf)
+            decision = "accepted" if state == "accepted" else "low_conf" # map for telemetry
+            
             snapshot_path = None
-            if args.save_rejects and decision != "accepted":
+            if args.save_rejects and state not in ("accepted", "qr_display", "loading"):
                 snapshot_path = telemetry.save_snapshot(frame, frame_id, decision)
 
             telemetry.event(
@@ -233,9 +156,9 @@ def main():
                 snapshot_path=snapshot_path,
             )
 
-            annotated_frame = draw_accepted(frame, detections, args.conf)
-            annotated_frame = draw_hud_panel(annotated_frame, decision, best, fps, inference_ms)
+            annotated_frame = draw_session_ui(frame, session, fps)
             cv2.imshow("Trash Detection - press q to quit", annotated_frame)
+            
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
     finally:

@@ -1,0 +1,122 @@
+import time
+import threading
+from datetime import datetime, timedelta, timezone
+from point_rules import CLASS_NAME_MAP, calculate_points
+import qr_generator
+import api_client
+
+class RecyclingSession:
+    def __init__(self, countdown_time=5.0, qr_display_time=30.0):
+        self.countdown_time = countdown_time
+        self.qr_display_time = qr_display_time
+        self.state = "idle" # "idle" | "detecting" | "accepted" | "countdown" | "loading" | "qr_display"
+        self.items = {} # {"plastic_bottle": 2, "can": 1}
+        
+        self.state_start_time = 0.0
+        
+        self.last_accepted_class = None
+        self.last_accepted_time = 0.0
+        self.duplicate_cooldown = 2.0 # seconds to ignore the same object class to prevent double counting
+        
+        self.qr_image = None
+        self.points_earned = 0
+        self.last_best_detection = None
+        
+    def get_items_list(self):
+        """Convert internal dict to the list format the backend expects."""
+        return [{"itemType": k, "quantity": v} for k, v in self.items.items()]
+
+    def transition(self, new_state):
+        self.state = new_state
+        self.state_start_time = time.time()
+        
+    def reset(self):
+        self.items = {}
+        self.qr_image = None
+        self.points_earned = 0
+        self.last_accepted_class = None
+        self.last_best_detection = None
+        self.transition("idle")
+        
+    def _do_loading_work(self):
+        """Run in a thread to generate QR and call API so we don't freeze the camera UI."""
+        items_list = self.get_items_list()
+        self.points_earned = calculate_points(items_list)
+        
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=self.qr_display_time)
+        expires_str = expires_at.isoformat().replace('+00:00', 'Z')
+        
+        qr_string, claim_token = qr_generator.build_signed_payload(
+            items=items_list,
+            total_points=self.points_earned,
+            expires_at_str=expires_str
+        )
+        
+        # Fire off the API request (we don't strictly need to block on it, but we want it done)
+        api_client.report_session(claim_token, items_list)
+        
+        self.qr_image = qr_generator.generate_qr_image(qr_string, box_size=8, border=4)
+        self.transition("qr_display")
+
+    def process_frame(self, detections, conf_threshold):
+        now = time.time()
+        
+        # Determine best detection
+        best_detection = None
+        if detections:
+            best = max(detections, key=lambda item: item["confidence"])
+            if best["confidence"] >= conf_threshold:
+                best_detection = best
+        
+        if best_detection:
+            self.last_best_detection = best_detection
+
+        # State Machine Logic
+        if self.state == "idle":
+            if best_detection:
+                self.transition("detecting")
+                
+        elif self.state == "detecting":
+            if best_detection:
+                raw_class = best_detection["class_name"]
+                mapped_class = CLASS_NAME_MAP.get(raw_class, raw_class)
+                
+                # Check cooldown to prevent double counting
+                if raw_class == self.last_accepted_class and (now - self.last_accepted_time) < self.duplicate_cooldown:
+                    pass # ignore it, it's the same item
+                else:
+                    self.items[mapped_class] = self.items.get(mapped_class, 0) + 1
+                    self.last_accepted_class = raw_class
+                    self.last_accepted_time = now
+                    self.transition("accepted")
+            else:
+                # If we lose the object for a bit, go back to idle
+                if now - self.state_start_time > 1.0:
+                    self.transition("idle")
+                    
+        elif self.state == "accepted":
+            if now - self.state_start_time > 1.5:
+                self.transition("countdown")
+                
+        elif self.state == "countdown":
+            if best_detection:
+                raw_class = best_detection["class_name"]
+                # Only reset countdown if it's a NEW item (respect cooldown)
+                if not (raw_class == self.last_accepted_class and (now - self.last_accepted_time) < self.duplicate_cooldown):
+                    self.transition("detecting")
+            
+            elapsed = now - self.state_start_time
+            if elapsed >= self.countdown_time:
+                self.transition("loading")
+                threading.Thread(target=self._do_loading_work, daemon=True).start()
+                
+        elif self.state == "loading":
+            # Just wait for the thread to change the state to qr_display
+            pass
+            
+        elif self.state == "qr_display":
+            elapsed = now - self.state_start_time
+            if elapsed >= self.qr_display_time:
+                self.reset()
+                
+        return self.state
