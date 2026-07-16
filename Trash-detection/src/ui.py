@@ -22,6 +22,10 @@ def draw_session_ui(frame, session, fps):
 
     if state == "idle":
         text = "Please insert your beverage"
+        if getattr(session, 'demo_mode', False):
+            text = "Detection Paused. Press [F] to start."
+            cv2.putText(annotated, "DETECTION: OFF", (10, h - 80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            
         text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 1, 2)[0]
         text_x = (w - text_size[0]) // 2
         text_y = (h + text_size[1]) // 2
@@ -29,6 +33,10 @@ def draw_session_ui(frame, session, fps):
         
     elif state == "detecting":
         text = "Scanning..."
+        
+        if getattr(session, 'demo_mode', False):
+            cv2.putText(annotated, "DETECTION: ON", (10, h - 80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            
         text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 1.5, 3)[0]
         text_x = (w - text_size[0]) // 2
         text_y = (h + text_size[1]) // 2
@@ -91,10 +99,16 @@ def draw_session_ui(frame, session, fps):
             # Text
             cv2.putText(annotated, f"Scan to earn {session.points_earned} points!", (x_offset, y_offset - 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             
-            # Countdown bar
-            elapsed = now - session.state_start_time
-            ratio = max(0, 1.0 - (elapsed / session.qr_display_time))
-            bar_w = int(w * ratio)
-            cv2.rectangle(annotated, (0, h - 20), (bar_w, h), (0, 255, 0), -1)
+            # Countdown bar (only if not demo mode)
+            if not getattr(session, 'demo_mode', False):
+                elapsed = now - session.state_start_time
+                ratio = max(0, 1.0 - (elapsed / session.qr_display_time))
+                bar_w = int(w * ratio)
+                cv2.rectangle(annotated, (0, h - 20), (bar_w, h), (0, 255, 0), -1)
+                
+    if getattr(session, 'demo_mode', False):
+        # Draw demo mode keyboard shortcuts
+        legend = "[Q] Quit  |  [F] Toggle Detection  |  [G] Generate/Clear QR"
+        cv2.putText(annotated, legend, (10, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 2)
             
     return annotated

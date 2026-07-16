@@ -6,10 +6,13 @@ import qr_generator
 import api_client
 
 class RecyclingSession:
-    def __init__(self, countdown_time=5.0, qr_display_time=30.0):
+    def __init__(self, countdown_time=5.0, qr_display_time=30.0, demo_mode=False):
         self.countdown_time = countdown_time
         self.qr_display_time = qr_display_time
-        self.state = "idle" # "idle" | "detecting" | "accepted" | "countdown" | "loading" | "qr_display"
+        self.demo_mode = demo_mode
+        
+        # State: "idle" | "detecting" | "accepted" | "countdown" | "loading" | "qr_display"
+        self.state = "idle" 
         self.items = {} # {"plastic_bottle": 2, "can": 1}
         
         self.state_start_time = 0.0
@@ -37,6 +40,23 @@ class RecyclingSession:
         self.last_accepted_class = None
         self.last_best_detection = None
         self.transition("idle")
+
+    def toggle_detection(self):
+        """For demo mode: manually start or stop detection."""
+        if self.state == "idle":
+            self.transition("detecting")
+        elif self.state == "detecting":
+            self.transition("idle")
+            
+    def generate_qr(self):
+        """For demo mode: immediately generate QR from accumulated items."""
+        if not self.items:
+            print("No items to generate QR for!")
+            return
+            
+        self.transition("loading")
+        # In demo mode, we can do this synchronously since it's user-triggered
+        self._do_loading_work()
         
     def _do_loading_work(self):
         """Run in a thread to generate QR and call API so we don't freeze the camera UI."""
@@ -73,7 +93,7 @@ class RecyclingSession:
 
         # State Machine Logic
         if self.state == "idle":
-            if best_detection:
+            if not self.demo_mode and best_detection:
                 self.transition("detecting")
                 
         elif self.state == "detecting":
@@ -88,14 +108,16 @@ class RecyclingSession:
                     self.items[mapped_class] = self.items.get(mapped_class, 0) + 1
                     self.last_accepted_class = raw_class
                     self.last_accepted_time = now
-                    self.transition("accepted")
+                    
+                    if not self.demo_mode:
+                        self.transition("accepted")
             else:
                 # If we lose the object for a bit, go back to idle
-                if now - self.state_start_time > 1.0:
+                if not self.demo_mode and (now - self.state_start_time > 1.0):
                     self.transition("idle")
                     
         elif self.state == "accepted":
-            if now - self.state_start_time > 1.5:
+            if not self.demo_mode and (now - self.state_start_time > 1.5):
                 self.transition("countdown")
                 
         elif self.state == "countdown":
@@ -115,8 +137,9 @@ class RecyclingSession:
             pass
             
         elif self.state == "qr_display":
-            elapsed = now - self.state_start_time
-            if elapsed >= self.qr_display_time:
-                self.reset()
+            if not self.demo_mode:
+                elapsed = now - self.state_start_time
+                if elapsed >= self.qr_display_time:
+                    self.reset()
                 
         return self.state

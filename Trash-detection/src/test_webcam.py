@@ -77,6 +77,7 @@ def parse_args():
     parser.add_argument("--device-id", default="local-dev", help="Device identifier included in telemetry")
     parser.add_argument("--save-rejects", action="store_true", help="Save rejected frames to snapshot directory")
     parser.add_argument("--no-telemetry", action="store_true", help="Disable telemetry writes")
+    parser.add_argument("--demo", action="store_true", default=True, help="Enable keyboard-driven demo mode")
     return parser.parse_args()
 
 
@@ -109,9 +110,17 @@ def main():
         telemetry.error(source="webcam", model_path=os.fspath(model_path), model_type="yolo_pt", message=message)
         return
 
-    session = RecyclingSession(countdown_time=5.0, qr_display_time=30.0)
+    session = RecyclingSession(countdown_time=5.0, qr_display_time=30.0, demo_mode=args.demo)
 
-    print("Starting detection. Press 'q' in the webcam window to quit.")
+    print("Starting detection...")
+    if args.demo:
+        print("--- DEMO MODE ENABLED ---")
+        print("Press 'Q' to quit")
+        print("Press 'F' to toggle detection on/off")
+        print("Press 'G' to generate QR / clear current QR")
+    else:
+        print("Press 'q' in the webcam window to quit.")
+        
     frame_id = 0
     try:
         while True:
@@ -157,10 +166,19 @@ def main():
             )
 
             annotated_frame = draw_session_ui(frame, session, fps)
-            cv2.imshow("Trash Detection - press q to quit", annotated_frame)
+            cv2.imshow("Trash Detection", annotated_frame)
             
-            if cv2.waitKey(1) & 0xFF == ord("q"):
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord("q") or key == ord("Q"):
                 break
+            elif args.demo:
+                if key == ord("f") or key == ord("F"):
+                    session.toggle_detection()
+                elif key == ord("g") or key == ord("G"):
+                    if session.state == "qr_display":
+                        session.reset()
+                    else:
+                        session.generate_qr()
     finally:
         cap.release()
         cv2.destroyAllWindows()
