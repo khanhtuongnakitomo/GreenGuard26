@@ -1,7 +1,7 @@
 ultralytics
 albumentations
 roboflow
-opencv-python
+opencv-python>=4.6.0,<5.0.0  # MUST uninstall opencv-python-headless after install (see setup.ps1)
 matplotlib
 seaborn
 wandb

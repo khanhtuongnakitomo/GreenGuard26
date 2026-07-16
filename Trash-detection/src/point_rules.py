@@ -1,6 +1,6 @@
 POINT_RULES = {
-    "plastic_bottle": 10,
-    "can": 8,
+    "plastic_bottle": 8,
+    "can": 10,
     "carton": 6,
 }
 
