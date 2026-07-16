@@ -21,6 +21,7 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -48,22 +49,21 @@ if (Platform.OS !== 'web') {
 }
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
-interface MockScanResult {
-  machineId: string;
-  location: string;
-  estimatedPoints: number;
-  recycleTypes: string[];
-  sessionCode: string;
+import { parseQrPayload, scanService } from '@/services/scan.service';
+import { useInvalidateUserData } from '@/hooks/useApi';
+import { useUserStore } from '@/store/userStore';
+import { getApiErrorMessage } from '@/utils/mappers';
+
+interface ScanPreview {
+  claimToken: string;
+  totalItems: number;
+  totalPoints: number;
+  items: Array<{ itemType: string; quantity: number }>;
+  expiresAt: string;
+  rawQr: string;
 }
 
 // ─── Mock scan response ────────────────────────────────────────────────────────
-const getMockScanResult = (data: string): MockScanResult => ({
-  machineId: 'GG-MACHINE-0042',
-  location: '268 Lý Thường Kiệt, Quận 10, TP.HCM',
-  estimatedPoints: 74,
-  recycleTypes: ['Plastic Bottles ×5', 'Aluminum Cans ×3', 'Paper ×2'],
-  sessionCode: 'SESSION-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
-});
 
 const { width: W } = Dimensions.get('window');
 const QR_SIZE = W * 0.65;
@@ -149,7 +149,7 @@ function SuccessCheckmark() {
 
 // ─── Claim Modal ───────────────────────────────────────────────────────────────
 interface ClaimModalProps {
-  result: MockScanResult | null;
+  result: ScanPreview | null;
   visible: boolean;
   onCancel: () => void;
   onClaim: () => void;
@@ -171,39 +171,6 @@ const ClaimModal = ({ result, visible, onCancel, onClaim, isClaiming }: ClaimMod
           </View>
 
           <View style={styles.claimBody}>
-            {/* Session code */}
-            <View style={styles.claimRow}>
-              <View style={styles.claimIconBox}>
-                <Ionicons name="barcode-outline" size={18} color={Colors.primary} />
-              </View>
-              <View style={styles.claimRowText}>
-                <Text style={styles.claimLabel}>Session Code</Text>
-                <Text style={styles.claimValue}>{result.sessionCode}</Text>
-              </View>
-            </View>
-
-            {/* Machine ID */}
-            <View style={styles.claimRow}>
-              <View style={styles.claimIconBox}>
-                <Ionicons name="hardware-chip-outline" size={18} color={Colors.primary} />
-              </View>
-              <View style={styles.claimRowText}>
-                <Text style={styles.claimLabel}>Machine ID</Text>
-                <Text style={styles.claimValue}>{result.machineId}</Text>
-              </View>
-            </View>
-
-            {/* Location */}
-            <View style={styles.claimRow}>
-              <View style={styles.claimIconBox}>
-                <Ionicons name="location-outline" size={18} color={Colors.primary} />
-              </View>
-              <View style={styles.claimRowText}>
-                <Text style={styles.claimLabel}>Location</Text>
-                <Text style={styles.claimValue}>{result.location}</Text>
-              </View>
-            </View>
-
             {/* Recycle Types */}
             <View style={styles.claimRow}>
               <View style={styles.claimIconBox}>
@@ -211,18 +178,20 @@ const ClaimModal = ({ result, visible, onCancel, onClaim, isClaiming }: ClaimMod
               </View>
               <View style={styles.claimRowText}>
                 <Text style={styles.claimLabel}>Items Recycled</Text>
-                {result.recycleTypes.map((t) => (
-                  <Text key={t} style={styles.claimValue}>• {t}</Text>
+                {result.items.map((item, i) => (
+                  <Text key={i} style={styles.claimValue}>
+                    • {item.itemType === 'plastic_bottle' ? 'Plastic Bottle' : item.itemType === 'can' ? 'Aluminum Can' : item.itemType} ×{item.quantity}
+                  </Text>
                 ))}
               </View>
             </View>
 
             {/* Points */}
             <View style={styles.pointsHighlight}>
-              <Text style={styles.pointsHighlightLabel}>Estimated Points</Text>
+              <Text style={styles.pointsHighlightLabel}>Total Points</Text>
               <View style={styles.pointsHighlightValue}>
                 <Text style={styles.pointsEmoji}>🍃</Text>
-                <Text style={styles.pointsNumber}>+{result.estimatedPoints}</Text>
+                <Text style={styles.pointsNumber}>+{result.totalPoints}</Text>
                 <Text style={styles.pointsUnit}>pts</Text>
               </View>
             </View>
@@ -265,8 +234,10 @@ export default function QRScanScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
-  const [scanResult, setScanResult] = useState<MockScanResult | null>(null);
+  const [scanResult, setScanResult] = useState<ScanPreview | null>(null);
   const hasScanned = useRef(false);
+  const invalidateUserData = useInvalidateUserData();
+  const refreshProfile = useUserStore((s) => s.refreshProfile);
 
   useEffect(() => {
     if (!permission?.granted) requestPermission();
@@ -283,13 +254,35 @@ export default function QRScanScreen() {
       Vibration.vibrate([0, 80, 60, 80]);
     }
 
-    // Simulate API delay
-    setTimeout(() => {
-      const result = getMockScanResult(data);
-      setScanResult(result);
-      setModalVisible(true);
+    // Parse the signed QR payload JSON
+    const payload = parseQrPayload(data);
+    if (!payload) {
+      Alert.alert('Invalid QR Code', 'This QR code is not from a GreenGuard machine.');
+      hasScanned.current = false;
       setIsProcessing(false);
-    }, 800);
+      setScanSuccess(false);
+      return;
+    }
+
+    // Check expiry client-side for instant feedback
+    if (new Date(payload.expiresAt) < new Date()) {
+      Alert.alert('Expired', 'This QR code has expired. Please recycle again to get a new one.');
+      hasScanned.current = false;
+      setIsProcessing(false);
+      setScanSuccess(false);
+      return;
+    }
+
+    setScanResult({
+      claimToken: payload.claimToken,
+      totalItems: payload.totalItems,
+      totalPoints: payload.totalPoints,
+      items: payload.items,
+      expiresAt: payload.expiresAt,
+      rawQr: payload.raw || data.trim(),
+    });
+    setModalVisible(true);
+    setIsProcessing(false);
   }, [isProcessing]);
 
   const handleCancel = () => {
@@ -301,11 +294,43 @@ export default function QRScanScreen() {
 
   const handleClaim = async () => {
     setIsClaiming(true);
-    // Mock claim
-    await new Promise((r) => setTimeout(r, 1500));
-    setIsClaiming(false);
-    setModalVisible(false);
-    router.back();
+    try {
+      const result = await scanService.claimContribution(
+        scanResult!.claimToken,
+        scanResult!.rawQr,
+      );
+      const currentUser = useUserStore.getState().user;
+      if (currentUser) {
+        useUserStore.getState().setUser({
+          ...currentUser,
+          totalPoints: result.totalBalance,
+        });
+      }
+      await refreshProfile();
+      invalidateUserData();
+      setIsClaiming(false);
+      setModalVisible(false);
+      Alert.alert(
+        'Points Claimed!',
+        `+${result.pointsEarned} pts · Balance: ${result.totalBalance}`,
+        [{ text: 'OK', onPress: () => router.back() }],
+      );
+    } catch (error: any) {
+      setIsClaiming(false);
+      const status = error?.response?.status;
+      const message = getApiErrorMessage(error, 'Something went wrong. Please try again.');
+
+      if (status === 409) {
+        Alert.alert('Already Claimed', message);
+      } else if (status === 410) {
+        Alert.alert('Expired', message);
+      } else if (status === 404) {
+        Alert.alert('Not Found', 'Session not found. Please try again in a moment.');
+      } else {
+        Alert.alert('Error', message);
+      }
+      handleCancel();
+    }
   };
 
   // ── Permission loading
@@ -439,7 +464,7 @@ export default function QRScanScreen() {
           </View>
 
           {/* History */}
-          <TouchableOpacity style={styles.bottomAction} onPress={() => router.push('/history')}>
+          <TouchableOpacity style={styles.bottomAction} onPress={() => router.push('/history' as any)}>
             <Ionicons name="time-outline" size={26} color={Colors.textWhite} />
             <Text style={styles.bottomActionLabel}>History</Text>
           </TouchableOpacity>

@@ -148,19 +148,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundSplash,
   },
   background: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: '#0A1A0A',
   },
   overlayDark: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 30, 0, 0.85)',
   },
   overlayGreen: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(10, 50, 10, 0.4)',
   },
   dotsPattern: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
   },
   dot: {
     position: 'absolute',

@@ -61,7 +61,7 @@ export default function RootLayout() {
   }, [fontsLoaded, fontError]);
 
   useEffect(() => {
-    if (!isReady || (!fontsLoaded && !fontError)) return;
+    if (!isReady || isLoading || (!fontsLoaded && !fontError)) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const isSplash = segments[0] === 'splash' || !segments[0]; // !segments[0] is index
@@ -76,7 +76,7 @@ export default function RootLayout() {
         router.replace('/(tabs)/home');
       }
     }
-  }, [isAuthenticated, isReady, segments, fontsLoaded, fontError]);
+  }, [isAuthenticated, isLoading, isReady, segments, fontsLoaded, fontError, router]);
 
   if (!fontsLoaded && !fontError) {
     return null;
@@ -109,6 +109,13 @@ export default function RootLayout() {
           />
           <Stack.Screen name="impact" />
           <Stack.Screen name="history" />
+          <Stack.Screen
+            name="wallet"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
         </Stack>
         {/* Global notification overlay */}
         <NotificationProvider />

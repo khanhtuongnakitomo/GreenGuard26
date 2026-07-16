@@ -3,10 +3,8 @@
  */
 import { create } from 'zustand';
 import { User, UserStats } from '@/types/user.types';
-import { MOCK_USER_STATS } from '@/constants/mockData';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const USERS_DB_KEY = '@greenguard/users_db';
+import { userService } from '@/services/user.service';
+import { mapImpactToStats, mapUser } from '@/utils/mappers';
 
 interface UserState {
   user: User | null;
@@ -14,47 +12,42 @@ interface UserState {
   setUser: (user: User) => void;
   setStats: (stats: UserStats) => void;
   clearUser: () => void;
-  loadUser: (userId: string) => Promise<boolean>;
+  refreshProfile: () => Promise<boolean>;
   updateUser: (partialUser: Partial<User>) => Promise<void>;
 }
 
 export const useUserStore = create<UserState>((set, get) => ({
-  user: null, // Start null to prevent showing mock user before login
-  stats: MOCK_USER_STATS,
+  user: null,
+  stats: null,
 
   setUser: (user) => set({ user }),
   setStats: (stats) => set({ stats }),
   clearUser: () => set({ user: null, stats: null }),
 
-  loadUser: async (userId) => {
-    const usersStr = await AsyncStorage.getItem(USERS_DB_KEY);
-    if (usersStr) {
-      const users = JSON.parse(usersStr);
-      const found = users.find((u: any) => u.id === userId);
-      if (found) {
-        set({ user: found, stats: MOCK_USER_STATS });
-        return true;
-      }
+  refreshProfile: async () => {
+    try {
+      const summary = await userService.getSummary();
+      set({
+        user: summary.user,
+        stats: mapImpactToStats(summary.impact),
+      });
+      return true;
+    } catch {
+      return false;
     }
-    return false;
   },
 
   updateUser: async (partialUser) => {
     const currentUser = get().user;
     if (!currentUser) return;
-    
-    const updatedUser = { ...currentUser, ...partialUser };
-    set({ user: updatedUser });
 
-    // Save back to DB
-    const usersStr = await AsyncStorage.getItem(USERS_DB_KEY);
-    if (usersStr) {
-      const users = JSON.parse(usersStr);
-      const index = users.findIndex((u: any) => u.id === currentUser.id);
-      if (index !== -1) {
-        users[index] = updatedUser;
-        await AsyncStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
-      }
-    }
+    const dto = await userService.updateProfile({
+      displayName: partialUser.name,
+      className: partialUser.className,
+      studentId: partialUser.studentId,
+      avatar: partialUser.avatarUrl,
+    });
+
+    set({ user: mapUser(dto) });
   },
 }));

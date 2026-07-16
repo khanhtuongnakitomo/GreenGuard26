@@ -10,6 +10,8 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -20,6 +22,8 @@ import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme'
 import { TextInput } from '@/components/common/TextInput';
 import { Button } from '@/components/common/Button';
 import { useResponsive } from '@/hooks/useResponsive';
+import { authService } from '@/services/auth.service';
+import { getApiErrorMessage } from '@/utils/mappers';
 
 // ─── Password strength ─────────────────────────────────────────────────────────
 
@@ -74,7 +78,7 @@ interface FormValues {
 
 export default function ResetPasswordScreen() {
   const { isLargeScreen } = useResponsive();
-  const params = useLocalSearchParams<{ phone?: string }>();
+  const params = useLocalSearchParams<{ phone?: string; otp?: string }>();
   const [isLoading, setIsLoading] = useState(false);
 
   const { control, handleSubmit, watch, formState: { errors } } = useForm<FormValues>({
@@ -84,10 +88,22 @@ export default function ResetPasswordScreen() {
   const password = watch('password');
 
   const onSubmit = async (values: FormValues) => {
+    if (values.password !== values.confirmPassword) return;
+    if (!params.phone || !params.otp) {
+      Alert.alert('Error', 'Missing verification details. Please restart the reset flow.');
+      return;
+    }
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 1400));
-    setIsLoading(false);
-    router.push('/(auth)/password-changed');
+    try {
+      await authService.resetPassword(params.phone, params.otp, values.password);
+      router.push('/(auth)/password-changed' as any);
+    } catch (err) {
+      const message = getApiErrorMessage(err, 'Failed to reset password');
+      if (Platform.OS === 'web') window.alert(message);
+      else Alert.alert('Error', message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

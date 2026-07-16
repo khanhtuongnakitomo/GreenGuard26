@@ -9,6 +9,8 @@ export async function createMachine(input: {
   locationName: string;
   locationType: string;
   apiKey: string;
+  latitude?: number;
+  longitude?: number;
 }) {
   return MachineModel.create({
     machineCode: input.machineCode || generateMachineCode(),
@@ -16,12 +18,20 @@ export async function createMachine(input: {
     locationName: input.locationName,
     locationType: input.locationType,
     apiKeyHash: await hashApiKey(input.apiKey),
-    status: "offline"
+    status: "offline",
+    latitude: input.latitude,
+    longitude: input.longitude
   });
 }
 
 export async function getMachines() {
   return MachineModel.find().sort({ createdAt: -1 });
+}
+
+export async function getPublicMachines() {
+  return MachineModel.find({ status: { $ne: "disabled" } })
+    .select("machineCode name locationName locationType status lastSeenAt latitude longitude bins")
+    .sort({ name: 1 });
 }
 
 export async function getMachineById(machineId: string) {

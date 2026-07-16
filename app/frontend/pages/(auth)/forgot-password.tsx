@@ -22,6 +22,8 @@ import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme'
 import { TextInput } from '@/components/common/TextInput';
 import { Button } from '@/components/common/Button';
 import { useResponsive } from '@/hooks/useResponsive';
+import { authService } from '@/services/auth.service';
+import { getApiErrorMessage } from '@/utils/mappers';
 
 interface FormValues { phone: string }
 
@@ -35,10 +37,19 @@ export default function ForgotPasswordScreen() {
 
   const onSubmit = async ({ phone }: FormValues) => {
     setIsLoading(true);
-    // Mock API
-    await new Promise((r) => setTimeout(r, 1200));
-    setIsLoading(false);
-    router.push({ pathname: '/(auth)/otp-verify', params: { phone } });
+    try {
+      const res = await authService.requestOtp(phone, 'reset_password');
+      router.push({
+        pathname: '/(auth)/otp-verify',
+        params: { phone, purpose: 'reset_password', otp: res.devOtp ?? '' },
+      } as any);
+    } catch (err) {
+      const message = getApiErrorMessage(err, 'Failed to send OTP');
+      if (Platform.OS === 'web') window.alert(message);
+      else Alert.alert('Error', message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

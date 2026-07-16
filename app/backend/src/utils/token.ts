@@ -13,3 +13,7 @@ export function generateRefreshToken(user: AuthUser) {
 export function verifyAccessToken(token: string) {
   return jwt.verify(token, env.JWT_ACCESS_SECRET) as AuthUser;
 }
+
+export function verifyRefreshToken(token: string) {
+  return jwt.verify(token, env.JWT_REFRESH_SECRET) as AuthUser;
+}

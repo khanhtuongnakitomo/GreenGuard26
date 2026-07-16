@@ -15,7 +15,7 @@ const EnvSchema = z.object({
   CLAIM_TOKEN_EXPIRES_MINUTES: z.coerce.number().default(15),
   OTP_EXPIRES_MINUTES: z.coerce.number().default(5),
   FRONTEND_ORIGIN: z.string().url().default("http://localhost:3000"),
-  QR_SIGNING_SECRET: z.string().min(16).default("dev_qr_signing_secret_1234567890"),
+  QR_SECRET: z.string().min(16).default("dev_qr_signing_secret_1234567890"),
 });
 
 export const env = EnvSchema.parse(process.env);

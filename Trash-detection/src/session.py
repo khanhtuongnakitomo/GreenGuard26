@@ -72,9 +72,12 @@ class RecyclingSession:
             expires_at_str=expires_str
         )
         
-        # Fire off the API request (we don't strictly need to block on it, but we want it done)
-        api_client.report_session(claim_token, items_list)
-        
+        ok, err = api_client.report_session(claim_token, items_list)
+        if not ok:
+            print(f"Failed to register session with backend: {err}")
+            self.transition("idle")
+            return
+
         self.qr_image = qr_generator.generate_qr_image(qr_string, box_size=8, border=4)
         self.transition("qr_display")
 

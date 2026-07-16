@@ -32,3 +32,17 @@ export const verifyOtpSchema = z.object({
     otp: z.string().min(4).max(8)
   })
 });
+
+export const refreshTokenSchema = z.object({
+  body: z.object({
+    refreshToken: z.string().min(1)
+  })
+});
+
+export const resetPasswordSchema = z.object({
+  body: z.object({
+    phoneNumber: z.string().min(8),
+    otp: z.string().min(4).max(8),
+    newPassword: z.string().min(6)
+  })
+});

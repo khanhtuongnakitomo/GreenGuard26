@@ -4,6 +4,7 @@ import { ITEM_TYPES } from "../../types/enums";
 export const createContributionSchema = z.object({
   body: z.object({
     machineCode: z.string().min(1),
+    claimToken: z.string().min(1),
     items: z.array(
       z.object({
         itemType: z.enum(ITEM_TYPES),
@@ -15,7 +16,9 @@ export const createContributionSchema = z.object({
 
 export const claimContributionSchema = z.object({
   body: z.object({
-    claimToken: z.string().min(1)
+    claimToken: z.string().min(1),
+    /** Full QR JSON string — used to create the session if machine POST was missed/late */
+    rawQr: z.string().min(1).optional()
   })
 });
 

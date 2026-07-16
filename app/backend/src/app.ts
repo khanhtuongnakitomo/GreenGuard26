@@ -23,7 +23,18 @@ import { voucherRoutes } from "./modules/vouchers/voucher.routes";
 export const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: env.FRONTEND_ORIGIN, credentials: true }));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow mobile apps / tools with no Origin, plus configured web origin
+      if (!origin || origin === env.FRONTEND_ORIGIN || env.NODE_ENV !== "production") {
+        return callback(null, true);
+      }
+      return callback(null, env.FRONTEND_ORIGIN);
+    },
+    credentials: true
+  })
+);
 app.use(express.json());
 app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 

@@ -1,9 +1,10 @@
-import React, { memo } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   ScrollView,
   View,
   Text,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,24 +18,56 @@ import { RewardListItem } from '@/components/home/RewardListItem';
 import { BottleIcon } from '@/components/icons/BottleIcon';
 import { PaperIcon } from '@/components/icons/PaperIcon';
 import { CalendarIcon } from '@/components/icons/CalendarIcon';
+import { EmptyState } from '@/components/common/EmptyState';
 import { Colors, Spacing, FontSize, FontWeight } from '@/theme';
 import { useUserStore } from '@/store/userStore';
 import { useResponsive } from '@/hooks/useResponsive';
-import { MOCK_HOME_REWARDS } from '@/constants/mockData';
+import { useHomeRewards, useUserSummary } from '@/hooks/useApi';
+import { emptyUserStats } from '@/utils/mappers';
 
 export default function HomeScreen() {
   const { isLargeScreen } = useResponsive();
   const user = useUserStore((s) => s.user);
-  const stats = useUserStore((s) => s.stats);
+  const stats = useUserStore((s) => s.stats) ?? emptyUserStats();
+  const { isLoading: summaryLoading, isError, refetch } = useUserSummary();
+  const { data: homeRewards = [], isLoading: rewardsLoading } = useHomeRewards();
 
-  if (!user || !stats) return null;
+  if (summaryLoading && !user) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <EmptyState
+          title={isError ? 'Could not load home' : 'Loading profile…'}
+          description={
+            isError
+              ? 'Check that the API is reachable, then tap retry.'
+              : 'Fetching your account…'
+          }
+        />
+        {isError && (
+          <Text style={styles.retry} onPress={() => refetch()}>
+            Tap to retry
+          </Text>
+        )}
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {!isLargeScreen && (
         <AppHeader
           rightIcon="bell"
-          onRightIconPress={() => {}}
+          onRightIconPress={() => router.push('/wallet' as any)}
         />
       )}
 
@@ -44,77 +77,76 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={isLargeScreen ? styles.desktopHeaderRow : undefined}>
-           <Text style={styles.greeting}>Hi, {user.name}!</Text>
-           {isLargeScreen && (
-             <AppHeader rightIcon="bell" onRightIconPress={() => {}} hideLogo />
-           )}
+          <Text style={styles.greeting}>Hi, {user.name}!</Text>
+          {isLargeScreen && (
+            <AppHeader rightIcon="bell" onRightIconPress={() => router.push('/wallet' as any)} hideLogo />
+          )}
         </View>
 
-        {/* Points card */}
-        <PointsBanner
-          user={user}
-          stats={stats}
-          style={styles.pointsBanner}
-        />
+        <PointsBanner user={user} stats={stats} style={styles.pointsBanner} />
 
-        {/* Scan QR banner - Mobile only */}
         {!isLargeScreen && <ScanQRBanner style={styles.scanBanner} />}
 
-        {/* Two column layout on desktop */}
         <View style={[styles.bottomSection, isLargeScreen && styles.bottomSectionDesktop]}>
-           
-           <View style={[styles.column, isLargeScreen && styles.columnLeft]}>
-             {/* My Impact */}
-             <View style={styles.section}>
-               <SectionHeader
-                 title="My Impact"
-                 linkLabel="View details ›"
-                 onLinkPress={() => router.push('/impact')}
-               />
-               <View style={styles.statsRow}>
-                 <StatCard
-                   label="Month"
-                   value={stats.monthlyBottles}
-                   unit="bottles"
-                   icon={<BottleIcon size={24} color={Colors.primary} />}
-                 />
-                 <StatCard
-                   label="Year"
-                   value={stats.yearlyBottles}
-                   unit="bottles"
-                   icon={<PaperIcon size={24} color={Colors.primary} />}
-                 />
-                 <StatCard
-                   label="All time"
-                   value={stats.allTimeBottles}
-                   unit="bottles"
-                   icon={<CalendarIcon size={24} color={Colors.primary} />}
-                 />
-               </View>
-             </View>
-           </View>
+          <View style={[styles.column, isLargeScreen && styles.columnLeft]}>
+            <View style={styles.section}>
+              <SectionHeader
+                title="My Impact"
+                linkLabel="View details ›"
+                onLinkPress={() => router.push('/impact' as any)}
+              />
+              <View style={styles.statsRow}>
+                <StatCard
+                  label="Month"
+                  value={stats.monthlyBottles}
+                  unit="bottles"
+                  icon={<BottleIcon size={24} color={Colors.primary} />}
+                />
+                <StatCard
+                  label="Cans"
+                  value={stats.monthlyCans}
+                  unit="this month"
+                  icon={<PaperIcon size={24} color={Colors.primary} />}
+                />
+                <StatCard
+                  label="All time"
+                  value={stats.allTimeBottles}
+                  unit="bottles"
+                  icon={<CalendarIcon size={24} color={Colors.primary} />}
+                />
+              </View>
+            </View>
+          </View>
 
-           <View style={[styles.column, isLargeScreen && styles.columnRight]}>
-             {/* Rewards */}
-             <View style={styles.section}>
-               <SectionHeader
-                 title="Rewards"
-                 linkLabel="View all ›"
-                 onLinkPress={() => router.push('/(tabs)/rewards')}
-               />
-               {MOCK_HOME_REWARDS.slice(0, 3).map((reward) => (
-                 <RewardListItem
-                   key={reward.id}
-                   reward={reward}
-                   onPress={() => router.push({ pathname: '/rewards/voucher-claim', params: { id: reward.id } })}
-                 />
-               ))}
-             </View>
-           </View>
-
+          <View style={[styles.column, isLargeScreen && styles.columnRight]}>
+            <View style={styles.section}>
+              <SectionHeader
+                title="Rewards"
+                linkLabel="View all ›"
+                onLinkPress={() => router.push('/(tabs)/rewards')}
+              />
+              {rewardsLoading && homeRewards.length === 0 ? (
+                <ActivityIndicator color={Colors.primary} />
+              ) : homeRewards.length === 0 ? (
+                <Text style={styles.emptyText}>No rewards available yet.</Text>
+              ) : (
+                homeRewards.slice(0, 3).map((reward) => (
+                  <RewardListItem
+                    key={reward.id}
+                    reward={reward}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/rewards/voucher-claim',
+                        params: { id: reward.id },
+                      } as any)
+                    }
+                  />
+                ))
+              )}
+            </View>
+          </View>
         </View>
 
-        {/* Bottom spacer for tab bar */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
@@ -125,6 +157,11 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: Colors.backgroundScreen,
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scroll: {
     flex: 1,
@@ -183,6 +220,16 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
+  },
+  emptyText: {
+    color: Colors.textMuted,
+    fontSize: FontSize.base,
+  },
+  retry: {
+    textAlign: 'center',
+    color: Colors.primary,
+    fontWeight: FontWeight.semiBold,
+    marginBottom: Spacing.xl,
   },
   bottomSpacer: {
     height: Spacing.base,

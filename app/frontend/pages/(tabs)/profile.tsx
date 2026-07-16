@@ -11,7 +11,7 @@
  * 7. RankingCard (Silver tier + progress bar)
  * 8. History section with time filter tabs + HistoryRows
  */
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -34,22 +34,46 @@ import { RankingCard } from '@/components/profile/RankingCard';
 import { HistoryRow } from '@/components/profile/HistoryRow';
 import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
 import { useUserStore } from '@/store/userStore';
-import { MOCK_HISTORY } from '@/constants/mockData';
 import { formatPoints } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
 import { router } from 'expo-router';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useHistory, useUserSummary } from '@/hooks/useApi';
+import type { HistoryEntry } from '@/types/user.types';
 
 const HISTORY_FILTERS = [
   { value: '1day', label: '1 Days' },
   { value: '1week', label: '1 Weeks' },
 ];
 
+function toHistoryEntries(txs: Array<{ _id: string; description?: string; points: number; createdAt: string; type: string }>): HistoryEntry[] {
+  return txs.slice(0, 5).map((tx) => ({
+    id: tx._id,
+    createdAt: tx.createdAt,
+    items: [
+      {
+        type: tx.description || tx.type,
+        quantity: 1,
+        pointsEarned: Math.abs(tx.points),
+      },
+    ],
+  }));
+}
+
 export default function ProfileScreen() {
   const { isLargeScreen } = useResponsive();
   const user = useUserStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [historyFilter, setHistoryFilter] = useState('1day');
+  useUserSummary();
+  const { data: transactions = [] } = useHistory();
+
+  const filteredHistory = useMemo(() => {
+    const now = Date.now();
+    const windowMs = historyFilter === '1day' ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+    const recent = transactions.filter((tx) => now - new Date(tx.createdAt).getTime() <= windowMs);
+    return toHistoryEntries(recent.length ? recent : transactions);
+  }, [transactions, historyFilter]);
 
   const handleLogout = async () => {
     if (Platform.OS === 'web') {
@@ -123,8 +147,12 @@ export default function ProfileScreen() {
 
               {/* User info */}
               <Text style={styles.userName}>{user.name}</Text>
-              <Text style={styles.userInfo}>{user.dateOfBirth}</Text>
-              <Text style={styles.userInfo}>{user.location}</Text>
+              <Text style={styles.userInfo}>{user.phoneNumber}</Text>
+              {(user.className || user.studentId) && (
+                <Text style={styles.userInfo}>
+                  {[user.className, user.studentId].filter(Boolean).join(' · ')}
+                </Text>
+              )}
 
               {/* Edit Profile button */}
               <Button
@@ -153,7 +181,7 @@ export default function ProfileScreen() {
             <SectionHeader
               title="History"
               linkLabel="View more"
-              onLinkPress={() => router.push('/history')}
+              onLinkPress={() => router.push('/history' as any)}
               style={styles.historySectionHeader}
             />
 
@@ -164,9 +192,15 @@ export default function ProfileScreen() {
               style={styles.historyFilterTabs}
             />
 
-            {MOCK_HISTORY.map((entry) => (
-              <HistoryRow key={entry.id} entry={entry} />
-            ))}
+            {filteredHistory.length === 0 ? (
+              <Text style={{ color: Colors.textMuted, marginBottom: Spacing.md }}>
+                No recent activity.
+              </Text>
+            ) : (
+              filteredHistory.map((entry) => (
+                <HistoryRow key={entry.id} entry={entry} />
+              ))
+            )}
             
             {/* Logout Button */}
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>

@@ -35,8 +35,8 @@ import { Colors, Spacing, FontSize, FontWeight, Shadows } from '@/theme';
 import { signUpSchema, SignUpFormValues } from '@/utils/validators';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth.service';
-
 import { useResponsive } from '@/hooks/useResponsive';
+import { getApiErrorMessage } from '@/utils/mappers';
 
 export default function SignUpScreen() {
   const { isLargeScreen } = useResponsive();
@@ -52,10 +52,10 @@ export default function SignUpScreen() {
   } = useForm<SignUpFormValues>({
     resolver: yupResolver(signUpSchema),
     defaultValues: {
-      email: '',
+      phoneNumber: '',
       password: '',
       confirmPassword: '',
-      username: '',
+      displayName: '',
       agreedToTerms: false,
     },
   });
@@ -65,20 +65,19 @@ export default function SignUpScreen() {
   const onSubmit = async (values: SignUpFormValues) => {
     try {
       setIsLoading(true);
-      await authService.signUp(values);
-      if (Platform.OS === 'web') {
-        window.alert('Account created successfully. Please log in.');
-        router.replace('/(auth)/sign-in');
-      } else {
-        Alert.alert('Success', 'Account created successfully. Please log in.', [
-          { text: 'OK', onPress: () => router.replace('/(auth)/sign-in') }
-        ]);
-      }
+      const response = await authService.signUp(values);
+      await login(
+        response.accessToken,
+        response.refreshToken,
+        response.user._id,
+        response.user,
+      );
     } catch (error: any) {
+      const message = getApiErrorMessage(error, 'Please try again later.');
       if (Platform.OS === 'web') {
-        window.alert(error.message || 'Please try again later.');
+        window.alert(message);
       } else {
-        Alert.alert('Sign Up Failed', error.message || 'Please try again later.');
+        Alert.alert('Sign Up Failed', message);
       }
     } finally {
       setIsLoading(false);
@@ -107,19 +106,35 @@ export default function SignUpScreen() {
           </View>
           <Text style={styles.title}>Create new account</Text>
 
-          {/* Email */}
+          {/* Phone */}
           <Controller
             control={control}
-            name="email"
+            name="phoneNumber"
             render={({ field: { onChange, value, onBlur } }) => (
               <TextInput
-                label="Email Address"
-                placeholder="Enter your email address"
-                keyboardType="email-address"
+                label="Phone Number"
+                placeholder="Enter your phone number"
+                keyboardType="phone-pad"
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
-                error={errors.email?.message}
+                error={errors.phoneNumber?.message}
+              />
+            )}
+          />
+
+          {/* Display name */}
+          <Controller
+            control={control}
+            name="displayName"
+            render={({ field: { onChange, value, onBlur } }) => (
+              <TextInput
+                label="Display Name"
+                placeholder="Enter your name"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.displayName?.message}
               />
             )}
           />
@@ -131,7 +146,7 @@ export default function SignUpScreen() {
             render={({ field: { onChange, value, onBlur } }) => (
               <TextInput
                 label="Password"
-                placeholder="Enter your password (min 8 characters)"
+                placeholder="Enter your password (min 6 characters)"
                 showPasswordToggle
                 value={value}
                 onChangeText={onChange}
@@ -154,24 +169,6 @@ export default function SignUpScreen() {
                 onChangeText={onChange}
                 onBlur={onBlur}
                 error={errors.confirmPassword?.message}
-              />
-            )}
-          />
-
-          {/* Username */}
-          <Controller
-            control={control}
-            name="username"
-            render={({ field: { onChange, value, onBlur } }) => (
-              <TextInput
-                label="Username"
-                placeholder="Enter your username"
-                showPasswordToggle={false}
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.username?.message}
-                autoCapitalize="none"
               />
             )}
           />

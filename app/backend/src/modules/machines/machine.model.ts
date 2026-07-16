@@ -37,7 +37,9 @@ const MachineSchema = new Schema(
     },
     lastSeenAt: Date,
     totalSessions: { type: Number, default: 0 },
-    bins: { type: [BinCapacitySchema], default: [] }
+    bins: { type: [BinCapacitySchema], default: [] },
+    latitude: { type: Number },
+    longitude: { type: Number }
   },
   { timestamps: true }
 );

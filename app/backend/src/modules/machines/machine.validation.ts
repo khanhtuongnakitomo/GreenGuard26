@@ -6,7 +6,9 @@ export const createMachineSchema = z.object({
     name: z.string().min(1),
     locationName: z.string().min(1),
     locationType: z.enum(["canteen", "parking", "library", "classroom_area", "other"]).default("other"),
-    apiKey: z.string().min(8)
+    apiKey: z.string().min(8),
+    latitude: z.number().optional(),
+    longitude: z.number().optional()
   })
 });
 
@@ -16,7 +18,9 @@ export const updateMachineSchema = z.object({
     name: z.string().optional(),
     locationName: z.string().optional(),
     locationType: z.enum(["canteen", "parking", "library", "classroom_area", "other"]).optional(),
-    status: z.enum(["online", "offline", "maintenance", "disabled"]).optional()
+    status: z.enum(["online", "offline", "maintenance", "disabled"]).optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional()
   })
 });
 

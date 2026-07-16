@@ -53,7 +53,9 @@ export const RewardListItem = memo<RewardListItemProps>(({ reward, onPress, styl
       <View style={styles.rightSection}>
         {reward.pointsValue ? (
           <Text style={[styles.pointsValue, { color: brandColor }]}>
-            {(reward.pointsValue / 1000).toFixed(0)}k
+            {reward.pointsValue >= 1000
+              ? `${(reward.pointsValue / 1000).toFixed(reward.pointsValue % 1000 === 0 ? 0 : 1)}k`
+              : String(reward.pointsValue)}
           </Text>
         ) : (
           <Ionicons name="gift-outline" size={18} color={brandColor} />

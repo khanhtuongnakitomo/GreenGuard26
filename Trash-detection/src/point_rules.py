@@ -1,6 +1,7 @@
+# Must match app/backend/src/config/constants.ts POINT_RULES
 POINT_RULES = {
-    "plastic_bottle": 8,
-    "can": 10,
+    "plastic_bottle": 10,
+    "can": 8,
     "carton": 6,
 }
 
@@ -10,6 +11,7 @@ CLASS_NAME_MAP = {
     "tin_can": "can",
     "milk_carton": "carton",
 }
+
 
 def calculate_points(items):
     """

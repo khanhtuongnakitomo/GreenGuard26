@@ -10,7 +10,9 @@ export async function createContributionSession(req: Request, res: Response) {
 }
 
 export async function claimContributionSession(req: Request, res: Response) {
-  res.json(await service.claimSessionForUser(req.user!.id, req.body.claimToken));
+  res.json(
+    await service.claimSessionForUser(req.user!.id, req.body.claimToken, req.body.rawQr)
+  );
 }
 
 export async function getContributionSession(req: Request, res: Response) {

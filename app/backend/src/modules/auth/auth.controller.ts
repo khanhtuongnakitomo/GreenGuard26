@@ -24,3 +24,13 @@ export async function logout(_req: Request, res: Response) {
 export async function getCurrentUser(req: Request, res: Response) {
   res.json(await authService.getCurrentUser(req.user!.id));
 }
+
+export async function refreshTokens(req: Request, res: Response) {
+  res.json(await authService.refreshAuthTokens(req.body.refreshToken));
+}
+
+export async function resetPassword(req: Request, res: Response) {
+  res.json(
+    await authService.resetPasswordWithOtp(req.body.phoneNumber, req.body.otp, req.body.newPassword)
+  );
+}

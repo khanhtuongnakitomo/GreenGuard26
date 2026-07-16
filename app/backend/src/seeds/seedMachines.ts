@@ -3,9 +3,9 @@ import { hashApiKey } from "../utils/hash";
 
 export async function seedMachines() {
   await MachineModel.updateOne(
-    { machineCode: "DHBK-H1" },
+    { machineCode: "0001" },
     {
-      machineCode: "DHBK-H1",
+      machineCode: "0001",
       name: "Smart Bin H1",
       locationName: "DHBK Main Hall",
       locationType: "classroom_area",

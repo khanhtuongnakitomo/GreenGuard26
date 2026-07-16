@@ -2,20 +2,48 @@
  * GreenGuard — TypeScript Types: Reward
  */
 
-export type RewardStatus = 'claimable' | 'claimed' | 'expired';
+export type RewardStatus = 'claimable' | 'claimed' | 'expired' | 'out_of_stock';
 export type TaskStatus = 'in_progress' | 'completed';
+
+export interface PartnerInfo {
+  _id: string;
+  name: string;
+  type?: string;
+  logoUrl?: string;
+  description?: string;
+}
+
+export interface ApiReward {
+  _id: string;
+  partnerId: PartnerInfo | string;
+  name: string;
+  description?: string;
+  rewardType: string;
+  pointsRequired: number;
+  valueVnd?: number;
+  quantityTotal?: number;
+  quantityRemaining?: number;
+  validFrom?: string;
+  validUntil?: string;
+  terms?: string[];
+  status: string;
+}
 
 export interface Reward {
   id: string;
   brandId: string;
   brandName: string;
   brandLogoUrl?: string;
-  brandColor?: string;       // e.g. "#E53935" for CocaCola
-  title: string;             // "1 CocaCola Bottle"
+  brandColor?: string;
+  title: string;
   description?: string;
-  expiresAt: string;         // "30 Jun 2026"
+  expiresAt: string;
   status: RewardStatus;
-  pointsValue?: number;      // for point-based rewards like "2k"
+  pointsValue: number;
+  valueVnd?: number;
+  remainingQty?: number;
+  terms: string[];
+  rewardType: string;
 }
 
 export interface Task {
@@ -24,9 +52,9 @@ export interface Task {
   brandName: string;
   brandLogoUrl?: string;
   brandColor?: string;
-  title: string;             // "Obtain 100pts"
-  targetPoints: number;      // 100
-  currentPoints: number;     // 80
+  title: string;
+  targetPoints: number;
+  currentPoints: number;
   expiresAt: string;
   status: TaskStatus;
 }
@@ -40,4 +68,25 @@ export interface WasteBreakdown {
 export interface TotalAmount {
   totalKg: number;
   breakdown: WasteBreakdown[];
+}
+
+export interface UserVoucher {
+  _id: string;
+  userId: string;
+  rewardId: ApiReward | string;
+  partnerId: PartnerInfo | string;
+  redeemCode: string;
+  pointsUsed: number;
+  status: 'unused' | 'used' | 'expired' | 'cancelled';
+  issuedAt: string;
+  usedAt?: string;
+  expiresAt: string;
+  usedLocation?: string;
+}
+
+export interface RedeemResult {
+  reward: ApiReward;
+  transaction: unknown;
+  voucher: UserVoucher;
+  qrToken: string;
 }

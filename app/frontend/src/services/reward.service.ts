@@ -1,65 +1,72 @@
 /**
- * GreenGuard — Reward Service
+ * GreenGuard — Reward & Wallet Service
  */
 import api from './api';
-import { Reward, Task, TotalAmount } from '@/types/reward.types';
-import {
-  MOCK_REWARDS,
-  MOCK_TASKS,
-  MOCK_TOTAL_AMOUNT,
-  MOCK_HOME_REWARDS,
-} from '@/constants/mockData';
-
-const USE_MOCK = true;
+import type { ApiReward, RedeemResult, Reward, TotalAmount, UserVoucher } from '@/types/reward.types';
+import type { ImpactStats } from '@/types/user.types';
+import { mapImpactToTotalAmount, mapReward } from '@/utils/mappers';
+import { userService } from './user.service';
 
 export const rewardService = {
-  async getRewards(filter?: string): Promise<Reward[]> {
-    if (USE_MOCK) {
-      await new Promise((res) => setTimeout(res, 500));
-      if (filter && filter !== 'All') {
-        return MOCK_REWARDS.filter((r) => r.brandName === filter);
-      }
-      return MOCK_REWARDS;
-    }
-    const { data } = await api.get<Reward[]>('/rewards', { params: { filter } });
-    return data;
+  async getRewards(): Promise<Reward[]> {
+    const { data } = await api.get<ApiReward[]>('/rewards');
+    return data.map((r, i) => mapReward(r, i));
   },
 
   async getHomeRewards(): Promise<Reward[]> {
-    if (USE_MOCK) {
-      await new Promise((res) => setTimeout(res, 500));
-      return MOCK_HOME_REWARDS;
-    }
-    const { data } = await api.get<Reward[]>('/rewards/home');
+    const rewards = await this.getRewards();
+    return rewards.filter((r) => r.status === 'claimable').slice(0, 5);
+  },
+
+  async getRewardById(rewardId: string): Promise<Reward> {
+    const { data } = await api.get<ApiReward>(`/rewards/${rewardId}`);
+    return mapReward(data);
+  },
+
+  async getTotalAmount(_period?: string): Promise<TotalAmount> {
+    const impact: ImpactStats = await userService.getImpact();
+    return mapImpactToTotalAmount(impact);
+  },
+
+  async getTasks(): Promise<
+    Array<{
+      id: string;
+      brandId: string;
+      brandName: string;
+      title: string;
+      targetPoints: number;
+      currentPoints: number;
+      expiresAt: string;
+      status: 'in_progress' | 'completed';
+    }>
+  > {
+    const { data } = await api.get('/milestones/me');
+    const rows = Array.isArray(data) ? data : [];
+
+    return rows.map((row: any) => ({
+      id: String(row.milestone?._id ?? row._id ?? Math.random()),
+      brandId: 'milestone',
+      brandName: 'Milestone',
+      title: row.milestone?.name ?? row.name ?? 'Milestone',
+      targetPoints: row.milestone?.targetValue ?? row.targetValue ?? 0,
+      currentPoints: row.currentValue ?? 0,
+      expiresAt: '',
+      status: row.achieved ? 'completed' : 'in_progress',
+    }));
+  },
+
+  async claimReward(rewardId: string): Promise<RedeemResult> {
+    const { data } = await api.post<RedeemResult>(`/rewards/${rewardId}/redeem`);
     return data;
   },
 
-  async getTasks(brandId?: string): Promise<Task[]> {
-    if (USE_MOCK) {
-      await new Promise((res) => setTimeout(res, 500));
-      if (brandId) {
-        return MOCK_TASKS.filter((t) => t.brandId === brandId);
-      }
-      return MOCK_TASKS;
-    }
-    const { data } = await api.get<Task[]>('/tasks', { params: { brandId } });
+  async getWallet(): Promise<UserVoucher[]> {
+    const { data } = await api.get<UserVoucher[]>('/wallet');
     return data;
   },
 
-  async getTotalAmount(period: '1day' | '1month' | 'alltime'): Promise<TotalAmount> {
-    if (USE_MOCK) {
-      await new Promise((res) => setTimeout(res, 500));
-      return MOCK_TOTAL_AMOUNT;
-    }
-    const { data } = await api.get<TotalAmount>('/rewards/total', { params: { period } });
+  async getVoucher(voucherId: string): Promise<UserVoucher> {
+    const { data } = await api.get<UserVoucher>(`/wallet/${voucherId}`);
     return data;
-  },
-
-  async claimReward(rewardId: string): Promise<void> {
-    if (USE_MOCK) {
-      await new Promise((res) => setTimeout(res, 800));
-      return;
-    }
-    await api.post(`/rewards/${rewardId}/claim`);
   },
 };

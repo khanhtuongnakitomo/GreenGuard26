@@ -7,6 +7,8 @@ import { createMachineSchema, machineIdSchema, updateMachineSchema, heartbeatSch
 
 export const machineRoutes = Router();
 
+machineRoutes.get("/public", controller.getPublicMachines);
+
 machineRoutes.use(authMiddleware);
 machineRoutes.get("/", requireRole("admin"), controller.getMachines);
 machineRoutes.get("/:machineId", requireRole("admin"), validate(machineIdSchema), controller.getMachineById);

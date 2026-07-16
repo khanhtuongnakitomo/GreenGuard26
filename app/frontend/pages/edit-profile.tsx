@@ -1,4 +1,4 @@
-import React, { useState, createElement } from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -20,80 +20,15 @@ import { Button } from '@/components/common/Button';
 import { Colors, Spacing, FontSize, FontWeight, Shadows } from '@/theme';
 import { useUserStore } from '@/store/userStore';
 import { useResponsive } from '@/hooks/useResponsive';
+import { getApiErrorMessage } from '@/utils/mappers';
 
 const editProfileSchema = Yup.object({
   name: Yup.string().required('Name is required'),
-  location: Yup.string().required('Location is required'),
-  dateOfBirth: Yup.string().required('Date of Birth is required'),
+  className: Yup.string().default(''),
+  studentId: Yup.string().default(''),
 });
 
 type EditProfileValues = Yup.InferType<typeof editProfileSchema>;
-
-const CITIES = [
-  'Hà Nội',
-  'TP. Hồ Chí Minh',
-  'Đà Nẵng',
-  'Hải Phòng',
-  'Cần Thơ',
-  'Nha Trang',
-  'Đà Lạt',
-  'Vũng Tàu',
-  'Huế',
-  'Biên Hòa',
-  'Hạ Long',
-];
-
-const webInputStyle = {
-  width: '100%',
-  height: 48,
-  borderRadius: 8,
-  borderWidth: 1.5,
-  borderStyle: 'solid',
-  borderColor: Colors.border,
-  paddingHorizontal: 16,
-  fontSize: 16,
-  backgroundColor: Colors.backgroundInput,
-  color: Colors.textPrimary,
-  marginBottom: 16,
-  outline: 'none',
-};
-
-const WebSelect = ({ value, onChange }: any) => {
-  return (
-    <View style={styles.webInputContainer}>
-      <Text style={styles.webLabel}>City / Location</Text>
-      {createElement(
-        'select',
-        {
-          value,
-          onChange: (e: any) => onChange(e.target.value),
-          style: webInputStyle,
-        },
-        [
-          createElement('option', { key: 'empty', value: '', disabled: true }, 'Select your city'),
-          ...CITIES.map((opt) => createElement('option', { key: opt, value: opt }, opt))
-        ]
-      )}
-    </View>
-  );
-};
-
-const WebDatePicker = ({ value, onChange }: any) => {
-  return (
-    <View style={styles.webInputContainer}>
-      <Text style={styles.webLabel}>Date of Birth</Text>
-      {createElement(
-        'input',
-        {
-          type: 'date',
-          value,
-          onChange: (e: any) => onChange(e.target.value),
-          style: webInputStyle,
-        }
-      )}
-    </View>
-  );
-};
 
 export default function EditProfileScreen() {
   const { isLargeScreen } = useResponsive();
@@ -109,8 +44,8 @@ export default function EditProfileScreen() {
     resolver: yupResolver(editProfileSchema),
     defaultValues: {
       name: user?.name || '',
-      location: user?.location || '',
-      dateOfBirth: user?.dateOfBirth || '',
+      className: user?.className || '',
+      studentId: user?.studentId || '',
     },
   });
 
@@ -119,21 +54,23 @@ export default function EditProfileScreen() {
   const onSubmit = async (values: EditProfileValues) => {
     try {
       setIsLoading(true);
-      await updateUser(values);
+      await updateUser({
+        name: values.name,
+        className: values.className,
+        studentId: values.studentId,
+      });
       if (Platform.OS === 'web') {
         window.alert('Profile updated successfully!');
         router.back();
       } else {
         Alert.alert('Success', 'Profile updated successfully!', [
-          { text: 'OK', onPress: () => router.back() }
+          { text: 'OK', onPress: () => router.back() },
         ]);
       }
-    } catch {
-      if (Platform.OS === 'web') {
-        window.alert('Could not update profile.');
-      } else {
-        Alert.alert('Error', 'Could not update profile.');
-      }
+    } catch (err) {
+      const message = getApiErrorMessage(err, 'Could not update profile.');
+      if (Platform.OS === 'web') window.alert(message);
+      else Alert.alert('Error', message);
     } finally {
       setIsLoading(false);
     }
@@ -155,10 +92,9 @@ export default function EditProfileScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={[styles.formSection, isLargeScreen && styles.formSectionDesktop]}>
-          
           <View style={styles.avatarContainer}>
             <Ionicons name="person-circle-outline" size={100} color={Colors.primary} />
-            <Text style={styles.changeAvatarText}>Change Avatar</Text>
+            <Text style={styles.changeAvatarText}>{user.phoneNumber}</Text>
           </View>
 
           <Controller
@@ -166,7 +102,7 @@ export default function EditProfileScreen() {
             name="name"
             render={({ field: { onChange, value, onBlur } }) => (
               <TextInput
-                label="Full Name"
+                label="Display Name"
                 placeholder="Enter your name"
                 value={value}
                 onChangeText={onChange}
@@ -178,48 +114,35 @@ export default function EditProfileScreen() {
 
           <Controller
             control={control}
-            name="dateOfBirth"
+            name="className"
             render={({ field: { onChange, value, onBlur } }) => (
-              Platform.OS === 'web' ? (
-                <WebDatePicker value={value} onChange={onChange} />
-              ) : (
-                <TextInput
-                  label="Date of Birth"
-                  placeholder="YYYY-MM-DD"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.dateOfBirth?.message}
-                />
-              )
+              <TextInput
+                label="Class"
+                placeholder="e.g. CS2022"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.className?.message}
+              />
             )}
           />
 
           <Controller
             control={control}
-            name="location"
+            name="studentId"
             render={({ field: { onChange, value, onBlur } }) => (
-              Platform.OS === 'web' ? (
-                <WebSelect value={value} onChange={onChange} />
-              ) : (
-                <TextInput
-                  label="City / Location"
-                  placeholder="Enter your city"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.location?.message}
-                />
-              )
+              <TextInput
+                label="Student ID"
+                placeholder="Optional"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.studentId?.message}
+              />
             )}
           />
 
-          <Button
-            label="Save Changes"
-            onPress={handleSubmit(onSubmit)}
-            loading={isLoading}
-            style={styles.saveBtn}
-          />
+          <Button label="Save Changes" onPress={handleSubmit(onSubmit)} loading={isLoading} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -227,72 +150,32 @@ export default function EditProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: Colors.backgroundScreen,
-  },
+  safe: { flex: 1, backgroundColor: Colors.backgroundWhite },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.screenHorizontal,
+    paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.md,
-    backgroundColor: Colors.backgroundWhite,
-    ...Shadows.xs,
   },
-  closeBtn: {
-    padding: Spacing.xs,
-    marginLeft: -Spacing.xs,
-  },
+  closeBtn: { width: 40 },
   headerTitle: {
     fontSize: FontSize.lg,
-    fontWeight: FontWeight.bold,
+    fontWeight: FontWeight.semiBold,
     color: Colors.textPrimary,
   },
-  headerSpacer: {
-    width: 36,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    flexGrow: 1,
-  },
-  contentDesktop: {
-    alignItems: 'center',
-    paddingVertical: Spacing['2xl'],
-  },
-  formSection: {
-    padding: Spacing.screenHorizontal,
-  },
+  headerSpacer: { width: 40 },
+  scroll: { flex: 1 },
+  content: { paddingBottom: Spacing['3xl'] },
+  contentDesktop: { alignItems: 'center' },
+  formSection: { paddingHorizontal: Spacing.base },
   formSectionDesktop: {
-    width: 440,
+    width: 460,
+    ...Shadows.md,
     backgroundColor: Colors.backgroundWhite,
-    borderRadius: 24,
-    padding: Spacing['2xl'],
-    ...Shadows.card,
+    padding: Spacing.xl,
+    borderRadius: 16,
   },
-  avatarContainer: {
-    alignItems: 'center',
-    marginBottom: Spacing.xl,
-  },
-  changeAvatarText: {
-    fontSize: FontSize.sm,
-    color: Colors.primary,
-    fontWeight: FontWeight.medium,
-    marginTop: Spacing.sm,
-  },
-  saveBtn: {
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
-  webInputContainer: {
-    marginBottom: Spacing.base,
-  },
-  webLabel: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.medium,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
+  avatarContainer: { alignItems: 'center', marginBottom: Spacing.xl },
+  changeAvatarText: { color: Colors.textMuted, marginTop: Spacing.sm },
 });

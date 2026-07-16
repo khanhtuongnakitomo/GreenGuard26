@@ -4,7 +4,7 @@
  * Uses Leaflet via WebView on native, and WebView html injection on web.
  * Displays recycling stations across Vietnam with search, legend and popups.
  */
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -30,6 +30,7 @@ import { AppHeader } from '@/components/common/AppHeader';
 import { Button } from '@/components/common/Button';
 import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useCollectionPoints } from '@/hooks/useApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -391,10 +392,28 @@ export default function MapScreen() {
   const [selectedStation, setSelectedStation] = useState<RecyclingStation | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [cityFilter, setCityFilter] = useState('All');
+  const { data: apiPoints = [] } = useCollectionPoints(searchQuery || undefined);
 
-  const cities = ['All', ...Array.from(new Set(VIETNAM_STATIONS.map((s) => s.city)))];
+  const stations = useMemo<RecyclingStation[]>(() => {
+    if (!apiPoints.length) return VIETNAM_STATIONS;
+    return apiPoints.map((p) => ({
+      id: p.id,
+      name: p.name,
+      city: p.address.split(',').slice(-1)[0]?.trim() || 'Campus',
+      address: p.address,
+      latitude: p.latitude,
+      longitude: p.longitude,
+      isOpen: p.status === 'online' || p.isActive,
+      openHours: p.status === 'maintenance' ? 'Maintenance' : '06:00 – 22:00',
+      distance: p.machineCode ? `#${p.machineCode}` : '',
+      acceptedItems: ['Plastic', 'Metal', 'Carton'],
+      pinColor: p.brandColor ?? Colors.primary,
+    }));
+  }, [apiPoints]);
 
-  const filtered = VIETNAM_STATIONS.filter((s) => {
+  const cities = ['All', ...Array.from(new Set(stations.map((s) => s.city)))];
+
+  const filtered = stations.filter((s) => {
     const matchCity = cityFilter === 'All' || s.city === cityFilter;
     const matchSearch =
       !searchQuery ||
@@ -486,14 +505,14 @@ export default function MapScreen() {
             {renderSidebar()}
           </View>
           <View style={styles.desktopMap}>
-            <LeafletMap stations={VIETNAM_STATIONS} />
+            <LeafletMap stations={stations} />
           </View>
         </View>
       ) : (
         // ── Mobile: map top half, list bottom half
         <View style={styles.mobileLayout}>
           <View style={{ height: SCREEN_H * 0.42 }}>
-            <LeafletMap stations={VIETNAM_STATIONS} />
+            <LeafletMap stations={stations} />
           </View>
           <View style={styles.mobileList}>
             {renderSidebar()}

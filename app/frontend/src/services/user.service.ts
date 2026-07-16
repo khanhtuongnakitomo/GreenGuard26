@@ -2,45 +2,57 @@
  * GreenGuard — User Service
  */
 import api from './api';
-import { User, UserStats, HistoryEntry } from '@/types/user.types';
-import { MOCK_USER, MOCK_USER_STATS, MOCK_HISTORY } from '@/constants/mockData';
-
-const USE_MOCK = true;
+import type { AuthUserDto } from '@/types/auth.types';
+import type { ImpactStats, PointTransaction, UserSummary } from '@/types/user.types';
+import { mapImpactToStats, mapUser } from '@/utils/mappers';
 
 export const userService = {
-  async getProfile(): Promise<User> {
-    if (USE_MOCK) {
-      await new Promise((res) => setTimeout(res, 500));
-      return MOCK_USER;
-    }
-    const { data } = await api.get<User>('/user/profile');
+  async getMe(): Promise<AuthUserDto> {
+    const { data } = await api.get<AuthUserDto>('/users/me');
     return data;
   },
 
-  async getStats(): Promise<UserStats> {
-    if (USE_MOCK) {
-      await new Promise((res) => setTimeout(res, 500));
-      return MOCK_USER_STATS;
-    }
-    const { data } = await api.get<UserStats>('/user/stats');
+  async getSummary(): Promise<UserSummary> {
+    const { data } = await api.get<{
+      user: AuthUserDto;
+      recentTransactions: PointTransaction[];
+      impact: ImpactStats;
+    }>('/users/me/summary');
+
+    return {
+      user: mapUser(data.user),
+      recentTransactions: data.recentTransactions,
+      impact: data.impact,
+    };
+  },
+
+  async getImpact(): Promise<ImpactStats> {
+    const { data } = await api.get<ImpactStats>('/users/me/impact');
     return data;
   },
 
-  async getHistory(): Promise<HistoryEntry[]> {
-    if (USE_MOCK) {
-      await new Promise((res) => setTimeout(res, 500));
-      return MOCK_HISTORY;
-    }
-    const { data } = await api.get<HistoryEntry[]>('/user/history');
+  async getHistory(): Promise<PointTransaction[]> {
+    const { data } = await api.get<PointTransaction[]>('/users/me/history');
     return data;
   },
 
-  async updateProfile(updates: Partial<User>): Promise<User> {
-    if (USE_MOCK) {
-      await new Promise((res) => setTimeout(res, 800));
-      return { ...MOCK_USER, ...updates };
-    }
-    const { data } = await api.put<User>('/user/profile', updates);
+  async getStats() {
+    const impact = await this.getImpact();
+    return mapImpactToStats(impact);
+  },
+
+  async updateProfile(updates: {
+    displayName?: string;
+    avatar?: string;
+    className?: string;
+    studentId?: string;
+  }): Promise<AuthUserDto> {
+    const { data } = await api.patch<AuthUserDto>('/users/me', updates);
+    return data;
+  },
+
+  async getMilestones() {
+    const { data } = await api.get('/users/me/milestones');
     return data;
   },
 };

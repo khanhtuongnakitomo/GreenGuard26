@@ -18,7 +18,7 @@ const ContributionSessionSchema = new Schema(
     items: { type: [ContributionItemSchema], required: true },
     totalItems: { type: Number, required: true, min: 0 },
     totalPoints: { type: Number, required: true, min: 0 },
-    claimTokenHash: { type: String, required: true, index: true },
+    claimTokenHash: { type: String, required: true, unique: true, index: true },
     status: {
       type: String,
       enum: ["unclaimed", "claimed", "expired", "cancelled"],

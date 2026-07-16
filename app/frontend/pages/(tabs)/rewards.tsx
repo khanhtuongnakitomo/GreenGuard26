@@ -1,234 +1,148 @@
 /**
- * GreenGuard — Rewards Screen
- *
- * Figma sections (top to bottom):
- * 1. AppHeader (logo + bell)
- * 2. "Total Amount" title
- * 3. Time filter tabs: 1 day | 1 month | all time
- * 4. DonutChart (15Kg waste breakdown)
- * 5. "Get Rewarded" section — horizontal scroll RewardCards
- * 6. "Tasks" section — vertical TaskProgressRows
+ * GreenGuard — Rewards Screen (live API)
  */
-import React, { useState } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   View,
   Text,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/common/AppHeader';
 import { SectionHeader } from '@/components/common/SectionHeader';
-import { TimeFilterTabs } from '@/components/common/TimeFilterTabs';
 import { DonutChart } from '@/components/rewards/DonutChart';
 import { RewardCard } from '@/components/rewards/RewardCard';
 import { TaskProgressRow } from '@/components/rewards/TaskProgressRow';
 import { Colors, Spacing, FontSize, FontWeight } from '@/theme';
-import {
-  MOCK_TOTAL_AMOUNT,
-  MOCK_REWARDS,
-  MOCK_REWARD_TASKS_PROGRESS,
-} from '@/constants/mockData';
-import { TIME_FILTERS } from '@/types/common.types';
 import { useResponsive } from '@/hooks/useResponsive';
+import {
+  useImpact,
+  useMilestoneTasks,
+  useRewards,
+  useUserSummary,
+} from '@/hooks/useApi';
+import { mapImpactToTotalAmount } from '@/utils/mappers';
 
 export default function RewardsScreen() {
   const { isLargeScreen } = useResponsive();
-  const [activeFilter, setActiveFilter] = useState<string>('1month');
+  useUserSummary();
+  const { data: rewards = [], isLoading: rewardsLoading } = useRewards();
+  const { data: impact } = useImpact();
+  const { data: tasks = [] } = useMilestoneTasks();
 
-  const claimableRewards = MOCK_REWARDS.filter((r) => r.status === 'claimable');
+  const totalAmount = impact
+    ? mapImpactToTotalAmount(impact)
+    : { totalKg: 0, breakdown: [] };
+  const claimable = rewards.filter((r) => r.status === 'claimable');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {!isLargeScreen && <AppHeader rightIcon="bell" onRightIconPress={() => {}} />}
+      {!isLargeScreen && (
+        <AppHeader rightIcon="bell" onRightIconPress={() => router.push('/wallet' as any)} />
+      )}
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.content, isLargeScreen && styles.contentDesktop]}
         showsVerticalScrollIndicator={false}
       >
-        {isLargeScreen && (
-          <View style={styles.desktopHeaderRow}>
-            <AppHeader rightIcon="bell" onRightIconPress={() => {}} hideLogo />
-          </View>
-        )}
+        <Text style={styles.title}>Rewards</Text>
+        <Text style={styles.subtitle}>Redeem points for campus vouchers</Text>
 
-        <View style={[styles.mainLayout, isLargeScreen && styles.mainLayoutDesktop]}>
-          <View style={[styles.column, isLargeScreen && styles.columnLeft]}>
-            {/* Title */}
-            <Text style={[styles.title, isLargeScreen && styles.titleDesktop]}>Total Amount</Text>
-
-            {/* Time filter tabs */}
-            <TimeFilterTabs
-              tabs={TIME_FILTERS}
-              activeValue={activeFilter}
-              onTabPress={setActiveFilter}
-              style={styles.filterTabs}
-            />
-
-            {/* Donut chart */}
-            <View style={styles.chartContainer}>
-              <DonutChart
-                totalKg={MOCK_TOTAL_AMOUNT.totalKg}
-                breakdown={MOCK_TOTAL_AMOUNT.breakdown}
-                size={isLargeScreen ? 250 : 200}
-                strokeWidth={isLargeScreen ? 35 : 30}
-              />
-            </View>
-          </View>
-
-          {/* Right Column on Desktop */}
-          <View style={[styles.column, isLargeScreen && styles.columnRight]}>
-            {/* Get Rewarded */}
-            <View style={styles.section}>
-              <SectionHeader
-                title="Get Rewarded"
-                linkLabel="See all"
-                onLinkPress={() => router.push('/rewards/tasks')}
-              />
-              {isLargeScreen ? (
-                <View style={styles.rewardGrid}>
-                  {claimableRewards.map((reward) => (
-                    <RewardCard
-                      key={reward.id}
-                      reward={reward}
-                      onPress={() => router.push({ pathname: '/rewards/voucher-claim', params: { id: reward.id } })}
-                    />
-                  ))}
-                </View>
-              ) : (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.rewardScroll}
-                >
-                  {claimableRewards.map((reward) => (
-                    <RewardCard
-                      key={reward.id}
-                      reward={reward}
-                      onPress={() => router.push({ pathname: '/rewards/voucher-claim', params: { id: reward.id } })}
-                    />
-                  ))}
-                </ScrollView>
-              )}
-            </View>
-
-            {/* Tasks */}
-            <View style={styles.section}>
-              <SectionHeader
-                title="Tasks"
-                linkLabel="See all"
-                onLinkPress={() => router.push('/rewards/tasks')}
-              />
-              <View style={isLargeScreen && styles.taskGrid}>
-                {MOCK_REWARD_TASKS_PROGRESS.map((task) => (
-                  <View key={task.id} style={isLargeScreen && styles.taskGridItem}>
-                    <TaskProgressRow
-                      label={task.label}
-                      current={task.current}
-                      target={task.target}
-                    />
-                  </View>
-                ))}
-              </View>
-            </View>
-          </View>
-
+        <View style={styles.chartContainer}>
+          <DonutChart
+            totalKg={totalAmount.totalKg}
+            breakdown={
+              totalAmount.breakdown.length
+                ? totalAmount.breakdown
+                : [{ label: 'None', percentage: 100, color: Colors.borderMuted }]
+            }
+            size={isLargeScreen ? 250 : 200}
+            strokeWidth={isLargeScreen ? 35 : 30}
+          />
         </View>
 
-        <View style={styles.bottomSpacer} />
+        <SectionHeader
+          title="Get Rewarded"
+          linkLabel="Wallet ›"
+          onLinkPress={() => router.push('/wallet' as any)}
+        />
+
+        {rewardsLoading ? (
+          <ActivityIndicator color={Colors.primary} />
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rewardScroll}>
+            {claimable.map((reward) => (
+              <RewardCard
+                key={reward.id}
+                reward={reward}
+                onPress={() =>
+                  router.push({
+                    pathname: '/rewards/voucher-claim',
+                    params: { id: reward.id },
+                  } as any)
+                }
+              />
+            ))}
+          </ScrollView>
+        )}
+
+        <SectionHeader title="Milestones" />
+        {tasks.length === 0 ? (
+          <Text style={styles.empty}>No milestones yet.</Text>
+        ) : (
+          tasks.map((task) => (
+            <TaskProgressRow
+              key={task.id}
+              label={task.title}
+              current={task.currentPoints}
+              target={task.targetPoints}
+            />
+          ))
+        )}
+
+        <View style={{ height: Spacing['2xl'] }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: Colors.backgroundScreen,
-  },
-  scroll: {
-    flex: 1,
-  },
+  safe: { flex: 1, backgroundColor: Colors.backgroundScreen },
+  scroll: { flex: 1 },
   content: {
     paddingHorizontal: Spacing.screenHorizontal,
     paddingBottom: Spacing['2xl'],
   },
   contentDesktop: {
-    paddingHorizontal: Spacing['3xl'],
-    paddingTop: Spacing.xl,
-    maxWidth: 1200,
+    maxWidth: 1000,
     alignSelf: 'center',
     width: '100%',
-  },
-  desktopHeaderRow: {
-    alignItems: 'flex-end',
-    marginBottom: Spacing.md,
-  },
-  mainLayout: {
-    flex: 1,
-  },
-  mainLayoutDesktop: {
-    flexDirection: 'row',
-    gap: Spacing['3xl'],
-    marginTop: Spacing.xl,
-  },
-  column: {
-    flex: 1,
-  },
-  columnLeft: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  columnRight: {
-    flex: 2,
+    paddingHorizontal: Spacing['3xl'],
   },
   title: {
-    fontSize: FontSize['3xl'],
+    fontSize: FontSize['2xl'],
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: Spacing.base,
     marginTop: Spacing.sm,
   },
-  titleDesktop: {
-    textAlign: 'left',
-    width: '100%',
-  },
-  filterTabs: {
-    marginBottom: Spacing.xl,
-    width: '100%',
+  subtitle: {
+    color: Colors.textMuted,
+    marginBottom: Spacing.lg,
   },
   chartContainer: {
     alignItems: 'center',
     marginBottom: Spacing.xl,
-    justifyContent: 'center',
-    flex: 1,
-  },
-  section: {
-    marginBottom: Spacing.xl,
   },
   rewardScroll: {
-    paddingBottom: Spacing.sm,
-    gap: Spacing.md,
+    marginBottom: Spacing.xl,
   },
-  rewardGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.md,
-  },
-  taskGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.md,
-    justifyContent: 'space-between',
-  },
-  taskGridItem: {
-    width: '48%',
-  },
-  bottomSpacer: {
-    height: Spacing.base,
+  empty: {
+    color: Colors.textMuted,
+    marginBottom: Spacing.lg,
   },
 });

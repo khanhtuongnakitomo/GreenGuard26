@@ -13,6 +13,8 @@ import {
   ScrollView,
   NativeSyntheticEvent,
   TextInputKeyPressEventData,
+  Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -28,20 +30,26 @@ import Animated, {
 import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
 import { Button } from '@/components/common/Button';
 import { useResponsive } from '@/hooks/useResponsive';
+import { authService } from '@/services/auth.service';
+import { useAuthStore } from '@/store/authStore';
+import { getApiErrorMessage } from '@/utils/mappers';
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 60;
 
 export default function OtpVerifyScreen() {
   const { isLargeScreen } = useResponsive();
-  const params = useLocalSearchParams<{ phone?: string }>();
-  const phone = params.phone ?? '0912 345 678';
+  const params = useLocalSearchParams<{ phone?: string; purpose?: string; otp?: string }>();
+  const phone = params.phone ?? '';
+  const purpose = (params.purpose as 'login' | 'register' | 'reset_password') || 'reset_password';
+  const login = useAuthStore((s) => s.login);
 
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [countdown, setCountdown] = useState(RESEND_SECONDS);
   const [canResend, setCanResend] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState('');
+  const [devHint, setDevHint] = useState(params.otp ?? '');
   const inputRefs = useRef<(TextInput | null)[]>([]);
   const shakeX = useSharedValue(0);
 
@@ -94,28 +102,64 @@ export default function OtpVerifyScreen() {
 
   const handleVerify = async () => {
     const code = otp.join('');
-    if (code.length < OTP_LENGTH) { setError('Please enter all 6 digits'); triggerShake(); return; }
+    if (code.length < OTP_LENGTH) {
+      setError('Please enter all 6 digits');
+      triggerShake();
+      return;
+    }
+    if (!phone) {
+      setError('Missing phone number');
+      return;
+    }
+
     setIsVerifying(true);
     setError('');
-    await new Promise((r) => setTimeout(r, 1200));
-    setIsVerifying(false);
-    // Mock: any code works except '000000'
-    if (code === '000000') {
-      setError('Invalid OTP. Please try again.');
+    try {
+      if (purpose === 'reset_password') {
+        router.push({
+          pathname: '/(auth)/reset-password',
+          params: { phone, otp: code },
+        } as any);
+        return;
+      }
+
+      const response = await authService.verifyOtp(phone, code);
+      await login(
+        response.accessToken,
+        response.refreshToken,
+        response.user._id,
+        response.user,
+      );
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Invalid OTP. Please try again.'));
       triggerShake();
       setOtp(Array(OTP_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
-      return;
+    } finally {
+      setIsVerifying(false);
     }
-    router.push({ pathname: '/(auth)/reset-password', params: { phone } });
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
+    if (!phone) return;
     setCanResend(false);
     setCountdown(RESEND_SECONDS);
     setOtp(Array(OTP_LENGTH).fill(''));
     setError('');
     inputRefs.current[0]?.focus();
+    try {
+      const res = await authService.requestOtp(phone, purpose);
+      if (res.devOtp) {
+        setDevHint(res.devOtp);
+        if (Platform.OS === 'web') {
+          window.alert(`Dev OTP: ${res.devOtp}`);
+        } else {
+          Alert.alert('Dev OTP', res.devOtp);
+        }
+      }
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to resend OTP'));
+    }
   };
 
   const isComplete = otp.every((d) => d !== '');
@@ -148,7 +192,8 @@ export default function OtpVerifyScreen() {
           <Text style={styles.title}>Verification Code</Text>
           <Text style={styles.subtitle}>
             We sent a 6-digit code to{'\n'}
-            <Text style={styles.phoneText}>{phone}</Text>
+            <Text style={styles.phoneText}>{phone || 'your phone'}</Text>
+            {devHint ? `\n(Dev OTP: ${devHint})` : ''}
           </Text>
 
           {/* OTP boxes */}

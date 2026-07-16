@@ -2,7 +2,7 @@ import { customAlphabet } from "nanoid";
 import { env } from "../../config/env";
 import { compareOtp, comparePassword, hashOtp, hashPassword } from "../../utils/hash";
 import { HttpError } from "../../utils/httpError";
-import { generateAccessToken, generateRefreshToken } from "../../utils/token";
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../../utils/token";
 import type { UserRole } from "../../types/enums";
 import { UserModel } from "../users/user.model";
 import { OtpModel } from "./otp.model";
@@ -121,4 +121,55 @@ export async function getCurrentUser(userId: string) {
   const user = await UserModel.findById(userId);
   if (!user) throw new HttpError(404, "User not found");
   return user;
+}
+
+export async function refreshAuthTokens(refreshToken: string) {
+  let payload: ReturnType<typeof verifyRefreshToken>;
+  try {
+    payload = verifyRefreshToken(refreshToken);
+  } catch {
+    throw new HttpError(401, "Invalid or expired refresh token");
+  }
+
+  const user = await UserModel.findById(payload.id);
+  if (!user) throw new HttpError(401, "User not found");
+
+  return loginResponse(user);
+}
+
+export async function resetPasswordWithOtp(phoneNumber: string, otp: string, newPassword: string) {
+  const record = await OtpModel.findOne({
+    phoneNumber,
+    purpose: "reset_password",
+    status: "active"
+  }).sort({ createdAt: -1 });
+
+  if (!record) throw new HttpError(401, "OTP is invalid");
+  if (record.expiresAt.getTime() < Date.now()) {
+    record.status = "expired";
+    await record.save();
+    throw new HttpError(401, "OTP has expired");
+  }
+
+  record.attempts += 1;
+  const valid = await compareOtp(otp, record.otpHash);
+  if (!valid) {
+    await record.save();
+    throw new HttpError(401, "OTP is invalid");
+  }
+
+  record.status = "used";
+  record.consumedAt = new Date();
+  await record.save();
+
+  const user = await UserModel.findOne({ phoneNumber }).select("+passwordHash");
+  if (!user) throw new HttpError(404, "User not found");
+
+  user.passwordHash = await hashPassword(newPassword);
+  if (!user.authMethods.includes("password")) {
+    user.authMethods = [...user.authMethods, "password"];
+  }
+  await user.save();
+
+  return { ok: true };
 }

@@ -3,27 +3,81 @@
  */
 import api from './api';
 
-export interface QRScanResult {
-  pointsEarned: number;
-  collectionPointId: string;
-  collectionPointName: string;
-  message: string;
+export interface QrPayload {
+  claimToken: string;
+  totalItems: number;
+  totalPoints: number;
+  items: Array<{ itemType: string; quantity: number }>;
+  expiresAt: string;
+  signature: string;
+  machineCode?: string;
+  /** Original scanned string — required for claim fallback */
+  raw?: string;
 }
 
-const USE_MOCK = true;
+export interface ClaimResult {
+  session: {
+    _id: string;
+    totalPoints: number;
+    totalItems?: number;
+    items: Array<{ itemType: string; quantity: number }>;
+  };
+  transaction: unknown;
+  milestones: unknown[];
+  pointsEarned: number;
+  totalBalance: number;
+}
 
-export const scanService = {
-  async processQRCode(qrData: string): Promise<QRScanResult> {
-    if (USE_MOCK) {
-      await new Promise((res) => setTimeout(res, 1200));
+export function parseQrPayload(raw: string): QrPayload | null {
+  const trimmed = raw.trim();
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (!parsed.claimToken) return null;
+    return { ...(parsed as QrPayload), raw: trimmed };
+  } catch {
+    // Allow raw claim token string (dev / simple QR)
+    if (trimmed && trimmed.length >= 8 && !trimmed.includes('{')) {
       return {
-        pointsEarned: 25,
-        collectionPointId: 'cp_001',
-        collectionPointName: '#CocaCola1',
-        message: 'Successfully claimed 25 points!',
+        claimToken: trimmed,
+        totalItems: 0,
+        totalPoints: 0,
+        items: [],
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        signature: '',
+        raw: trimmed,
       };
     }
-    const { data } = await api.post<QRScanResult>('/scan/qr', { qrData });
-    return data;
+    return null;
+  }
+}
+
+async function claimOnce(claimToken: string, rawQr?: string): Promise<ClaimResult> {
+  const body: { claimToken: string; rawQr?: string } = { claimToken };
+  // Send full signed QR so backend can create the session if machine POST was missed
+  if (rawQr && rawQr.startsWith('{')) {
+    body.rawQr = rawQr;
+  }
+  const { data } = await api.post<ClaimResult>('/contributions/claim', body);
+  return data;
+}
+
+export const scanService = {
+  async claimContribution(claimToken: string, rawQr?: string): Promise<ClaimResult> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await claimOnce(claimToken, rawQr);
+      } catch (error: any) {
+        lastError = error;
+        const status = error?.response?.status;
+        // Only retry plain 404 without rawQr race; with rawQr, 404 means real failure
+        if (status === 404 && !rawQr?.startsWith('{') && attempt < 2) {
+          await new Promise((r) => setTimeout(r, 800));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw lastError;
   },
 };

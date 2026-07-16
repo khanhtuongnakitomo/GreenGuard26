@@ -38,6 +38,7 @@ import { signInSchema, SignInFormValues } from '@/utils/validators';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/auth.service';
 import { useResponsive } from '@/hooks/useResponsive';
+import { getApiErrorMessage } from '@/utils/mappers';
 
 export default function SignInScreen() {
   const { isLargeScreen } = useResponsive();
@@ -53,7 +54,7 @@ export default function SignInScreen() {
   } = useForm<SignInFormValues>({
     resolver: yupResolver(signInSchema),
     defaultValues: {
-      email: '',
+      phoneNumber: '',
       password: '',
       agreedToTerms: false,
     },
@@ -65,14 +66,18 @@ export default function SignInScreen() {
     try {
       setIsLoading(true);
       const response = await authService.signIn(values);
-      await login(response.tokens.accessToken, response.tokens.refreshToken, response.userId);
-      // Navigation is handled by the auth gate in pages/_layout.tsx, which
-      // watches `isAuthenticated` and redirects out of the (auth) group.
+      await login(
+        response.accessToken,
+        response.refreshToken,
+        response.user._id,
+        response.user,
+      );
     } catch (error: any) {
+      const message = getApiErrorMessage(error, 'Please check your credentials and try again.');
       if (Platform.OS === 'web') {
-        window.alert(error.message || 'Please check your credentials and try again.');
+        window.alert(message);
       } else {
-        Alert.alert('Sign In Failed', error.message || 'Please check your credentials and try again.');
+        Alert.alert('Sign In Failed', message);
       }
     } finally {
       setIsLoading(false);
@@ -80,7 +85,7 @@ export default function SignInScreen() {
   };
 
   const handleForgotPassword = () => {
-    router.push('/(auth)/forgot-password');
+    router.push('/(auth)/forgot-password' as any);
   };
 
   return (
@@ -105,19 +110,19 @@ export default function SignInScreen() {
           </View>
           <Text style={styles.title}>Sign in to your account</Text>
 
-          {/* Email */}
+          {/* Phone */}
           <Controller
             control={control}
-            name="email"
+            name="phoneNumber"
             render={({ field: { onChange, value, onBlur } }) => (
               <TextInput
-                label="Email Address"
-                placeholder="Enter your email address"
-                keyboardType="email-address"
+                label="Phone Number"
+                placeholder="Enter your phone number"
+                keyboardType="phone-pad"
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
-                error={errors.email?.message}
+                error={errors.phoneNumber?.message}
               />
             )}
           />

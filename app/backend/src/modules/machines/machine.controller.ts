@@ -5,6 +5,10 @@ export async function getMachines(_req: Request, res: Response) {
   res.json(await service.getMachines());
 }
 
+export async function getPublicMachines(_req: Request, res: Response) {
+  res.json(await service.getPublicMachines());
+}
+
 export async function getMachineById(req: Request, res: Response) {
   res.json(await service.getMachineById(req.params.machineId));
 }
