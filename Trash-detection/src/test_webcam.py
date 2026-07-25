@@ -112,6 +112,11 @@ def main():
 
     session = RecyclingSession(countdown_time=5.0, qr_display_time=30.0, demo_mode=args.demo)
 
+    # Set up near-fullscreen window for 14" laptop (1920x1080)
+    DISPLAY_W, DISPLAY_H = 1280, 720
+    cv2.namedWindow("Trash Detection", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("Trash Detection", DISPLAY_W, DISPLAY_H)
+
     print("Starting detection...")
     if args.demo:
         print("--- DEMO MODE ENABLED ---")
@@ -136,6 +141,9 @@ def main():
                     frame_id=frame_id,
                 )
                 break
+
+            # Resize frame to fill the display window
+            frame = cv2.resize(frame, (DISPLAY_W, DISPLAY_H))
 
             frame_id += 1
             start_ms = now_ms()

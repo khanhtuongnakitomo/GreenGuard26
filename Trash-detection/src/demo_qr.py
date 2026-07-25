@@ -26,7 +26,7 @@ def main():
 
     points = calculate_points(items_list)
 
-    expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)
     expires_str = expires_at.isoformat().replace("+00:00", "Z")
 
     qr_string, claim_token = qr_generator.build_signed_payload(
@@ -41,11 +41,11 @@ def main():
         print("Fix Trash-detection/.env (BACKEND_URL, MACHINE_CODE, MACHINE_API_KEY) and ensure backend is running.")
         sys.exit(1)
 
-    qr_img = qr_generator.generate_qr_image(qr_string, box_size=10, border=4)
+    qr_img = qr_generator.generate_qr_image(qr_string, box_size=4, border=4)
 
     h, w = qr_img.shape[:2]
-    canvas_h = h + 200
-    canvas_w = max(w + 100, 500)
+    canvas_h = h + 250
+    canvas_w = max(w + 50, 500)
     canvas = np.zeros((canvas_h, canvas_w, 3), dtype=np.uint8)
 
     x_offset = (canvas_w - w) // 2

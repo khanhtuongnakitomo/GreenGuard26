@@ -1,5 +1,6 @@
 import time
 import threading
+import random
 from datetime import datetime, timedelta, timezone
 from point_rules import CLASS_NAME_MAP, calculate_points
 import qr_generator
@@ -48,9 +49,23 @@ class RecyclingSession:
         elif self.state == "detecting":
             self.transition("idle")
             
+    def _generate_random_items(self):
+        """Generate random items for demo QR codes."""
+        items = {}
+        classes = ["plastic_bottle", "can", "carton"]
+        for cls in classes:
+            if random.random() < 0.8:
+                items[cls] = random.randint(1, 5)
+        if not items:
+            items["plastic_bottle"] = 1
+        return items
+
     def generate_qr(self):
         """For demo mode: immediately generate QR from accumulated items."""
-        if not self.items:
+        if self.demo_mode:
+            # Demo: always generate with random items, no need for real detections
+            self.items = self._generate_random_items()
+        elif not self.items:
             print("No items to generate QR for!")
             return
             
@@ -63,7 +78,9 @@ class RecyclingSession:
         items_list = self.get_items_list()
         self.points_earned = calculate_points(items_list)
         
-        expires_at = datetime.now(timezone.utc) + timedelta(seconds=self.qr_display_time)
+        # Use longer expiry in demo mode so judges have time to scan
+        expiry_seconds = 30 * 60 if self.demo_mode else self.qr_display_time
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=expiry_seconds)
         expires_str = expires_at.isoformat().replace('+00:00', 'Z')
         
         qr_string, claim_token = qr_generator.build_signed_payload(

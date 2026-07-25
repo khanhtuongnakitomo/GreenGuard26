@@ -12,7 +12,7 @@ export async function seedRewards() {
       partnerId: dhbk._id,
       name: "Digital parking ticket",
       rewardType: "parking_ticket",
-      pointsRequired: 2000,
+      pointsRequired: 100,
       quantityTotal: 100,
       quantityRemaining: 86,
       validUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
@@ -22,7 +22,7 @@ export async function seedRewards() {
       partnerId: dhbk._id,
       name: "Lunch voucher",
       rewardType: "meal_voucher",
-      pointsRequired: 35000,
+      pointsRequired: 100,
       quantityTotal: 50,
       quantityRemaining: 44,
       validUntil: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)
@@ -31,7 +31,7 @@ export async function seedRewards() {
       partnerId: coke._id,
       name: "Promo code",
       rewardType: "promo_code",
-      pointsRequired: 800,
+      pointsRequired: 100,
       quantityTotal: 200,
       quantityRemaining: 153,
       validUntil: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000)
@@ -40,7 +40,7 @@ export async function seedRewards() {
       partnerId: aqua._id,
       name: "Free drink at Circle K",
       rewardType: "free_item",
-      pointsRequired: 1200,
+      pointsRequired: 100,
       quantityTotal: 160,
       quantityRemaining: 112,
       validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
