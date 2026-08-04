@@ -1,0 +1,15 @@
+{
+  "greetingSub": "Good morning,",
+  "greeting": "Hi, {{name}}! 👋",
+  "myImpact": "My Impact",
+  "rewards": "Rewards",
+  "nearbyBins": "Nearby Bins",
+  "month": "Month",
+  "cans": "Cans",
+  "allTime": "All time",
+  "noRewardsYet": "No rewards available yet.",
+  "couldNotLoadHome": "Could not load home",
+  "checkApiReachable": "Check that the API is reachable, then tap retry.",
+  "loadingProfile": "Loading profile…",
+  "fetchingAccount": "Fetching your account…"
+}

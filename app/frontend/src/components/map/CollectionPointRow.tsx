@@ -13,8 +13,9 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight } from '@/theme';
 import { CollectionPoint } from '@/types/collection.types';
+import { useTheme } from '@/hooks/useTheme';
 
 interface CollectionPointRowProps {
   point: CollectionPoint;
@@ -23,12 +24,18 @@ interface CollectionPointRowProps {
 }
 
 export const CollectionPointRow = memo<CollectionPointRowProps>(({ point, onPress, style }) => {
+  const { colors } = useTheme();
+
   const isGreenPin = point.brandId === 'brand_hcmut';
-  const pinColor = isGreenPin ? Colors.primary : Colors.mapPinRed;
+  const pinColor = isGreenPin ? colors.primary : colors.mapPinRed;
 
   return (
     <TouchableOpacity
-      style={[styles.container, style]}
+      style={[
+        styles.container,
+        { borderBottomColor: colors.divider, backgroundColor: colors.backgroundWhite },
+        style
+      ]}
       onPress={onPress}
       activeOpacity={0.75}
     >
@@ -38,11 +45,11 @@ export const CollectionPointRow = memo<CollectionPointRowProps>(({ point, onPres
       </View>
 
       <View style={styles.info}>
-        <Text style={styles.name}>{point.name}</Text>
-        <Text style={styles.address} numberOfLines={1}>{point.address}</Text>
+        <Text style={[styles.name, { color: colors.textPrimary }]}>{point.name}</Text>
+        <Text style={[styles.address, { color: colors.textMuted }]} numberOfLines={1}>{point.address}</Text>
       </View>
 
-      <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
     </TouchableOpacity>
   );
 });
@@ -57,8 +64,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base,
     gap: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
-    backgroundColor: Colors.backgroundWhite,
   },
   pinCircle: {
     width: 40,
@@ -73,12 +78,10 @@ const styles = StyleSheet.create({
   name: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textPrimary,
     marginBottom: 2,
   },
   address: {
     fontSize: FontSize.sm,
-    color: Colors.textMuted,
     fontWeight: FontWeight.medium,
   },
 });

@@ -1,0 +1,21 @@
+{
+  "title": "Phần thưởng",
+  "subtitle": "Đổi điểm lấy voucher trường",
+  "availablePoints": "Điểm khả dụng",
+  "tier": "Hạng {{tier}}",
+  "getRewarded": "Nhận phần thưởng",
+  "milestones": "Cột mốc",
+  "noMilestones": "Chưa có cột mốc nào.",
+  "bronzeTier": "Đồng",
+  "wallet": "Ví ›",
+  "myRewards": "Phần thưởng của tôi",
+  "redeemVoucher": "Đổi voucher",
+  "history": "Lịch sử",
+  "tasksToEarn": "Nhiệm vụ nhận điểm",
+  "brandTasks": "Nhiệm vụ nhãn hàng",
+  "scanBins": "Quét thùng rác",
+  "completeTasks": "Hoàn thành nhiệm vụ",
+  "viewAll": "Xem tất cả",
+  "noRewards": "Chưa có phần thưởng",
+  "points": "điểm"
+}

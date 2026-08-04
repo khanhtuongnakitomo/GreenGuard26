@@ -23,12 +23,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
 import {
   useNotificationStore,
   NotificationItem,
   NotificationType,
 } from '@/store/notificationStore';
+import { useTheme } from '@/hooks/useTheme';
 
 // ─── Config per type ──────────────────────────────────────────────────────────
 
@@ -39,65 +40,6 @@ interface TypeConfig {
   borderColor: string;
   label: string;
 }
-
-const TYPE_CONFIG: Record<NotificationType, TypeConfig> = {
-  success: {
-    icon: 'checkmark-circle',
-    iconColor: Colors.success,
-    bgColor: Colors.successLight,
-    borderColor: Colors.border,
-    label: 'Success',
-  },
-  warning: {
-    icon: 'warning',
-    iconColor: Colors.warning,
-    bgColor: Colors.warningLight,
-    borderColor: '#FCD34D',
-    label: 'Warning',
-  },
-  error: {
-    icon: 'close-circle',
-    iconColor: Colors.error,
-    bgColor: Colors.errorLight,
-    borderColor: '#FCA5A5',
-    label: 'Error',
-  },
-  info: {
-    icon: 'information-circle',
-    iconColor: Colors.info,
-    bgColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-    label: 'Info',
-  },
-  reward_claimed: {
-    icon: 'gift',
-    iconColor: Colors.rankingGold,
-    bgColor: '#FFFBEB',
-    borderColor: '#FDE68A',
-    label: 'Reward',
-  },
-  points_earned: {
-    icon: 'leaf',
-    iconColor: Colors.primary,
-    bgColor: Colors.successLight,
-    borderColor: Colors.border,
-    label: 'Points',
-  },
-  mission_completed: {
-    icon: 'trophy',
-    iconColor: Colors.rankingGold,
-    bgColor: '#FFFBEB',
-    borderColor: '#FDE68A',
-    label: 'Mission',
-  },
-  voucher_redeemed: {
-    icon: 'ticket',
-    iconColor: Colors.info,
-    bgColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-    label: 'Voucher',
-  },
-};
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
@@ -111,10 +53,71 @@ interface ToastProps {
 
 const Toast = ({ notification, onDismiss }: ToastProps) => {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const translateY = useSharedValue(-120);
   const opacity = useSharedValue(0);
-  const config = TYPE_CONFIG[notification.type];
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const TYPE_CONFIG: Record<NotificationType, TypeConfig> = {
+    success: {
+      icon: 'checkmark-circle',
+      iconColor: colors.success,
+      bgColor: colors.successLight,
+      borderColor: colors.border,
+      label: 'Success',
+    },
+    warning: {
+      icon: 'warning',
+      iconColor: colors.warning,
+      bgColor: colors.warningLight,
+      borderColor: '#FCD34D',
+      label: 'Warning',
+    },
+    error: {
+      icon: 'close-circle',
+      iconColor: colors.error,
+      bgColor: colors.errorLight,
+      borderColor: '#FCA5A5',
+      label: 'Error',
+    },
+    info: {
+      icon: 'information-circle',
+      iconColor: colors.info,
+      bgColor: colors.infoBg,
+      borderColor: colors.infoBorder,
+      label: 'Info',
+    },
+    reward_claimed: {
+      icon: 'gift',
+      iconColor: colors.rankingGold,
+      bgColor: colors.warningBg,
+      borderColor: colors.warningBorder,
+      label: 'Reward',
+    },
+    points_earned: {
+      icon: 'leaf',
+      iconColor: colors.primary,
+      bgColor: colors.successLight,
+      borderColor: colors.border,
+      label: 'Points',
+    },
+    mission_completed: {
+      icon: 'trophy',
+      iconColor: colors.rankingGold,
+      bgColor: colors.warningBg,
+      borderColor: colors.warningBorder,
+      label: 'Mission',
+    },
+    voucher_redeemed: {
+      icon: 'ticket',
+      iconColor: colors.info,
+      bgColor: colors.infoBg,
+      borderColor: colors.infoBorder,
+      label: 'Voucher',
+    },
+  };
+
+  const config = TYPE_CONFIG[notification.type];
 
   const animateOut = () => {
     'worklet';
@@ -168,9 +171,11 @@ const Toast = ({ notification, onDismiss }: ToastProps) => {
 
       {/* Text */}
       <View style={styles.textArea}>
-        <Text style={styles.toastTitle}>{notification.title}</Text>
+        <Text style={[styles.toastTitle, { color: colors.textPrimary }]}>
+          {notification.title}
+        </Text>
         {notification.message && (
-          <Text style={styles.toastMessage} numberOfLines={2}>
+          <Text style={[styles.toastMessage, { color: colors.textSecondary }]} numberOfLines={2}>
             {notification.message}
           </Text>
         )}
@@ -182,7 +187,7 @@ const Toast = ({ notification, onDismiss }: ToastProps) => {
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         style={styles.closeBtn}
       >
-        <Ionicons name="close" size={18} color={Colors.textMuted} />
+        <Ionicons name="close" size={18} color={colors.textMuted} />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -244,11 +249,9 @@ const styles = StyleSheet.create({
   toastTitle: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textPrimary,
   },
   toastMessage: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondary,
     marginTop: 2,
     lineHeight: 18,
   },

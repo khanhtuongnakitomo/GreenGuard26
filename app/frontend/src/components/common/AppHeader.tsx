@@ -15,8 +15,8 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, FontSize, FontWeight } from '@/theme';
-
+import { Spacing, FontSize, FontWeight } from '@/theme';
+import { useTheme } from '@/hooks/useTheme';
 import { router } from 'expo-router';
 
 type RightIconType = 'bell' | 'settings' | 'none';
@@ -40,8 +40,10 @@ export const AppHeader = memo<AppHeaderProps>((
     showBack = false,
     avatarInitials,
   }) => {
+  const { colors, colorScheme } = useTheme();
+
   return (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, { backgroundColor: colors.backgroundScreen }, style]}>
       {/* Left: Logo or Back Button */}
       <View style={styles.logoContainer}>
         {showBack ? (
@@ -56,12 +58,12 @@ export const AppHeader = memo<AppHeaderProps>((
             }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-            <Text style={styles.backText}>Back</Text>
+            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+            <Text style={[styles.backText, { color: colors.textPrimary }]}>Back</Text>
           </TouchableOpacity>
         ) : !hideLogo ? (
           <Image
-            source={require('../../../assets/BKI LOGO/Horiziontal.png')}
+            source={colorScheme === 'dark' ? require('../../../assets/BKI LOGO/White On Dark Horiziontal.png') : require('../../../assets/BKI LOGO/Horiziontal.png')}
             style={styles.headerLogo}
             resizeMode="contain"
           />
@@ -71,8 +73,8 @@ export const AppHeader = memo<AppHeaderProps>((
       {/* Right: action area */}
       <View style={styles.rightArea}>
         {avatarInitials ? (
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>
+          <View style={[styles.avatarCircle, { backgroundColor: colors.greenLight, borderColor: colors.cardBorder }]}>
+            <Text style={[styles.avatarText, { color: colors.primary }]}>
               {avatarInitials.charAt(0).toUpperCase()}
             </Text>
           </View>
@@ -86,7 +88,7 @@ export const AppHeader = memo<AppHeaderProps>((
             <Ionicons
               name={rightIcon === 'bell' ? 'notifications-outline' : 'settings-outline'}
               size={24}
-              color={Colors.textPrimary}
+              color={colors.textPrimary}
             />
           </TouchableOpacity>
         )}
@@ -104,7 +106,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.screenHorizontal,
     paddingVertical: Spacing.sm,
-    backgroundColor: Colors.backgroundScreen,
   },
   logoContainer: {
     flexDirection: 'row',
@@ -132,16 +133,13 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: Colors.greenLight,
     borderWidth: 1.5,
-    borderColor: Colors.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
-    color: Colors.primary,
   },
   backButton: {
     flexDirection: 'row',
@@ -151,6 +149,5 @@ const styles = StyleSheet.create({
   backText: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.medium,
-    color: Colors.textPrimary,
   },
 });

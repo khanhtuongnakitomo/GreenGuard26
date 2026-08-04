@@ -26,13 +26,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { AvatarIcon } from '@/components/icons/AvatarIcon';
 
 import { AppHeader } from '@/components/common/AppHeader';
-import { Badge } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { SectionHeader } from '@/components/common/SectionHeader';
 import { TimeFilterTabs } from '@/components/common/TimeFilterTabs';
 import { RankingCard } from '@/components/profile/RankingCard';
 import { HistoryRow } from '@/components/profile/HistoryRow';
-import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Shadows } from '@/theme';
 import { useUserStore } from '@/store/userStore';
 import { formatPoints } from '@/utils/formatters';
 import { useAuthStore } from '@/store/authStore';
@@ -40,6 +39,8 @@ import { router } from 'expo-router';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useHistory, useUserSummary } from '@/hooks/useApi';
 import type { HistoryEntry } from '@/types/user.types';
+import { useTheme } from '@/hooks/useTheme';
+import { useI18n } from '@/hooks/useI18n';
 
 const HISTORY_FILTERS = [
   { value: '1day', label: '1 Days' },
@@ -62,6 +63,9 @@ function toHistoryEntries(txs: Array<{ _id: string; description?: string; points
 
 export default function ProfileScreen() {
   const { isLargeScreen } = useResponsive();
+  const { colors, colorScheme, setColorScheme } = useTheme();
+  const { t } = useI18n();
+
   const user = useUserStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [historyFilter, setHistoryFilter] = useState('1day');
@@ -77,16 +81,16 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     if (Platform.OS === 'web') {
-      const confirmed = window.confirm('Are you sure you want to log out?');
+      const confirmed = window.confirm(t('profile.confirmLogout', 'Are you sure you want to log out?'));
       if (confirmed) {
         await logout();
         router.replace('/(auth)/sign-in');
       }
     } else {
-      Alert.alert('Logout', 'Are you sure you want to log out?', [
-        { text: 'Cancel', style: 'cancel' },
+      Alert.alert(t('profile.logout', 'Logout'), t('profile.confirmLogout', 'Are you sure you want to log out?'), [
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         { 
-          text: 'Logout', 
+          text: t('profile.logout', 'Logout'), 
           style: 'destructive',
           onPress: async () => {
             await logout();
@@ -100,11 +104,11 @@ export default function ProfileScreen() {
   if (!user) return null;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.backgroundScreen }]} edges={['top']}>
       {!isLargeScreen && (
         <AppHeader
           rightIcon="settings"
-          onRightIconPress={() => Alert.alert('Settings', 'Settings screen coming soon.')}
+          onRightIconPress={() => router.push('/settings')}
         />
       )}
 
@@ -117,7 +121,7 @@ export default function ProfileScreen() {
           <View style={styles.desktopHeaderRow}>
             <AppHeader
               rightIcon="settings"
-              onRightIconPress={() => Alert.alert('Settings', 'Settings screen coming soon.')}
+              onRightIconPress={() => router.push('/settings')}
               hideLogo
             />
           </View>
@@ -129,7 +133,7 @@ export default function ProfileScreen() {
           <View style={[styles.column, isLargeScreen && styles.columnLeft]}>
 
             {/* ── Hero Card (solid green) ── */}
-            <View style={styles.heroCard}>
+            <View style={[styles.heroCard, { backgroundColor: colors.primary, borderColor: colors.primaryDark }]}>
               {/* Decorative circle */}
               <View style={styles.heroDecorCircle} />
               <View style={styles.heroRow}>
@@ -151,38 +155,45 @@ export default function ProfileScreen() {
                     <Text style={styles.heroBadgeText}>{user.memberTier || 'New Member'}</Text>
                   </View>
                 </View>
-                {/* Edit icon */}
-                <TouchableOpacity
-                  style={styles.heroEditBtn}
-                  onPress={() => router.push('/edit-profile')}
-                >
-                  <Ionicons name="create-outline" size={17} color="#fff" />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'column', gap: Spacing.sm }}>
+                  <TouchableOpacity
+                    style={styles.heroEditBtn}
+                    onPress={() => setColorScheme(colorScheme === 'dark' ? 'light' : 'dark')}
+                  >
+                    <Ionicons name={colorScheme === 'dark' ? 'sunny-outline' : 'moon-outline'} size={17} color="#fff" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.heroEditBtn}
+                    onPress={() => router.push('/edit-profile')}
+                  >
+                    <Ionicons name="create-outline" size={17} color="#fff" />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
             {/* ── Stats strip (4 cols) ── */}
             <View style={styles.statsStrip}>
               {[
-                { label: 'Total Points', value: user.totalPoints?.toLocaleString() ?? '0', icon: 'leaf-outline' as const },
-                { label: 'Rank', value: user.memberTier?.charAt(0) ?? 'B', icon: 'trophy-outline' as const },
-                { label: 'Streak', value: '7d', icon: 'flash-outline' as const },
-                { label: 'History', value: filteredHistory.length.toString(), icon: 'time-outline' as const },
+                { label: t('profile.totalPoints', 'Total Points'), value: user.totalPoints?.toLocaleString() ?? '0', icon: 'leaf-outline' as const },
+                { label: t('profile.rank', 'Rank'), value: user.memberTier?.charAt(0) ?? 'B', icon: 'trophy-outline' as const },
+                { label: t('profile.streak', 'Streak'), value: '7d', icon: 'flash-outline' as const },
+                { label: t('profile.history', 'History'), value: filteredHistory.length.toString(), icon: 'time-outline' as const },
               ].map((s) => (
-                <View key={s.label} style={styles.statCell}>
-                  <Ionicons name={s.icon} size={15} color={Colors.primary} />
-                  <Text style={styles.statValue}>{s.value}</Text>
-                  <Text style={styles.statLabel}>{s.label}</Text>
+                <View key={s.label} style={[styles.statCell, { backgroundColor: colors.backgroundWhite, borderColor: colors.cardBorder }]}>
+                  <Ionicons name={s.icon} size={15} color={colors.primary} />
+                  <Text style={[styles.statValue, { color: colors.textPrimary }]}>{s.value}</Text>
+                  <Text style={[styles.statLabel, { color: colors.textSecondaryNew }]}>{s.label}</Text>
                 </View>
               ))}
             </View>
 
             {/* Total Points row */}
-            <View style={styles.pointsRow}>
-              <Text style={styles.pointsLabel}>Total Points</Text>
+            <View style={[styles.pointsRow, { borderColor: colors.divider }]}>
+              <Text style={[styles.pointsLabel, { color: colors.textPrimary }]}>{t('profile.totalPoints', 'Total Points')}</Text>
               <View style={styles.pointsValue}>
                 <Text style={styles.leafEmoji}>🍃</Text>
-                <Text style={styles.pointsText}>{formatPoints(user.totalPoints)}</Text>
+                <Text style={[styles.pointsText, { color: colors.primary }]}>{formatPoints(user.totalPoints)}</Text>
               </View>
             </View>
 
@@ -191,7 +202,7 @@ export default function ProfileScreen() {
 
             {/* Edit Profile button */}
             <Button
-              label="Edit Profile"
+              label={t('profile.editProfile', 'Edit Profile')}
               onPress={() => router.push('/edit-profile')}
               style={styles.editButton}
             />
@@ -201,8 +212,8 @@ export default function ProfileScreen() {
           <View style={[styles.column, isLargeScreen && styles.columnRight]}>
             {/* History */}
             <SectionHeader
-              title="History"
-              linkLabel="View more"
+              title={t('profile.history', 'History')}
+              linkLabel={t('profile.viewMore', 'View more')}
               onLinkPress={() => router.push('/history' as any)}
               style={styles.historySectionHeader}
             />
@@ -215,8 +226,8 @@ export default function ProfileScreen() {
             />
 
             {filteredHistory.length === 0 ? (
-              <Text style={{ color: Colors.textMuted, marginBottom: Spacing.md }}>
-                No recent activity.
+              <Text style={{ color: colors.textMuted, marginBottom: Spacing.md }}>
+                {t('profile.noActivity', 'No recent activity.')}
               </Text>
             ) : (
               filteredHistory.map((entry) => (
@@ -225,9 +236,9 @@ export default function ProfileScreen() {
             )}
 
             {/* Logout Button */}
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={20} color={Colors.error} />
-              <Text style={styles.logoutText}>Logout</Text>
+            <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colors.backgroundWhite, borderColor: colors.errorLight }]} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={20} color={colors.error} />
+              <Text style={[styles.logoutText, { color: colors.error }]}>{t('profile.logout', 'Logout')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -241,7 +252,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.backgroundScreen,
   },
   scroll: {
     flex: 1,
@@ -280,12 +290,9 @@ const styles = StyleSheet.create({
   columnRight: {
     flex: 2,
   },
-  // ── Hero card (solid green) ──
   heroCard: {
-    backgroundColor: Colors.primary,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: Colors.primaryDark,
     padding: Spacing.lg,
     marginBottom: Spacing.md,
     overflow: 'hidden',
@@ -360,7 +367,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // ── Stats strip ──
   statsStrip: {
     flexDirection: 'row',
     gap: Spacing.sm,
@@ -368,10 +374,8 @@ const styles = StyleSheet.create({
   },
   statCell: {
     flex: 1,
-    backgroundColor: Colors.backgroundWhite,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: Colors.cardBorder,
     paddingVertical: Spacing.md,
     paddingHorizontal: 6,
     alignItems: 'center',
@@ -380,18 +384,15 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
     lineHeight: 20,
     marginTop: 4,
   },
   statLabel: {
     fontSize: 10,
-    color: Colors.textSecondaryNew,
     marginTop: 3,
     lineHeight: 13,
     textAlign: 'center',
   },
-  // ── Points row ──
   pointsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -401,12 +402,10 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: Colors.divider,
   },
   pointsLabel: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textPrimary,
   },
   pointsValue: {
     flexDirection: 'row',
@@ -419,7 +418,6 @@ const styles = StyleSheet.create({
   pointsText: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
-    color: Colors.primary,
   },
   editButton: {
     marginTop: Spacing.base,
@@ -437,7 +435,6 @@ const styles = StyleSheet.create({
   bottomSpacer: {
     height: Spacing.base,
   },
-  // ── Logout button ──
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -446,14 +443,11 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: Colors.errorLight,
-    backgroundColor: Colors.backgroundWhite,
     gap: Spacing.sm,
     ...Shadows.xs,
   },
   logoutText: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.semiBold,
-    color: Colors.error,
   },
 });

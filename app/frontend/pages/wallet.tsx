@@ -12,62 +12,66 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, FontSize, FontWeight, Radius } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius } from '@/theme';
 import { AppHeader } from '@/components/common/AppHeader';
 import { EmptyState } from '@/components/common/EmptyState';
 import { useWallet } from '@/hooks/useApi';
 import type { UserVoucher } from '@/types/reward.types';
+import { useTheme } from '@/hooks/useTheme';
+import { useI18n } from '@/hooks/useI18n';
 
-function rewardTitle(voucher: UserVoucher): string {
+function rewardTitle(voucher: UserVoucher, fallback: string): string {
   if (voucher.rewardId && typeof voucher.rewardId === 'object' && 'name' in voucher.rewardId) {
     return voucher.rewardId.name;
   }
-  return 'Voucher';
+  return fallback;
 }
 
-function partnerName(voucher: UserVoucher): string {
+function partnerName(voucher: UserVoucher, fallback: string): string {
   if (voucher.partnerId && typeof voucher.partnerId === 'object' && 'name' in voucher.partnerId) {
     return voucher.partnerId.name;
   }
-  return 'Partner';
+  return fallback;
 }
 
 export default function WalletScreen() {
   const { data = [], isLoading, isError, refetch } = useWallet();
+  const { colors } = useTheme();
+  const { t } = useI18n();
 
   const renderItem = ({ item }: { item: UserVoucher }) => (
-    <View style={styles.card}>
-      <View style={styles.iconBox}>
-        <Ionicons name="ticket-outline" size={22} color={Colors.primary} />
+    <View style={[styles.card, { backgroundColor: colors.backgroundWhite }]}>
+      <View style={[styles.iconBox, { backgroundColor: colors.backgroundCard }]}>
+        <Ionicons name="ticket-outline" size={22} color={colors.primary} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.title}>{rewardTitle(item)}</Text>
-        <Text style={styles.meta}>
-          {partnerName(item)} · {item.status}
+        <Text style={[styles.title, { color: colors.textPrimary }]}>{rewardTitle(item, t('wallet.voucherFallback', 'Voucher'))}</Text>
+        <Text style={[styles.meta, { color: colors.textMuted }]}>
+          {partnerName(item, t('wallet.partnerFallback', 'Partner'))} · {item.status}
         </Text>
-        <Text style={styles.code}>Code: {item.redeemCode}</Text>
-        <Text style={styles.meta}>
-          Expires {new Date(item.expiresAt).toLocaleDateString()}
+        <Text style={[styles.code, { color: colors.primary }]}>{t('wallet.code', 'Code:')} {item.redeemCode}</Text>
+        <Text style={[styles.meta, { color: colors.textMuted }]}>
+          {t('wallet.expires', 'Expires')} {new Date(item.expiresAt).toLocaleDateString()}
         </Text>
       </View>
-      <Text style={styles.points}>-{item.pointsUsed}</Text>
+      <Text style={[styles.points, { color: colors.error }]}>-{item.pointsUsed}</Text>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.backgroundScreen }]} edges={['top']}>
       <AppHeader showBack rightIcon="none" />
-      <Text style={styles.heading}>My Wallet</Text>
-      <Text style={styles.subheading}>Your redeemed vouchers</Text>
+      <Text style={[styles.heading, { color: colors.textPrimary }]}>{t('wallet.title', 'My Wallet')}</Text>
+      <Text style={[styles.subheading, { color: colors.textMuted }]}>{t('wallet.subtitle', 'Your redeemed vouchers')}</Text>
 
       {isLoading ? (
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
       ) : isError ? (
-        <EmptyState title="Could not load wallet" description="Check your connection." />
+        <EmptyState title={t('wallet.errorTitle', 'Could not load wallet')} description={t('wallet.errorDesc', 'Check your connection.')} />
       ) : data.length === 0 ? (
         <EmptyState
-          title="No vouchers yet"
-          description="Redeem rewards to fill your wallet."
+          title={t('wallet.emptyTitle', 'No vouchers yet')}
+          description={t('wallet.emptyDesc', 'Redeem rewards to fill your wallet.')}
         />
       ) : (
         <FlatList
@@ -82,7 +86,7 @@ export default function WalletScreen() {
 
       {isError && (
         <TouchableOpacity onPress={() => refetch()} style={styles.retry}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={[styles.retryText, { color: colors.primary }]}>{t('common.retry', 'Retry')}</Text>
         </TouchableOpacity>
       )}
     </SafeAreaView>
@@ -90,15 +94,13 @@ export default function WalletScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.backgroundScreen },
+  safe: { flex: 1 },
   heading: {
     fontSize: FontSize['2xl'],
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
     paddingHorizontal: Spacing.base,
   },
   subheading: {
-    color: Colors.textMuted,
     paddingHorizontal: Spacing.base,
     marginBottom: Spacing.md,
   },
@@ -106,7 +108,6 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     gap: Spacing.md,
-    backgroundColor: Colors.backgroundWhite,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     marginBottom: Spacing.sm,
@@ -116,19 +117,17 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.backgroundCard,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { fontWeight: FontWeight.semiBold, color: Colors.textPrimary },
-  meta: { color: Colors.textMuted, fontSize: FontSize.sm, marginTop: 2 },
+  title: { fontWeight: FontWeight.semiBold },
+  meta: { fontSize: FontSize.sm, marginTop: 2 },
   code: {
     fontSize: FontSize.sm,
-    color: Colors.primary,
     fontWeight: FontWeight.medium,
     marginTop: 4,
   },
-  points: { fontWeight: FontWeight.bold, color: Colors.error },
+  points: { fontWeight: FontWeight.bold },
   retry: { alignSelf: 'center', marginBottom: Spacing.xl },
-  retryText: { color: Colors.primary, fontWeight: FontWeight.semiBold },
+  retryText: { fontWeight: FontWeight.semiBold },
 });

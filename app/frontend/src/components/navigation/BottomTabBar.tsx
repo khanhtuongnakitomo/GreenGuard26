@@ -1,7 +1,7 @@
 /**
  * GreenGuard — Custom Bottom Tab Bar
  *
- * Layout from Design:
+ * Layout:
  * [ Home ] [ Map ] [  FAB (QR scan)  ] [ Rewards ] [ Profile ]
  *
  * The FAB (green circle) is raised in the center and opens the QR Scanner modal.
@@ -23,7 +23,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Colors, Spacing, FontSize, FontWeight, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Shadows } from '@/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 type TabName = 'home' | 'map' | 'rewards' | 'profile';
 
@@ -44,6 +45,7 @@ const TABS: TabItem[] = [
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 const FABButton = memo(() => {
+  const { colors } = useTheme();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -59,13 +61,20 @@ const FABButton = memo(() => {
 
   return (
     <AnimatedTouchable
-      style={[styles.fab, animatedStyle]}
+      style={[
+        styles.fab,
+        {
+          backgroundColor: colors.primary,
+          borderColor: colors.backgroundWhite,
+        },
+        animatedStyle,
+      ]}
       onPress={() => router.push('/qr-scan')}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       activeOpacity={0.85}
     >
-      <Ionicons name="scan-outline" size={26} color={Colors.textWhite} />
+      <Ionicons name="scan-outline" size={26} color={colors.textWhite} />
     </AnimatedTouchable>
   );
 });
@@ -87,6 +96,7 @@ interface BottomTabBarProps {
 
 export const BottomTabBar = memo<BottomTabBarProps>(({ state, navigation }) => {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   const handleTabPress = (routeName: string, routeKey: string, index: number) => {
     const event = navigation.emit({
@@ -116,18 +126,36 @@ export const BottomTabBar = memo<BottomTabBarProps>(({ state, navigation }) => {
         activeOpacity={0.7}
       >
         {/* Active indicator dot */}
-        <View style={[styles.activeDot, isActive && styles.activeDotVisible]} />
+        <View
+          style={[
+            styles.activeDot,
+            { backgroundColor: isActive ? colors.primary : 'transparent' },
+          ]}
+        />
 
-        {/* Icon with subtle active greenLight background */}
-        <View style={[styles.iconWrapper, isActive && styles.iconWrapperActive]}>
+        {/* Icon with active bg */}
+        <View
+          style={[
+            styles.iconWrapper,
+            isActive && { backgroundColor: colors.greenLight },
+          ]}
+        >
           <Ionicons
             name={isActive ? tab.iconActive : tab.icon}
             size={22}
-            color={isActive ? Colors.primary : '#8FA98F'}
+            color={isActive ? colors.primary : colors.textMuted}
           />
         </View>
 
-        <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+        <Text
+          style={[
+            styles.tabLabel,
+            {
+              color: isActive ? colors.primary : colors.textMuted,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.medium,
+            },
+          ]}
+        >
           {tab.label}
         </Text>
       </TouchableOpacity>
@@ -135,7 +163,16 @@ export const BottomTabBar = memo<BottomTabBarProps>(({ state, navigation }) => {
   };
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom || Spacing.sm }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.backgroundWhite,
+          borderTopColor: colors.cardBorder,
+          paddingBottom: insets.bottom || Spacing.sm,
+        },
+      ]}
+    >
       <View style={styles.tabGroup}>
         {leftTabs.map((tab) => renderTab(tab))}
       </View>
@@ -157,9 +194,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.backgroundWhite,
     borderTopWidth: 1.5,
-    borderTopColor: Colors.cardBorder,
     paddingTop: Spacing.xs,
     ...Shadows.modal,
   },
@@ -179,11 +214,7 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'transparent',
     marginBottom: 4,
-  },
-  activeDotVisible: {
-    backgroundColor: Colors.primary,
   },
   iconWrapper: {
     width: 40,
@@ -192,18 +223,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 14,
   },
-  iconWrapperActive: {
-    backgroundColor: Colors.greenLight,
-  },
   tabLabel: {
     fontSize: FontSize.xs,
-    fontWeight: FontWeight.medium,
-    color: '#8FA98F',
     marginTop: 2,
-  },
-  tabLabelActive: {
-    color: Colors.primary,
-    fontWeight: FontWeight.bold,
   },
   fabContainer: {
     width: 72,
@@ -215,11 +237,9 @@ const styles = StyleSheet.create({
     width: Spacing.fabSize,
     height: Spacing.fabSize,
     borderRadius: Spacing.fabSize / 2,
-    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadows.buttonGreen,
     borderWidth: 3,
-    borderColor: Colors.backgroundWhite,
   },
 });

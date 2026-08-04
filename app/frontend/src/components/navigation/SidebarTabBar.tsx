@@ -2,7 +2,8 @@ import React, { memo } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Spacing, FontSize, FontWeight, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Shadows } from '@/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 type TabName = 'home' | 'map' | 'rewards' | 'profile';
 
@@ -33,6 +34,7 @@ interface SidebarTabBarProps {
 
 export const SidebarTabBar = memo<SidebarTabBarProps>(({ state, navigation }) => {
   const insets = useSafeAreaInsets();
+  const { colors, colorScheme } = useTheme();
 
   const handleTabPress = (routeName: string, routeKey: string, index: number) => {
     const event = navigation.emit({
@@ -54,16 +56,27 @@ export const SidebarTabBar = memo<SidebarTabBarProps>(({ state, navigation }) =>
     return (
       <TouchableOpacity
         key={tab.name}
-        style={[styles.tabItem, isActive && styles.tabItemActive]}
+        style={[
+          styles.tabItem,
+          isActive && { backgroundColor: colors.backgroundCard },
+        ]}
         onPress={() => handleTabPress(tab.name, routeKey, routeIndex)}
         activeOpacity={0.7}
       >
         <Ionicons
           name={isActive ? tab.iconActive : tab.icon}
           size={24}
-          color={isActive ? Colors.primary : Colors.textSecondary}
+          color={isActive ? colors.primary : colors.textSecondary}
         />
-        <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+        <Text
+          style={[
+            styles.tabLabel,
+            {
+              color: isActive ? colors.primary : colors.textSecondary,
+              fontWeight: isActive ? FontWeight.semiBold : FontWeight.medium,
+            },
+          ]}
+        >
           {tab.label}
         </Text>
       </TouchableOpacity>
@@ -71,12 +84,21 @@ export const SidebarTabBar = memo<SidebarTabBarProps>(({ state, navigation }) =>
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top || Spacing.xl }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          paddingTop: insets.top || Spacing.xl,
+          backgroundColor: colors.backgroundWhite,
+          borderRightColor: colors.divider,
+        },
+      ]}
+    >
       <View style={styles.header}>
-        <Image 
-          source={require('../../../assets/BKI LOGO/Horiziontal.png')} 
-          style={styles.sidebarLogo} 
-          resizeMode="cover" 
+        <Image
+          source={colorScheme === 'dark' ? require('../../../assets/BKI LOGO/White On Dark Horiziontal.png') : require('../../../assets/BKI LOGO/Horiziontal.png')}
+          style={styles.sidebarLogo}
+          resizeMode="cover"
         />
       </View>
 
@@ -96,9 +118,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     width: 320,
-    backgroundColor: Colors.backgroundWhite,
     borderRightWidth: 1,
-    borderRightColor: Colors.divider,
     paddingHorizontal: Spacing.md,
     ...Shadows.card,
   },
@@ -125,16 +145,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: Spacing.md,
   },
-  tabItemActive: {
-    backgroundColor: Colors.backgroundCard,
-  },
   tabLabel: {
     fontSize: FontSize.base,
-    fontWeight: FontWeight.medium,
-    color: Colors.textSecondary,
-  },
-  tabLabelActive: {
-    color: Colors.primary,
-    fontWeight: FontWeight.semiBold,
   },
 });

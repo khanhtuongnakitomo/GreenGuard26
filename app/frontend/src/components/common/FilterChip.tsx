@@ -1,7 +1,6 @@
 /**
  * GreenGuard — FilterChip Component
  * Pill-shaped toggleable filter chip.
- * e.g. "🔒 Filter: All", "🔒 Filter: CocaCola"
  */
 import React, { memo } from 'react';
 import {
@@ -12,7 +11,8 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Radius, FontSize, FontWeight } from '@/theme';
+import { Spacing, Radius, FontSize, FontWeight } from '@/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 interface FilterChipProps {
   label: string;
@@ -27,9 +27,18 @@ export const FilterChip = memo<FilterChipProps>(({
   onPress,
   style,
 }) => {
+  const { colors } = useTheme();
+
   return (
     <TouchableOpacity
-      style={[styles.chip, active && styles.chipActive, style]}
+      style={[
+        styles.chip,
+        {
+          borderColor: active ? colors.primary : colors.border,
+          backgroundColor: active ? colors.primary : colors.backgroundWhite,
+        },
+        style,
+      ]}
       onPress={onPress}
       activeOpacity={0.75}
     >
@@ -37,10 +46,17 @@ export const FilterChip = memo<FilterChipProps>(({
         <Ionicons
           name="filter-outline"
           size={12}
-          color={active ? Colors.textWhite : Colors.textSecondary}
+          color={active ? colors.textWhite : colors.textSecondary}
           style={styles.icon}
         />
-        <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
+        <Text
+          style={[
+            styles.label,
+            { color: active ? colors.textWhite : colors.textSecondary },
+          ]}
+        >
+          {label}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -52,15 +68,9 @@ const styles = StyleSheet.create({
   chip: {
     borderRadius: Radius.badge,
     borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.backgroundWhite,
     alignSelf: 'flex-start',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
-  },
-  chipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
   },
   inner: {
     flexDirection: 'row',
@@ -72,9 +82,5 @@ const styles = StyleSheet.create({
   label: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
-    color: Colors.textSecondary,
-  },
-  labelActive: {
-    color: Colors.textWhite,
   },
 });

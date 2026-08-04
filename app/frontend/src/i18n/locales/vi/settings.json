@@ -1,0 +1,23 @@
+{
+  "title": "Cài đặt",
+  "appearance": "Giao diện",
+  "appearanceSubtitle": "Chọn chủ đề ưa thích",
+  "light": "Sáng",
+  "dark": "Tối",
+  "followSystem": "Theo hệ thống",
+  "system": "Hệ thống",
+  "language": "Ngôn ngữ",
+  "languageSubtitle": "Chọn ngôn ngữ ưa thích",
+  "english": "English",
+  "vietnamese": "Tiếng Việt",
+  "about": "Giới thiệu",
+  "aboutGreenGuard": "Về GreenGuard",
+  "aboutSubtitle": "Phiên bản {{version}}",
+  "privacyPolicy": "Chính sách bảo mật",
+  "privacySubtitle": "Cách chúng tôi xử lý dữ liệu của bạn",
+  "termsOfService": "Điều khoản dịch vụ",
+  "termsSubtitle": "Quy tắc và điều kiện sử dụng",
+  "appVersion": "Phiên bản ứng dụng",
+  "version": "{{version}}",
+  "madeWith": "Tạo ra với 🌱 vì một khuôn viên xanh hơn"
+}

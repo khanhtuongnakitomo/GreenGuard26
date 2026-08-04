@@ -20,8 +20,9 @@ import Animated, {
   withTiming,
   interpolate,
 } from 'react-native-reanimated';
-import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius } from '@/theme';
 import { Reward } from '@/types/reward.types';
+import { useTheme } from '@/hooks/useTheme';
 
 interface RewardListItemProps {
   reward: Reward;
@@ -32,8 +33,10 @@ interface RewardListItemProps {
 const AnimatedView = Animated.createAnimatedComponent(View);
 
 export const RewardListItem = memo<RewardListItemProps>(({ reward, onPress, style }) => {
+  const { colors } = useTheme();
+
   const brandInitial = reward.brandName.charAt(0).toUpperCase();
-  const brandColor = reward.brandColor ?? Colors.primary;
+  const brandColor = reward.brandColor ?? colors.primary;
 
   const scale = useSharedValue(1);
   const pressed = useSharedValue(0);
@@ -75,7 +78,7 @@ export const RewardListItem = memo<RewardListItemProps>(({ reward, onPress, styl
         </View>
 
         {/* Reward info */}
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
           {reward.title}
         </Text>
 
@@ -136,14 +139,13 @@ const styles = StyleSheet.create({
   brandInitial: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
-    color: Colors.textWhite,
+    color: '#fff',
     letterSpacing: 0.3,
   },
   title: {
     flex: 1,
     fontSize: FontSize.base,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textPrimary,
     lineHeight: 20,
   },
   rightSection: {

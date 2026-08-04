@@ -17,13 +17,17 @@ import Animated, {
   withSpring,
   withDelay,
   withTiming,
-  withSequence,
   useAnimatedStyle,
 } from 'react-native-reanimated';
-import { Colors, Spacing, FontSize, FontWeight, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Shadows } from '@/theme';
 import { Button } from '@/components/common/Button';
+import { useTheme } from '@/hooks/useTheme';
+import { useI18n } from '@/hooks/useI18n';
 
 export default function PasswordChangedScreen() {
+  const { colors } = useTheme();
+  const { t } = useI18n();
+
   const circleScale = useSharedValue(0);
   const iconScale = useSharedValue(0);
   const textOpacity = useSharedValue(0);
@@ -50,7 +54,7 @@ export default function PasswordChangedScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <LinearGradient
-        colors={[Colors.primaryDark, Colors.primary, Colors.primaryMedium]}
+        colors={[colors.primaryDark, colors.primary, '#1CA44D']}
         style={styles.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -63,7 +67,7 @@ export default function PasswordChangedScreen() {
         <View style={styles.content}>
           {/* Success animation */}
           <Animated.View style={[styles.outerCircle, circleStyle]}>
-            <View style={styles.innerCircle}>
+            <View style={[styles.innerCircle, { backgroundColor: colors.backgroundWhite }]}>
               <Animated.View style={iconStyle}>
                 <Text style={styles.checkEmoji}>✅</Text>
               </Animated.View>
@@ -72,19 +76,20 @@ export default function PasswordChangedScreen() {
 
           {/* Text */}
           <Animated.View style={[styles.textBlock, textStyle]}>
-            <Text style={styles.title}>Password Changed!</Text>
+            <Text style={[styles.title, { color: colors.textWhite }]}>{t('auth.passwordChangedTitle', 'Password Changed!')}</Text>
             <Text style={styles.subtitle}>
-              Your password has been successfully updated.{'\n'}
-              You can now sign in with your new password.
+              {t('auth.passwordChangedDesc1', 'Your password has been successfully updated.')}{'\n'}
+              {t('auth.passwordChangedDesc2', 'You can now sign in with your new password.')}
             </Text>
           </Animated.View>
 
           {/* Button */}
           <Animated.View style={[styles.btnWrapper, btnStyle]}>
             <Button
-              label="Back to Sign In"
+              label={t('auth.backToSignIn', 'Back to Sign In')}
               onPress={() => router.replace('/(auth)/sign-in')}
-              style={styles.btn}
+              style={{ backgroundColor: colors.backgroundWhite }}
+              textStyle={{ color: colors.primary }}
             />
           </Animated.View>
         </View>
@@ -117,7 +122,6 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: Colors.backgroundWhite,
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadows.xl,
@@ -128,7 +132,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FontSize['4xl'],
     fontWeight: FontWeight.bold,
-    color: Colors.textWhite,
     textAlign: 'center',
     marginBottom: Spacing.md,
   },
@@ -140,5 +143,4 @@ const styles = StyleSheet.create({
   },
 
   btnWrapper: { width: '100%' },
-  btn: { backgroundColor: Colors.backgroundWhite },
 });

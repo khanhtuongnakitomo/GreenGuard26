@@ -7,8 +7,9 @@
 import React, { memo } from 'react';
 import { StyleSheet, View, Text, ViewStyle } from 'react-native';
 import { ProgressBar } from '@/components/common/ProgressBar';
-import { Colors, Spacing, FontSize, FontWeight, Radius } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius } from '@/theme';
 import { calcProgress } from '@/utils/formatters';
+import { useTheme } from '@/hooks/useTheme';
 
 interface TaskProgressRowProps {
   label: string;
@@ -23,19 +24,20 @@ export const TaskProgressRow = memo<TaskProgressRowProps>((({
   target,
   style,
 }) => {
+  const { colors } = useTheme();
   const progress = calcProgress(current, target);
 
   return (
     <View style={[styles.container, style]}>
       <View style={styles.labelRow}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={styles.pts}>{current}/{target} pts</Text>
+        <Text style={[styles.label, { color: colors.textPrimary }]}>{label}</Text>
+        <Text style={[styles.pts, { color: colors.textMuted }]}>{current}/{target} pts</Text>
       </View>
       <ProgressBar
         progress={progress}
         height={12}
-        color={Colors.primary}
-        trackColor={Colors.backgroundCard}
+        color={colors.primary}
+        trackColor={colors.backgroundCard}
         style={styles.bar}
       />
     </View>
@@ -56,13 +58,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: FontSize.sm,
-    color: Colors.textPrimary,
     fontWeight: FontWeight.semiBold,
   },
   pts: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
-    color: Colors.textMuted,
   },
   bar: {
     borderRadius: Radius.pill,

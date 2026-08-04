@@ -14,8 +14,9 @@ import Animated, {
   useAnimatedProps,
   Easing,
 } from 'react-native-reanimated';
-import { Colors, FontSize, FontWeight } from '@/theme';
+import { FontSize, FontWeight } from '@/theme';
 import { WasteBreakdown } from '@/types/reward.types';
+import { useTheme } from '@/hooks/useTheme';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -34,6 +35,7 @@ export const DonutChart = memo<DonutChartProps>(({
   strokeWidth = 28,
   style,
 }) => {
+  const { colors } = useTheme();
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
@@ -82,8 +84,8 @@ export const DonutChart = memo<DonutChartProps>(({
 
       {/* Center label */}
       <View style={[styles.centerLabel, { width: size, height: size }]}>
-        <Text style={styles.kgValue}>{totalKg}</Text>
-        <Text style={styles.kgUnit}>Kg</Text>
+        <Text style={[styles.kgValue, { color: colors.textPrimary }]}>{totalKg}</Text>
+        <Text style={[styles.kgUnit, { color: colors.textMuted }]}>Kg</Text>
       </View>
 
       {/* Legend */}
@@ -91,8 +93,8 @@ export const DonutChart = memo<DonutChartProps>(({
         {breakdown.map((segment) => (
           <View key={segment.label} style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: segment.color }]} />
-            <Text style={styles.legendPercent}>{segment.percentage}%</Text>
-            <Text style={styles.legendLabel}>{segment.label}</Text>
+            <Text style={[styles.legendPercent, { color: colors.textPrimary }]}>{segment.percentage}%</Text>
+            <Text style={[styles.legendLabel, { color: colors.textMuted }]}>{segment.label}</Text>
           </View>
         ))}
       </View>
@@ -114,14 +116,12 @@ const styles = StyleSheet.create({
   kgValue: {
     fontSize: FontSize['5xl'],
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
     lineHeight: 36,
     letterSpacing: -1,
   },
   kgUnit: {
     fontSize: FontSize.xl,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textMuted,
   },
   legend: {
     marginTop: 16,
@@ -144,10 +144,8 @@ const styles = StyleSheet.create({
   legendPercent: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textPrimary,
   },
   legendLabel: {
     fontSize: FontSize.xs,
-    color: Colors.textMuted,
   },
 });

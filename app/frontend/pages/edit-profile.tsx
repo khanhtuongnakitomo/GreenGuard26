@@ -17,10 +17,12 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { TextInput } from '@/components/common/TextInput';
 import { Button } from '@/components/common/Button';
-import { Colors, Spacing, FontSize, FontWeight, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Shadows } from '@/theme';
 import { useUserStore } from '@/store/userStore';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getApiErrorMessage } from '@/utils/mappers';
+import { useTheme } from '@/hooks/useTheme';
+import { useI18n } from '@/hooks/useI18n';
 
 const editProfileSchema = Yup.object({
   name: Yup.string().required('Name is required'),
@@ -32,6 +34,8 @@ type EditProfileValues = Yup.InferType<typeof editProfileSchema>;
 
 export default function EditProfileScreen() {
   const { isLargeScreen } = useResponsive();
+  const { colors } = useTheme();
+  const { t } = useI18n();
   const user = useUserStore((s) => s.user);
   const updateUser = useUserStore((s) => s.updateUser);
   const [isLoading, setIsLoading] = useState(false);
@@ -60,29 +64,29 @@ export default function EditProfileScreen() {
         studentId: values.studentId,
       });
       if (Platform.OS === 'web') {
-        window.alert('Profile updated successfully!');
+        window.alert(t('profile.updateSuccess', 'Profile updated successfully!'));
         router.back();
       } else {
-        Alert.alert('Success', 'Profile updated successfully!', [
-          { text: 'OK', onPress: () => router.back() },
+        Alert.alert(t('common.success', 'Success'), t('profile.updateSuccess', 'Profile updated successfully!'), [
+          { text: t('common.ok', 'OK'), onPress: () => router.back() },
         ]);
       }
     } catch (err) {
-      const message = getApiErrorMessage(err, 'Could not update profile.');
+      const message = getApiErrorMessage(err, t('profile.updateError', 'Could not update profile.'));
       if (Platform.OS === 'web') window.alert(message);
-      else Alert.alert('Error', message);
+      else Alert.alert(t('common.error', 'Error'), message);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.backgroundWhite }]} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
-          <Ionicons name="close" size={28} color={Colors.textPrimary} />
+          <Ionicons name="close" size={28} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{t('profile.editProfile', 'Edit Profile')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -91,10 +95,10 @@ export default function EditProfileScreen() {
         contentContainerStyle={[styles.content, isLargeScreen && styles.contentDesktop]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={[styles.formSection, isLargeScreen && styles.formSectionDesktop]}>
+        <View style={[styles.formSection, isLargeScreen && [styles.formSectionDesktop, { backgroundColor: colors.backgroundWhite }]]}>
           <View style={styles.avatarContainer}>
-            <Ionicons name="person-circle-outline" size={100} color={Colors.primary} />
-            <Text style={styles.changeAvatarText}>{user.phoneNumber}</Text>
+            <Ionicons name="person-circle-outline" size={100} color={colors.primary} />
+            <Text style={[styles.changeAvatarText, { color: colors.textMuted }]}>{user.phoneNumber}</Text>
           </View>
 
           <Controller
@@ -102,8 +106,8 @@ export default function EditProfileScreen() {
             name="name"
             render={({ field: { onChange, value, onBlur } }) => (
               <TextInput
-                label="Display Name"
-                placeholder="Enter your name"
+                label={t('auth.displayName', 'Display Name')}
+                placeholder={t('auth.displayNamePlaceholder', 'Enter your name')}
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
@@ -117,8 +121,8 @@ export default function EditProfileScreen() {
             name="className"
             render={({ field: { onChange, value, onBlur } }) => (
               <TextInput
-                label="Class"
-                placeholder="e.g. CS2022"
+                label={t('profile.classLabel', 'Class')}
+                placeholder={t('profile.classPlaceholder', 'e.g. CS2022')}
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
@@ -132,8 +136,8 @@ export default function EditProfileScreen() {
             name="studentId"
             render={({ field: { onChange, value, onBlur } }) => (
               <TextInput
-                label="Student ID"
-                placeholder="Optional"
+                label={t('profile.studentIdLabel', 'Student ID')}
+                placeholder={t('common.optional', 'Optional')}
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
@@ -142,7 +146,7 @@ export default function EditProfileScreen() {
             )}
           />
 
-          <Button label="Save Changes" onPress={handleSubmit(onSubmit)} loading={isLoading} />
+          <Button label={t('profile.saveChanges', 'Save Changes')} onPress={handleSubmit(onSubmit)} loading={isLoading} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -150,7 +154,7 @@ export default function EditProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.backgroundWhite },
+  safe: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -162,7 +166,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textPrimary,
   },
   headerSpacer: { width: 40 },
   scroll: { flex: 1 },
@@ -172,10 +175,9 @@ const styles = StyleSheet.create({
   formSectionDesktop: {
     width: 460,
     ...Shadows.md,
-    backgroundColor: Colors.backgroundWhite,
     padding: Spacing.xl,
     borderRadius: 16,
   },
   avatarContainer: { alignItems: 'center', marginBottom: Spacing.xl },
-  changeAvatarText: { color: Colors.textMuted, marginTop: Spacing.sm },
+  changeAvatarText: { marginTop: Spacing.sm },
 });

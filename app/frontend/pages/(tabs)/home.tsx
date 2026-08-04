@@ -20,11 +20,13 @@ import { PaperIcon } from '@/components/icons/PaperIcon';
 import { CalendarIcon } from '@/components/icons/CalendarIcon';
 import { EmptyState } from '@/components/common/EmptyState';
 import { NearbyBinCard } from '@/components/home/NearbyBinCard';
-import { Colors, Spacing, FontSize, FontWeight } from '@/theme';
+import { Spacing, FontSize, FontWeight } from '@/theme';
 import { useUserStore } from '@/store/userStore';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useHomeRewards, useUserSummary } from '@/hooks/useApi';
 import { emptyUserStats } from '@/utils/mappers';
+import { useTheme } from '@/hooks/useTheme';
+import { useI18n } from '@/hooks/useI18n';
 
 const NEARBY_BINS = [
   { id: '1', name: 'B4 Recycling Hub', distance: '~80m away', fillPercent: 35 },
@@ -33,6 +35,8 @@ const NEARBY_BINS = [
 
 export default function HomeScreen() {
   const { isLargeScreen } = useResponsive();
+  const { colors } = useTheme();
+  const { t } = useI18n();
 
   const user = useUserStore((s) => s.user);
   const stats = useUserStore((s) => s.stats) ?? emptyUserStats();
@@ -41,9 +45,9 @@ export default function HomeScreen() {
 
   if (summaryLoading && !user) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.backgroundScreen }]} edges={['top']}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -51,7 +55,7 @@ export default function HomeScreen() {
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.backgroundScreen }]} edges={['top']}>
         <EmptyState
           title={isError ? 'Could not load home' : 'Loading profile…'}
           description={
@@ -61,7 +65,7 @@ export default function HomeScreen() {
           }
         />
         {isError && (
-          <Text style={styles.retry} onPress={() => refetch()}>
+          <Text style={[styles.retry, { color: colors.primary }]} onPress={() => refetch()}>
             Tap to retry
           </Text>
         )}
@@ -70,7 +74,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.backgroundScreen }]} edges={['top']}>
       {!isLargeScreen && (
         <AppHeader
           rightIcon="bell"
@@ -85,8 +89,8 @@ export default function HomeScreen() {
       >
         <View style={isLargeScreen ? styles.desktopHeaderRow : undefined}>
           <View>
-            <Text style={styles.greetingSub}>Good morning,</Text>
-            <Text style={styles.greeting}>Hi, {user.name}! 👋</Text>
+            <Text style={[styles.greetingSub, { color: colors.textSecondaryNew }]}>{t('home.greetingSub', 'Good morning,')}</Text>
+            <Text style={[styles.greeting, { color: colors.textPrimary }]}>{t('home.greeting', `Hi, ${user.name}! 👋`, { name: user.name })}</Text>
           </View>
           {isLargeScreen && (
             <AppHeader rightIcon="bell" onRightIconPress={() => router.push('/wallet' as any)} hideLogo />
@@ -101,28 +105,28 @@ export default function HomeScreen() {
           <View style={[styles.column, isLargeScreen && styles.columnLeft]}>
             <View style={styles.section}>
               <SectionHeader
-                title="My Impact"
-                linkLabel="View details ›"
+                title={t('home.myImpact', 'My Impact')}
+                linkLabel={t('home.viewDetails', 'View details ›')}
                 onLinkPress={() => router.push('/impact' as any)}
               />
               <View style={styles.statsRow}>
                 <StatCard
-                  label="Month"
+                  label={t('home.month', 'Month')}
                   value={stats.monthlyBottles}
-                  unit="bottles"
-                  icon={<BottleIcon size={24} color={Colors.primary} />}
+                  unit={t('home.bottles', 'bottles')}
+                  icon={<BottleIcon size={24} color={colors.primary} />}
                 />
                 <StatCard
-                  label="Cans"
+                  label={t('home.cans', 'Cans')}
                   value={stats.monthlyCans}
-                  unit="this month"
-                  icon={<PaperIcon size={24} color={Colors.primary} />}
+                  unit={t('home.thisMonth', 'this month')}
+                  icon={<PaperIcon size={24} color={colors.primary} />}
                 />
                 <StatCard
-                  label="All time"
+                  label={t('home.allTime', 'All time')}
                   value={stats.allTimeBottles}
-                  unit="bottles"
-                  icon={<CalendarIcon size={24} color={Colors.primary} />}
+                  unit={t('home.bottles', 'bottles')}
+                  icon={<CalendarIcon size={24} color={colors.primary} />}
                 />
               </View>
             </View>
@@ -131,14 +135,14 @@ export default function HomeScreen() {
           <View style={[styles.column, isLargeScreen && styles.columnRight]}>
             <View style={styles.section}>
               <SectionHeader
-                title="Rewards"
-                linkLabel="View all ›"
+                title={t('home.rewards', 'Rewards')}
+                linkLabel={t('home.viewAll', 'View all ›')}
                 onLinkPress={() => router.push('/(tabs)/rewards')}
               />
               {rewardsLoading && homeRewards.length === 0 ? (
-                <ActivityIndicator color={Colors.primary} />
+                <ActivityIndicator color={colors.primary} />
               ) : homeRewards.length === 0 ? (
-                <Text style={styles.emptyText}>No rewards available yet.</Text>
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>{t('home.noRewards', 'No rewards available yet.')}</Text>
               ) : (
                 homeRewards.slice(0, 3).map((reward) => (
                   <RewardListItem
@@ -159,8 +163,8 @@ export default function HomeScreen() {
           {/* Nearby Bins */}
           <View style={styles.section}>
             <SectionHeader
-              title="Nearby Bins"
-              linkLabel="View map ›"
+              title={t('home.nearbyBins', 'Nearby Bins')}
+              linkLabel={t('home.viewMap', 'View map ›')}
               onLinkPress={() => router.push('/(tabs)/map')}
             />
             {NEARBY_BINS.map((bin) => (
@@ -182,7 +186,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.backgroundScreen,
   },
   centered: {
     flex: 1,
@@ -212,14 +215,12 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: FontSize['2xl'],
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
     marginBottom: Spacing.md,
     letterSpacing: 0.1,
   },
   greetingSub: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
-    color: Colors.textSecondaryNew,
     marginTop: Spacing.sm,
     marginBottom: 2,
   },
@@ -253,12 +254,10 @@ const styles = StyleSheet.create({
     gap: Spacing.sm + 2,
   },
   emptyText: {
-    color: Colors.textMuted,
     fontSize: FontSize.base,
   },
   retry: {
     textAlign: 'center',
-    color: Colors.primary,
     fontWeight: FontWeight.semiBold,
     marginBottom: Spacing.xl,
   },

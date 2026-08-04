@@ -36,7 +36,7 @@ import Animated, {
   Easing,
   runOnJS,
 } from 'react-native-reanimated';
-import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
 
 // ─── Platform-safe camera ──────────────────────────────────────────────────────
 let CameraView: any = View;
@@ -53,6 +53,8 @@ import { parseQrPayload, scanService } from '@/services/scan.service';
 import { useInvalidateUserData } from '@/hooks/useApi';
 import { useUserStore } from '@/store/userStore';
 import { getApiErrorMessage } from '@/utils/mappers';
+import { useTheme } from '@/hooks/useTheme';
+import { useI18n } from '@/hooks/useI18n';
 
 interface ScanPreview {
   claimToken: string;
@@ -69,7 +71,7 @@ const { width: W } = Dimensions.get('window');
 const QR_SIZE = W * 0.65;
 
 // ─── Scan Line ─────────────────────────────────────────────────────────────────
-function ScanLine({ active }: { active: boolean }) {
+function ScanLine({ active, colors }: { active: boolean; colors: any }) {
   const translateY = useSharedValue(0);
 
   useEffect(() => {
@@ -87,11 +89,11 @@ function ScanLine({ active }: { active: boolean }) {
     opacity: active ? 1 : 0,
   }));
 
-  return <Animated.View style={[styles.scanLine, style]} />;
+  return <Animated.View style={[styles.scanLine, { backgroundColor: colors.primaryLight }, style]} />;
 }
 
 // ─── QR Frame ──────────────────────────────────────────────────────────────────
-function QRFrame({ success }: { success: boolean }) {
+function QRFrame({ success, colors }: { success: boolean; colors: any }) {
   const scale = useSharedValue(1);
   const borderOpacity = useSharedValue(1);
 
@@ -111,22 +113,22 @@ function QRFrame({ success }: { success: boolean }) {
 
   const frameStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-    borderColor: success ? Colors.accent : Colors.primaryLight,
+    borderColor: success ? colors.accent : colors.primaryLight,
   }));
 
   return (
     <Animated.View style={[styles.qrFrame, frameStyle]}>
-      <View style={[styles.corner, styles.cornerTL, success && styles.cornerSuccess]} />
-      <View style={[styles.corner, styles.cornerTR, success && styles.cornerSuccess]} />
-      <View style={[styles.corner, styles.cornerBL, success && styles.cornerSuccess]} />
-      <View style={[styles.corner, styles.cornerBR, success && styles.cornerSuccess]} />
-      <ScanLine active={!success} />
+      <View style={[styles.corner, styles.cornerTL, { borderColor: colors.primaryLight }, success && { borderColor: colors.accent }]} />
+      <View style={[styles.corner, styles.cornerTR, { borderColor: colors.primaryLight }, success && { borderColor: colors.accent }]} />
+      <View style={[styles.corner, styles.cornerBL, { borderColor: colors.primaryLight }, success && { borderColor: colors.accent }]} />
+      <View style={[styles.corner, styles.cornerBR, { borderColor: colors.primaryLight }, success && { borderColor: colors.accent }]} />
+      <ScanLine active={!success} colors={colors} />
     </Animated.View>
   );
 }
 
 // ─── Success Animation ─────────────────────────────────────────────────────────
-function SuccessCheckmark() {
+function SuccessCheckmark({ colors }: { colors: any }) {
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
 
@@ -141,8 +143,8 @@ function SuccessCheckmark() {
   }));
 
   return (
-    <Animated.View style={[styles.successCircle, style]}>
-      <Ionicons name="checkmark" size={48} color={Colors.textWhite} />
+    <Animated.View style={[styles.successCircle, { backgroundColor: colors.primary }, style]}>
+      <Ionicons name="checkmark" size={48} color={colors.textWhite} />
     </Animated.View>
   );
 }
@@ -154,52 +156,54 @@ interface ClaimModalProps {
   onCancel: () => void;
   onClaim: () => void;
   isClaiming: boolean;
+  colors: any;
+  t: any;
 }
 
-const ClaimModal = ({ result, visible, onCancel, onClaim, isClaiming }: ClaimModalProps) => {
+const ClaimModal = ({ result, visible, onCancel, onClaim, isClaiming, colors, t }: ClaimModalProps) => {
   if (!result) return null;
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
       <View style={styles.claimBackdrop}>
-        <View style={styles.claimSheet}>
-          <View style={styles.claimHandle} />
+        <View style={[styles.claimSheet, { backgroundColor: colors.backgroundWhite }]}>
+          <View style={[styles.claimHandle, { backgroundColor: colors.borderMuted }]} />
 
-          <View style={styles.claimSuccessHeader}>
-            <SuccessCheckmark />
-            <Text style={styles.claimTitle}>Ready to Claim!</Text>
-            <Text style={styles.claimSubtitle}>Scan verified — review your session below</Text>
+          <View style={[styles.claimSuccessHeader, { borderBottomColor: colors.divider }]}>
+            <SuccessCheckmark colors={colors} />
+            <Text style={[styles.claimTitle, { color: colors.textPrimary }]}>{t('scan.readyToClaim', 'Ready to Claim!')}</Text>
+            <Text style={[styles.claimSubtitle, { color: colors.textMuted }]}>{t('scan.claimSubtitle', 'Scan verified — review your session below')}</Text>
           </View>
 
           <View style={styles.claimBody}>
             {/* Recycle Types */}
             <View style={styles.claimRow}>
-              <View style={styles.claimIconBox}>
-                <Ionicons name="leaf-outline" size={18} color={Colors.primary} />
+              <View style={[styles.claimIconBox, { backgroundColor: colors.backgroundCard }]}>
+                <Ionicons name="leaf-outline" size={18} color={colors.primary} />
               </View>
               <View style={styles.claimRowText}>
-                <Text style={styles.claimLabel}>Items Recycled</Text>
+                <Text style={[styles.claimLabel, { color: colors.textMuted }]}>{t('scan.itemsRecycled', 'Items Recycled')}</Text>
                 {result.items.map((item, i) => (
-                  <Text key={i} style={styles.claimValue}>
-                    • {item.itemType === 'plastic_bottle' ? 'Plastic Bottle' : item.itemType === 'can' ? 'Aluminum Can' : item.itemType} ×{item.quantity}
+                  <Text key={i} style={[styles.claimValue, { color: colors.textPrimary }]}>
+                    • {item.itemType === 'plastic_bottle' ? t('scan.plasticBottle', 'Plastic Bottle') : item.itemType === 'can' ? t('scan.aluminumCan', 'Aluminum Can') : item.itemType} ×{item.quantity}
                   </Text>
                 ))}
               </View>
             </View>
 
             {/* Points */}
-            <View style={styles.pointsHighlight}>
-              <Text style={styles.pointsHighlightLabel}>Total Points</Text>
+            <View style={[styles.pointsHighlight, { backgroundColor: colors.backgroundCard, borderColor: colors.border }]}>
+              <Text style={[styles.pointsHighlightLabel, { color: colors.textMuted }]}>{t('scan.totalPoints', 'Total Points')}</Text>
               <View style={styles.pointsHighlightValue}>
                 <Text style={styles.pointsEmoji}>🍃</Text>
-                <Text style={styles.pointsNumber}>+{result.totalPoints}</Text>
-                <Text style={styles.pointsUnit}>pts</Text>
+                <Text style={[styles.pointsNumber, { color: colors.primary }]}>+{result.totalPoints}</Text>
+                <Text style={[styles.pointsUnit, { color: colors.primary }]}>{t('common.pts', 'pts')}</Text>
               </View>
             </View>
           </View>
 
           <View style={styles.claimActions}>
             <Button
-              label="Cancel"
+              label={t('common.cancel', 'Cancel')}
               variant="secondary"
               fullWidth={false}
               style={styles.claimBtn}
@@ -207,13 +211,13 @@ const ClaimModal = ({ result, visible, onCancel, onClaim, isClaiming }: ClaimMod
               disabled={isClaiming}
             />
             <Button
-              label={isClaiming ? 'Claiming...' : 'Claim Points'}
+              label={isClaiming ? t('scan.claiming', 'Claiming...') : t('scan.claimPoints', 'Claim Points')}
               variant="primary"
               fullWidth={false}
               style={styles.claimBtn}
               onPress={onClaim}
               loading={isClaiming}
-              leftIcon={!isClaiming ? <Ionicons name="gift" size={16} color={Colors.textWhite} /> : undefined}
+              leftIcon={!isClaiming ? <Ionicons name="gift" size={16} color={colors.textWhite} /> : undefined}
             />
           </View>
         </View>
@@ -238,6 +242,8 @@ export default function QRScanScreen() {
   const hasScanned = useRef(false);
   const invalidateUserData = useInvalidateUserData();
   const refreshProfile = useUserStore((s) => s.refreshProfile);
+  const { colors } = useTheme();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!permission?.granted) requestPermission();
@@ -257,7 +263,7 @@ export default function QRScanScreen() {
     // Parse the signed QR payload JSON
     const payload = parseQrPayload(data);
     if (!payload) {
-      Alert.alert('Invalid QR Code', 'This QR code is not from a GreenGuard machine.');
+      Alert.alert(t('scan.invalidQrTitle', 'Invalid QR Code'), t('scan.invalidQrDesc', 'This QR code is not from a GreenGuard machine.'));
       hasScanned.current = false;
       setIsProcessing(false);
       setScanSuccess(false);
@@ -266,7 +272,7 @@ export default function QRScanScreen() {
 
     // Check expiry client-side for instant feedback
     if (new Date(payload.expiresAt) < new Date()) {
-      Alert.alert('Expired', 'This QR code has expired. Please recycle again to get a new one.');
+      Alert.alert(t('scan.expiredTitle', 'Expired'), t('scan.expiredDesc', 'This QR code has expired. Please recycle again to get a new one.'));
       hasScanned.current = false;
       setIsProcessing(false);
       setScanSuccess(false);
@@ -283,7 +289,7 @@ export default function QRScanScreen() {
     });
     setModalVisible(true);
     setIsProcessing(false);
-  }, [isProcessing]);
+  }, [isProcessing, t]);
 
   const handleCancel = () => {
     setModalVisible(false);
@@ -311,23 +317,23 @@ export default function QRScanScreen() {
       setIsClaiming(false);
       setModalVisible(false);
       Alert.alert(
-        'Points Claimed!',
+        t('scan.pointsClaimedTitle', 'Points Claimed!'),
         `+${result.pointsEarned} pts · Balance: ${result.totalBalance}`,
-        [{ text: 'OK', onPress: () => router.back() }],
+        [{ text: t('common.ok', 'OK'), onPress: () => router.back() }],
       );
     } catch (error: any) {
       setIsClaiming(false);
       const status = error?.response?.status;
-      const message = getApiErrorMessage(error, 'Something went wrong. Please try again.');
+      const message = getApiErrorMessage(error, t('scan.defaultError', 'Something went wrong. Please try again.'));
 
       if (status === 409) {
-        Alert.alert('Already Claimed', message);
+        Alert.alert(t('scan.alreadyClaimedTitle', 'Already Claimed'), message);
       } else if (status === 410) {
-        Alert.alert('Expired', message);
+        Alert.alert(t('scan.expiredTitle', 'Expired'), message);
       } else if (status === 404) {
-        Alert.alert('Not Found', 'Session not found. Please try again in a moment.');
+        Alert.alert(t('scan.notFoundTitle', 'Not Found'), t('scan.notFoundDesc', 'Session not found. Please try again in a moment.'));
       } else {
-        Alert.alert('Error', message);
+        Alert.alert(t('common.error', 'Error'), message);
       }
       handleCancel();
     }
@@ -337,7 +343,7 @@ export default function QRScanScreen() {
   if (!permission) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color={Colors.primary} style={{ flex: 1 }} />
+        <ActivityIndicator size="large" color={colors.primary} style={{ flex: 1 }} />
       </View>
     );
   }
@@ -347,19 +353,19 @@ export default function QRScanScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <TouchableOpacity style={styles.topBackBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textWhite} />
-          <Text style={styles.backLabel}>Back</Text>
+          <Ionicons name="arrow-back" size={24} color={colors.textWhite} />
+          <Text style={[styles.backLabel, { color: colors.textWhite }]}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
         <View style={styles.permissionContainer}>
-          <View style={styles.permissionIcon}>
-            <Ionicons name="camera-outline" size={52} color={Colors.primary} />
+          <View style={[styles.permissionIcon, { backgroundColor: colors.successLight }]}>
+            <Ionicons name="camera-outline" size={52} color={colors.primary} />
           </View>
-          <Text style={styles.permissionTitle}>Camera Access Required</Text>
+          <Text style={[styles.permissionTitle, { color: colors.textWhite }]}>{t('scan.cameraRequired', 'Camera Access Required')}</Text>
           <Text style={styles.permissionDesc}>
-            GreenGuard needs camera access to scan QR codes at recycling points and earn your reward points.
+            {t('scan.cameraDesc', 'GreenGuard needs camera access to scan QR codes at recycling points and earn your reward points.')}
           </Text>
-          <TouchableOpacity style={styles.grantBtn} onPress={requestPermission}>
-            <Text style={styles.grantBtnText}>Grant Camera Permission</Text>
+          <TouchableOpacity style={[styles.grantBtn, { backgroundColor: colors.primary }]} onPress={requestPermission}>
+            <Text style={[styles.grantBtnText, { color: colors.textWhite }]}>{t('scan.grantCamera', 'Grant Camera Permission')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -371,16 +377,16 @@ export default function QRScanScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <TouchableOpacity style={styles.topBackBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textWhite} />
-          <Text style={styles.backLabel}>Back</Text>
+          <Ionicons name="arrow-back" size={24} color={colors.textWhite} />
+          <Text style={[styles.backLabel, { color: colors.textWhite }]}>{t('common.back', 'Back')}</Text>
         </TouchableOpacity>
         <View style={styles.permissionContainer}>
-          <View style={styles.permissionIcon}>
-            <Ionicons name="qr-code-outline" size={52} color={Colors.primary} />
+          <View style={[styles.permissionIcon, { backgroundColor: colors.successLight }]}>
+            <Ionicons name="qr-code-outline" size={52} color={colors.primary} />
           </View>
-          <Text style={styles.permissionTitle}>Camera Not Available</Text>
+          <Text style={[styles.permissionTitle, { color: colors.textWhite }]}>{t('scan.cameraNotAvailable', 'Camera Not Available')}</Text>
           <Text style={styles.permissionDesc}>
-            QR scanning is available on Android and iOS devices.{'\n'}Please use the mobile app to scan QR codes.
+            {t('scan.cameraWebDesc', 'QR scanning is available on Android and iOS devices.\nPlease use the mobile app to scan QR codes.')}
           </Text>
         </View>
       </SafeAreaView>
@@ -403,7 +409,7 @@ export default function QRScanScreen() {
         <View style={styles.overlayTop} />
         <View style={styles.overlayMiddle}>
           <View style={styles.overlaySide} />
-          <QRFrame success={scanSuccess} />
+          <QRFrame success={scanSuccess} colors={colors} />
           <View style={styles.overlaySide} />
         </View>
         <View style={styles.overlayBottom} />
@@ -412,15 +418,15 @@ export default function QRScanScreen() {
       {/* Instruction text */}
       {!scanSuccess && (
         <View style={styles.instructionBox}>
-          <Text style={styles.instructionText}>Point camera at the QR code on the machine</Text>
+          <Text style={styles.instructionText}>{t('scan.instruction', 'Point camera at the QR code on the machine')}</Text>
         </View>
       )}
 
       {/* Processing indicator */}
       {isProcessing && !modalVisible && (
         <View style={styles.processingBox}>
-          <ActivityIndicator size="small" color={Colors.textWhite} />
-          <Text style={styles.processingText}>Verifying QR code...</Text>
+          <ActivityIndicator size="small" color={colors.textWhite} />
+          <Text style={[styles.processingText, { color: colors.textWhite }]}>{t('scan.verifying', 'Verifying QR code...')}</Text>
         </View>
       )}
 
@@ -428,10 +434,10 @@ export default function QRScanScreen() {
       <SafeAreaView style={styles.headerSafe} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.headerBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={22} color={Colors.textWhite} />
-            <Text style={styles.backLabel}>Back</Text>
+            <Ionicons name="arrow-back" size={22} color={colors.textWhite} />
+            <Text style={[styles.backLabel, { color: colors.textWhite }]}>{t('common.back', 'Back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Scan QR Code</Text>
+          <Text style={[styles.headerTitle, { color: colors.textWhite }]}>{t('scan.title', 'Scan QR Code')}</Text>
           {/* Flash toggle */}
           <TouchableOpacity
             style={[styles.headerIconBtn, flashEnabled && styles.headerIconBtnActive]}
@@ -440,7 +446,7 @@ export default function QRScanScreen() {
             <Ionicons
               name={flashEnabled ? 'flash' : 'flash-outline'}
               size={22}
-              color={flashEnabled ? Colors.accent : Colors.textWhite}
+              color={flashEnabled ? colors.accent : colors.textWhite}
             />
           </TouchableOpacity>
         </View>
@@ -454,19 +460,19 @@ export default function QRScanScreen() {
             style={styles.bottomAction}
             onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
           >
-            <Ionicons name="camera-reverse-outline" size={26} color={Colors.textWhite} />
-            <Text style={styles.bottomActionLabel}>Flip</Text>
+            <Ionicons name="camera-reverse-outline" size={26} color={colors.textWhite} />
+            <Text style={styles.bottomActionLabel}>{t('scan.flip', 'Flip')}</Text>
           </TouchableOpacity>
 
           {/* Center QR icon */}
-          <View style={styles.centerQR}>
-            <Ionicons name="qr-code-outline" size={30} color={Colors.textWhite} />
+          <View style={[styles.centerQR, { backgroundColor: colors.primary }]}>
+            <Ionicons name="qr-code-outline" size={30} color={colors.textWhite} />
           </View>
 
           {/* History */}
           <TouchableOpacity style={styles.bottomAction} onPress={() => router.push('/history' as any)}>
-            <Ionicons name="time-outline" size={26} color={Colors.textWhite} />
-            <Text style={styles.bottomActionLabel}>History</Text>
+            <Ionicons name="time-outline" size={26} color={colors.textWhite} />
+            <Text style={styles.bottomActionLabel}>{t('scan.history', 'History')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -478,6 +484,8 @@ export default function QRScanScreen() {
         onCancel={handleCancel}
         onClaim={handleClaim}
         isClaiming={isClaiming}
+        colors={colors}
+        t={t}
       />
     </View>
   );
@@ -503,7 +511,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textWhite,
   },
   headerIconBtn: {
     width: 40,
@@ -517,7 +524,6 @@ const styles = StyleSheet.create({
   backLabel: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.medium,
-    color: Colors.textWhite,
   },
   topBackBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, padding: Spacing.base },
 
@@ -535,16 +541,13 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: Colors.primaryLight,
     borderRadius: Radius.sm,
   },
   corner: {
     position: 'absolute',
     width: CORNER_SIZE,
     height: CORNER_SIZE,
-    borderColor: Colors.primaryLight,
   },
-  cornerSuccess: { borderColor: Colors.accent },
   cornerTL: { top: -1, left: -1, borderTopWidth: CORNER_THICKNESS, borderLeftWidth: CORNER_THICKNESS },
   cornerTR: { top: -1, right: -1, borderTopWidth: CORNER_THICKNESS, borderRightWidth: CORNER_THICKNESS },
   cornerBL: { bottom: -1, left: -1, borderBottomWidth: CORNER_THICKNESS, borderLeftWidth: CORNER_THICKNESS },
@@ -554,7 +557,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 2,
-    backgroundColor: Colors.primaryLight,
     opacity: 0.9,
   },
 
@@ -590,7 +592,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     borderRadius: Radius.pill,
   },
-  processingText: { fontSize: FontSize.base, color: Colors.textWhite, fontWeight: FontWeight.medium },
+  processingText: { fontSize: FontSize.base, fontWeight: FontWeight.medium },
 
   // Bottom bar
   bottomSafe: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,15,0,0.85)' },
@@ -607,7 +609,6 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadows.lg,
@@ -624,7 +625,6 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: Colors.successLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.xl,
@@ -632,7 +632,6 @@ const styles = StyleSheet.create({
   permissionTitle: {
     fontSize: FontSize.xl,
     fontWeight: FontWeight.bold,
-    color: Colors.textWhite,
     marginBottom: Spacing.md,
     textAlign: 'center',
   },
@@ -644,19 +643,17 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   grantBtn: {
-    backgroundColor: Colors.primary,
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
   },
-  grantBtnText: { fontSize: FontSize.base, fontWeight: FontWeight.semiBold, color: Colors.textWhite },
+  grantBtnText: { fontSize: FontSize.base, fontWeight: FontWeight.semiBold },
 
   // Success circle
   successCircle: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.md,
@@ -666,7 +663,6 @@ const styles = StyleSheet.create({
   // Claim Modal
   claimBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   claimSheet: {
-    backgroundColor: Colors.backgroundWhite,
     borderTopLeftRadius: Radius.modal,
     borderTopRightRadius: Radius.modal,
     paddingBottom: Spacing['2xl'],
@@ -675,7 +671,6 @@ const styles = StyleSheet.create({
   claimHandle: {
     width: 40,
     height: 4,
-    backgroundColor: Colors.borderMuted,
     borderRadius: 2,
     alignSelf: 'center',
     marginTop: Spacing.md,
@@ -684,10 +679,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.xl,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
   },
-  claimTitle: { fontSize: FontSize['2xl'], fontWeight: FontWeight.bold, color: Colors.textPrimary },
-  claimSubtitle: { fontSize: FontSize.base, color: Colors.textMuted, marginTop: Spacing.xs },
+  claimTitle: { fontSize: FontSize['2xl'], fontWeight: FontWeight.bold },
+  claimSubtitle: { fontSize: FontSize.base, marginTop: Spacing.xs },
   claimBody: { paddingHorizontal: Spacing.base, paddingTop: Spacing.base },
   claimRow: {
     flexDirection: 'row',
@@ -699,28 +693,25 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: Radius.md,
-    backgroundColor: Colors.backgroundCard,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   claimRowText: { flex: 1 },
-  claimLabel: { fontSize: FontSize.sm, color: Colors.textMuted, marginBottom: 2 },
-  claimValue: { fontSize: FontSize.base, color: Colors.textPrimary, fontWeight: FontWeight.medium, lineHeight: 20 },
+  claimLabel: { fontSize: FontSize.sm, marginBottom: 2 },
+  claimValue: { fontSize: FontSize.base, fontWeight: FontWeight.medium, lineHeight: 20 },
   pointsHighlight: {
-    backgroundColor: Colors.backgroundCard,
     borderRadius: Radius.lg,
     padding: Spacing.base,
     alignItems: 'center',
     marginBottom: Spacing.base,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
-  pointsHighlightLabel: { fontSize: FontSize.sm, color: Colors.textMuted, marginBottom: Spacing.xs },
+  pointsHighlightLabel: { fontSize: FontSize.sm, marginBottom: Spacing.xs },
   pointsHighlightValue: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.xs },
   pointsEmoji: { fontSize: FontSize['2xl'] },
-  pointsNumber: { fontSize: FontSize['6xl'], fontWeight: FontWeight.bold, color: Colors.primary },
-  pointsUnit: { fontSize: FontSize.lg, color: Colors.primary, fontWeight: FontWeight.medium },
+  pointsNumber: { fontSize: FontSize['6xl'], fontWeight: FontWeight.bold },
+  pointsUnit: { fontSize: FontSize.lg, fontWeight: FontWeight.medium },
   claimActions: {
     flexDirection: 'row',
     paddingHorizontal: Spacing.base,

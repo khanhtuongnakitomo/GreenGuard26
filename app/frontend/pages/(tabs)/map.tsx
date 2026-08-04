@@ -28,8 +28,10 @@ import Animated, {
 
 import { AppHeader } from '@/components/common/AppHeader';
 import { Button } from '@/components/common/Button';
-import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useTheme } from '@/hooks/useTheme';
+import { useI18n } from '@/hooks/useI18n';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,62 +46,31 @@ interface RecyclingStation {
   openHours: string;
   distance: string;
   acceptedItems: string[];
-  pinColor: string;
+  pinColor: string; // Wait, I should make pinColor dynamic or derive from theme. Let's just keep the prop but use theme colors below
 }
-
-// ─── Mock Data ─────────────────────────────────────────────────────────────────
-
-const VIETNAM_STATIONS: RecyclingStation[] = [
-  {
-    id: 's_001',
-    name: 'GreenGuard HCM - Quận 1',
-    city: 'Hồ Chí Minh',
-    address: '186 Nguyễn Thị Minh Khai, Quận 1, TP.HCM',
-    latitude: 10.7769,
-    longitude: 106.7009,
-    isOpen: true,
-    openHours: '07:00 – 20:00',
-    distance: '0.5 km',
-    acceptedItems: ['Plastic', 'Paper', 'Metal', 'Glass'],
-    pinColor: Colors.primary,
-  },
-  {
-    id: 's_002',
-    name: 'GreenGuard HCM - HCMUT',
-    city: 'Hồ Chí Minh',
-    address: '268 Lý Thường Kiệt, Quận 10, TP.HCM',
-    latitude: 10.7729,
-    longitude: 106.658,
-    isOpen: true,
-    openHours: '06:00 – 22:00',
-    distance: '1.2 km',
-    acceptedItems: ['Plastic', 'Paper', 'Metal'],
-    pinColor: Colors.primary,
-  },
-];
 
 // ─── Leaflet HTML ─────────────────────────────────────────────────────────────
 
-const buildLeafletHtml = (stations: RecyclingStation[]) => {
+const buildLeafletHtml = (stations: RecyclingStation[], colors: any) => {
   const markersJs = stations
     .map(
       (s) => `
       var marker${s.id.replace(/-/g, '_')} = L.circleMarker([${s.latitude}, ${s.longitude}], {
         radius: 12,
         fillColor: '${s.pinColor}',
-        color: '#fff',
+        color: '${colors.backgroundWhite}',
         weight: 2,
         opacity: 1,
         fillOpacity: 0.9
       }).addTo(map);
       marker${s.id.replace(/-/g, '_')}.bindPopup(
-        '<div style="font-family: sans-serif; min-width: 200px;">' +
-        '<b style="font-size:14px; color:#156B2F;">${s.name}</b>' +
-        '<p style="margin:4px 0; font-size:12px; color:#555;">${s.address}</p>' +
-        '<span style="display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; background:${s.isOpen ? '#D4EDAA' : '#FEE2E2'}; color:${s.isOpen ? '#156B2F' : '#EF4444'};">${s.isOpen ? '● Open' : '● Closed'}</span>' +
+        '<div style="font-family: sans-serif; min-width: 200px; color:${colors.textPrimary};">' +
+        '<b style="font-size:14px; color:${colors.primary};">${s.name}</b>' +
+        '<p style="margin:4px 0; font-size:12px; color:${colors.textMuted};">${s.address}</p>' +
+        '<span style="display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; background:${s.isOpen ? colors.successLight : colors.errorLight}; color:${s.isOpen ? colors.primary : colors.error};">${s.isOpen ? '● Open' : '● Closed'}</span>' +
         '<p style="margin:6px 0; font-size:12px;">🕐 ${s.openHours}</p>' +
         '<p style="margin:4px 0; font-size:12px;">📦 ${s.acceptedItems.join(', ')}</p>' +
-        '<p style="margin:4px 0; font-size:12px; color:#4A4A4A;">📍 ${s.distance} away</p>' +
+        '<p style="margin:4px 0; font-size:12px; color:${colors.textSecondary};">📍 ${s.distance} away</p>' +
         '</div>'
       , { maxWidth: 260 });
     `,
@@ -116,19 +87,21 @@ const buildLeafletHtml = (stations: RecyclingStation[]) => {
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body, #map { width: 100%; height: 100%; }
+    html, body, #map { width: 100%; height: 100%; background: ${colors.backgroundScreen}; }
     .leaflet-popup-content-wrapper {
       border-radius: 12px !important;
       box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+      background: ${colors.backgroundWhite};
+      color: ${colors.textPrimary};
     }
-    .leaflet-popup-tip { display: none; }
+    .leaflet-popup-tip { border-top-color: ${colors.backgroundWhite} !important; }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <script>
     var map = L.map('map', { zoomControl: false }).setView([10.7769, 106.7009], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/${colors.backgroundScreen === '#121212' ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png', {
       attribution: '© OpenStreetMap contributors',
       maxZoom: 18
     }).addTo(map);
@@ -153,26 +126,29 @@ interface StationCardProps {
   onPress: () => void;
 }
 
-const StationCard = ({ station, onPress }: StationCardProps) => (
-  <TouchableOpacity style={styles.stationCard} onPress={onPress} activeOpacity={0.8}>
-    <View style={styles.stationCardLeft}>
-      <View style={[styles.stationDot, { backgroundColor: station.pinColor }]} />
-      <View style={styles.stationInfo}>
-        <Text style={styles.stationName} numberOfLines={1}>{station.name}</Text>
-        <Text style={styles.stationAddress} numberOfLines={1}>{station.address}</Text>
-        <View style={styles.stationMeta}>
-          <View style={[styles.statusBadge, station.isOpen ? styles.statusOpen : styles.statusClosed]}>
-            <Text style={[styles.statusText, { color: station.isOpen ? Colors.primary : Colors.error }]}>
-              {station.isOpen ? 'Open' : 'Closed'}
-            </Text>
+const StationCard = ({ station, onPress }: StationCardProps) => {
+  const { colors } = useTheme();
+  return (
+    <TouchableOpacity style={[styles.stationCard, { backgroundColor: colors.backgroundWhite, borderColor: colors.cardBorder }]} onPress={onPress} activeOpacity={0.8}>
+      <View style={styles.stationCardLeft}>
+        <View style={[styles.stationDot, { backgroundColor: station.pinColor }]} />
+        <View style={styles.stationInfo}>
+          <Text style={[styles.stationName, { color: colors.textPrimary }]} numberOfLines={1}>{station.name}</Text>
+          <Text style={[styles.stationAddress, { color: colors.textMuted }]} numberOfLines={1}>{station.address}</Text>
+          <View style={styles.stationMeta}>
+            <View style={[styles.statusBadge, { backgroundColor: station.isOpen ? colors.successLight : colors.errorLight }]}>
+              <Text style={[styles.statusText, { color: station.isOpen ? colors.primary : colors.error }]}>
+                {station.isOpen ? 'Open' : 'Closed'}
+              </Text>
+            </View>
+            <Text style={[styles.distanceText, { color: colors.textMuted }]}>📍 {station.distance}</Text>
           </View>
-          <Text style={styles.distanceText}>📍 {station.distance}</Text>
         </View>
       </View>
-    </View>
-    <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-  </TouchableOpacity>
-);
+      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+    </TouchableOpacity>
+  );
+};
 
 interface StationDetailModalProps {
   station: RecyclingStation | null;
@@ -181,43 +157,44 @@ interface StationDetailModalProps {
 }
 
 const StationDetailModal = ({ station, visible, onClose }: StationDetailModalProps) => {
+  const { colors } = useTheme();
   if (!station) return null;
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={onClose}>
-        <TouchableOpacity style={styles.modalSheet} activeOpacity={1}>
-          <View style={styles.modalHandle} />
-          <View style={styles.modalHeader}>
+        <TouchableOpacity style={[styles.modalSheet, { backgroundColor: colors.backgroundWhite }]} activeOpacity={1}>
+          <View style={[styles.modalHandle, { backgroundColor: colors.borderMuted }]} />
+          <View style={[styles.modalHeader, { borderBottomColor: colors.divider }]}>
             <View style={[styles.stationDot, styles.stationDotLg, { backgroundColor: station.pinColor }]} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.modalTitle}>{station.name}</Text>
-              <Text style={styles.modalCity}>{station.city}</Text>
+              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>{station.name}</Text>
+              <Text style={[styles.modalCity, { color: colors.textMuted }]}>{station.city}</Text>
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="close" size={22} color={Colors.textMuted} />
+              <Ionicons name="close" size={22} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.modalBody}>
             <View style={styles.modalRow}>
-              <Ionicons name="location-outline" size={18} color={Colors.primary} />
-              <Text style={styles.modalRowText}>{station.address}</Text>
+              <Ionicons name="location-outline" size={18} color={colors.primary} />
+              <Text style={[styles.modalRowText, { color: colors.textSecondary }]}>{station.address}</Text>
             </View>
             <View style={styles.modalRow}>
-              <Ionicons name="time-outline" size={18} color={Colors.primary} />
-              <Text style={styles.modalRowText}>{station.openHours}</Text>
+              <Ionicons name="time-outline" size={18} color={colors.primary} />
+              <Text style={[styles.modalRowText, { color: colors.textSecondary }]}>{station.openHours}</Text>
             </View>
             <View style={styles.modalRow}>
-              <Ionicons name="navigate-outline" size={18} color={Colors.primary} />
-              <Text style={styles.modalRowText}>{station.distance} from current location</Text>
+              <Ionicons name="navigate-outline" size={18} color={colors.primary} />
+              <Text style={[styles.modalRowText, { color: colors.textSecondary }]}>{station.distance} from current location</Text>
             </View>
 
             <View style={[styles.modalRow, { alignItems: 'flex-start' }]}>
-              <Ionicons name="leaf-outline" size={18} color={Colors.primary} />
+              <Ionicons name="leaf-outline" size={18} color={colors.primary} />
               <View style={styles.itemsWrap}>
                 {station.acceptedItems.map((item) => (
-                  <View key={item} style={styles.itemChip}>
-                    <Text style={styles.itemChipText}>{item}</Text>
+                  <View key={item} style={[styles.itemChip, { backgroundColor: colors.backgroundCard, borderColor: colors.border }]}>
+                    <Text style={[styles.itemChipText, { color: colors.primary }]}>{item}</Text>
                   </View>
                 ))}
               </View>
@@ -225,14 +202,14 @@ const StationDetailModal = ({ station, visible, onClose }: StationDetailModalPro
 
             <View style={[
               styles.statusBanner,
-              station.isOpen ? styles.statusBannerOpen : styles.statusBannerClosed,
+              { backgroundColor: station.isOpen ? colors.successLight : colors.errorLight }
             ]}>
               <Ionicons
                 name={station.isOpen ? 'checkmark-circle' : 'close-circle'}
                 size={16}
-                color={station.isOpen ? Colors.primary : Colors.error}
+                color={station.isOpen ? colors.primary : colors.error}
               />
-              <Text style={[styles.statusBannerText, { color: station.isOpen ? Colors.primary : Colors.error }]}>
+              <Text style={[styles.statusBannerText, { color: station.isOpen ? colors.primary : colors.error }]}>
                 {station.isOpen ? 'Currently Open' : 'Currently Closed'}
               </Text>
             </View>
@@ -244,7 +221,7 @@ const StationDetailModal = ({ station, visible, onClose }: StationDetailModalPro
                 fullWidth={false}
                 style={styles.modalBtn}
                 onPress={onClose}
-                leftIcon={<Ionicons name="navigate" size={16} color={Colors.primary} />}
+                leftIcon={<Ionicons name="navigate" size={16} color={colors.primary} />}
               />
               <Button
                 label="Details"
@@ -252,7 +229,7 @@ const StationDetailModal = ({ station, visible, onClose }: StationDetailModalPro
                 fullWidth={false}
                 style={styles.modalBtn}
                 onPress={onClose}
-                leftIcon={<Ionicons name="information-circle" size={16} color={Colors.textWhite} />}
+                leftIcon={<Ionicons name="information-circle" size={16} color={colors.textWhite} />}
               />
             </View>
           </View>
@@ -264,24 +241,28 @@ const StationDetailModal = ({ station, visible, onClose }: StationDetailModalPro
 
 // ─── Legend ──────────────────────────────────────────────────────────────────
 
-const MapLegend = () => (
-  <View style={styles.legend}>
-    <Text style={styles.legendTitle}>Legend</Text>
-    <View style={styles.legendRow}>
-      <View style={[styles.legendDot, { backgroundColor: Colors.primary }]} />
-      <Text style={styles.legendLabel}>Open Station</Text>
+const MapLegend = () => {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.legend, { backgroundColor: colors.backgroundWhite }]}>
+      <Text style={[styles.legendTitle, { color: colors.textPrimary }]}>Legend</Text>
+      <View style={styles.legendRow}>
+        <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+        <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>Open Station</Text>
+      </View>
+      <View style={styles.legendRow}>
+        <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />
+        <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>Closed Station</Text>
+      </View>
     </View>
-    <View style={styles.legendRow}>
-      <View style={[styles.legendDot, { backgroundColor: Colors.warning }]} />
-      <Text style={styles.legendLabel}>Closed Station</Text>
-    </View>
-  </View>
-);
+  );
+};
 
 // ─── Map Renderer ─────────────────────────────────────────────────────────────
 
 const LeafletMap = ({ stations }: { stations: RecyclingStation[] }) => {
-  const html = buildLeafletHtml(stations);
+  const { colors } = useTheme();
+  const html = buildLeafletHtml(stations, colors);
 
   if (Platform.OS === 'web') {
     return (
@@ -307,9 +288,9 @@ const LeafletMap = ({ stations }: { stations: RecyclingStation[] }) => {
 
   if (!WebView) {
     return (
-      <View style={[styles.mapContainer, styles.mapFallback]}>
-        <Ionicons name="map-outline" size={48} color={Colors.textMuted} />
-        <Text style={styles.fallbackText}>Install react-native-webview to enable the map</Text>
+      <View style={[styles.mapContainer, styles.mapFallback, { backgroundColor: colors.backgroundCard }]}>
+        <Ionicons name="map-outline" size={48} color={colors.textMuted} />
+        <Text style={[styles.fallbackText, { color: colors.textMuted }]}>Install react-native-webview to enable the map</Text>
       </View>
     );
   }
@@ -335,9 +316,42 @@ const { height: SCREEN_H } = Dimensions.get('window');
 
 export default function MapScreen() {
   const { isLargeScreen } = useResponsive();
+  const { colors } = useTheme();
+  const { t } = useI18n();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStation, setSelectedStation] = useState<RecyclingStation | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+
+  // Rebuild mock data colors
+  const VIETNAM_STATIONS: RecyclingStation[] = [
+    {
+      id: 's_001',
+      name: 'GreenGuard HCM - Quận 1',
+      city: 'Hồ Chí Minh',
+      address: '186 Nguyễn Thị Minh Khai, Quận 1, TP.HCM',
+      latitude: 10.7769,
+      longitude: 106.7009,
+      isOpen: true,
+      openHours: '07:00 – 20:00',
+      distance: '0.5 km',
+      acceptedItems: ['Plastic', 'Paper', 'Metal', 'Glass'],
+      pinColor: colors.primary,
+    },
+    {
+      id: 's_002',
+      name: 'GreenGuard HCM - HCMUT',
+      city: 'Hồ Chí Minh',
+      address: '268 Lý Thường Kiệt, Quận 10, TP.HCM',
+      latitude: 10.7729,
+      longitude: 106.658,
+      isOpen: true,
+      openHours: '06:00 – 22:00',
+      distance: '1.2 km',
+      acceptedItems: ['Plastic', 'Paper', 'Metal'],
+      pinColor: colors.primary,
+    },
+  ];
 
   const filtered = VIETNAM_STATIONS.filter((s) => {
     const matchSearch =
@@ -356,25 +370,25 @@ export default function MapScreen() {
   const renderSidebar = () => (
     <>
       {/* Search bar */}
-      <View style={styles.searchCard}>
-        <Ionicons name="search-outline" size={18} color={Colors.textMuted} />
+      <View style={[styles.searchCard, { backgroundColor: colors.backgroundWhite, borderColor: colors.cardBorder }]}>
+        <Ionicons name="search-outline" size={18} color={colors.textMuted} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: colors.textPrimary }]}
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Search stations, cities..."
-          placeholderTextColor={Colors.textMuted}
+          placeholder={t('map.searchPlaceholder', 'Search stations, cities...')}
+          placeholderTextColor={colors.textMuted}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
+            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         )}
       </View>
 
       {/* Results count */}
       <View style={styles.resultsRow}>
-        <Text style={styles.resultsCount}>{filtered.length} station{filtered.length !== 1 ? 's' : ''} found</Text>
+        <Text style={[styles.resultsCount, { color: colors.textMuted }]}>{filtered.length} station{filtered.length !== 1 ? 's' : ''} found</Text>
       </View>
 
       {/* Station list */}
@@ -388,8 +402,8 @@ export default function MapScreen() {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyList}>
-            <Ionicons name="search-outline" size={40} color={Colors.borderMuted} />
-            <Text style={styles.emptyListText}>No stations found</Text>
+            <Ionicons name="search-outline" size={40} color={colors.borderMuted} />
+            <Text style={[styles.emptyListText, { color: colors.textMuted }]}>{t('map.noStationsFound', 'No stations found')}</Text>
           </View>
         }
       />
@@ -397,17 +411,17 @@ export default function MapScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.backgroundScreen }]} edges={['top']}>
       {!isLargeScreen && <AppHeader rightIcon="bell" onRightIconPress={() => { }} />}
 
       {isLargeScreen ? (
         // ── Desktop: sidebar + map side-by-side
         <View style={styles.desktopLayout}>
-          <View style={styles.desktopSidebar}>
+          <View style={[styles.desktopSidebar, { backgroundColor: colors.backgroundWhite, borderRightColor: colors.divider }]}>
             <View style={styles.desktopTitleRow}>
               <AppHeader rightIcon="bell" onRightIconPress={() => { }} hideLogo />
             </View>
-            <Text style={styles.titleDesktop}>Recycling Stations</Text>
+            <Text style={[styles.titleDesktop, { color: colors.textPrimary }]}>{t('map.title', 'Recycling Stations')}</Text>
             {renderSidebar()}
           </View>
           <View style={styles.desktopMap}>
@@ -438,7 +452,7 @@ export default function MapScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.backgroundScreen },
+  safe: { flex: 1 },
 
   // Layout
   mobileLayout: { flex: 1 },
@@ -446,9 +460,7 @@ const styles = StyleSheet.create({
   desktopLayout: { flex: 1, flexDirection: 'row' },
   desktopSidebar: {
     width: 380,
-    backgroundColor: Colors.backgroundWhite,
     borderRightWidth: 1,
-    borderRightColor: Colors.divider,
   },
   desktopMap: { flex: 1 },
   desktopTitleRow: { alignItems: 'flex-end' },
@@ -457,14 +469,12 @@ const styles = StyleSheet.create({
   titleMobile: {
     fontSize: FontSize['2xl'],
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
     textAlign: 'center',
     paddingVertical: Spacing.sm,
   },
   titleDesktop: {
     fontSize: FontSize.xl,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
     paddingHorizontal: Spacing.base,
     paddingBottom: Spacing.sm,
   },
@@ -474,12 +484,10 @@ const styles = StyleSheet.create({
   mapFallback: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.backgroundCard,
     gap: Spacing.md,
   },
   fallbackText: {
     fontSize: FontSize.base,
-    color: Colors.textMuted,
     textAlign: 'center',
     paddingHorizontal: Spacing.xl,
   },
@@ -488,7 +496,6 @@ const styles = StyleSheet.create({
   searchCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.backgroundWhite,
     marginHorizontal: Spacing.base,
     marginTop: Spacing.sm,
     marginBottom: Spacing.sm,
@@ -496,17 +503,14 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: Colors.cardBorder,
     gap: Spacing.sm,
     ...Shadows.card,
   },
   searchInput: {
     flex: 1,
     fontSize: FontSize.base,
-    color: Colors.textPrimary,
     paddingVertical: 0,
   },
-
 
   // Results
   resultsRow: {
@@ -515,7 +519,6 @@ const styles = StyleSheet.create({
   },
   resultsCount: {
     fontSize: FontSize.sm,
-    color: Colors.textMuted,
     fontWeight: FontWeight.medium,
   },
 
@@ -526,11 +529,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: Spacing.base,
     marginBottom: Spacing.sm,
-    backgroundColor: Colors.backgroundWhite,
     borderRadius: 20,
     padding: Spacing.md,
     borderWidth: 1.5,
-    borderColor: Colors.cardBorder,
     ...Shadows.card,
   },
   stationCardLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
@@ -540,12 +541,10 @@ const styles = StyleSheet.create({
   stationName: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textPrimary,
     marginBottom: 2,
   },
   stationAddress: {
     fontSize: FontSize.sm,
-    color: Colors.textMuted,
     marginBottom: Spacing.xs,
   },
   stationMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
@@ -554,17 +553,14 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: Radius.pill,
   },
-  statusOpen: { backgroundColor: Colors.successLight },
-  statusClosed: { backgroundColor: Colors.errorLight },
   statusText: { fontSize: FontSize.xs, fontWeight: FontWeight.semiBold },
-  distanceText: { fontSize: FontSize.xs, color: Colors.textMuted },
+  distanceText: { fontSize: FontSize.xs },
 
   // Legend
   legend: {
     position: 'absolute',
     bottom: Spacing.base,
     left: Spacing.base,
-    backgroundColor: Colors.backgroundWhite,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     ...Shadows.md,
@@ -572,16 +568,15 @@ const styles = StyleSheet.create({
   legendTitle: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textPrimary,
     marginBottom: Spacing.xs,
   },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: 4 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendLabel: { fontSize: FontSize.xs, color: Colors.textSecondary },
+  legendLabel: { fontSize: FontSize.xs },
 
   // Empty
   emptyList: { alignItems: 'center', paddingVertical: Spacing['3xl'], gap: Spacing.md },
-  emptyListText: { fontSize: FontSize.base, color: Colors.textMuted },
+  emptyListText: { fontSize: FontSize.base },
 
   // Modal
   modalBackdrop: {
@@ -590,7 +585,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: Colors.backgroundWhite,
     borderTopLeftRadius: Radius.modal,
     borderTopRightRadius: Radius.modal,
     paddingBottom: Spacing['2xl'],
@@ -599,7 +593,6 @@ const styles = StyleSheet.create({
   modalHandle: {
     width: 40,
     height: 4,
-    backgroundColor: Colors.borderMuted,
     borderRadius: 2,
     alignSelf: 'center',
     marginTop: Spacing.md,
@@ -612,16 +605,13 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
     gap: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
   },
   modalTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
   },
   modalCity: {
     fontSize: FontSize.sm,
-    color: Colors.textMuted,
     marginTop: 2,
   },
   modalBody: { paddingHorizontal: Spacing.base, paddingTop: Spacing.base },
@@ -634,7 +624,6 @@ const styles = StyleSheet.create({
   modalRowText: {
     flex: 1,
     fontSize: FontSize.base,
-    color: Colors.textSecondary,
     lineHeight: 20,
   },
   itemsWrap: {
@@ -646,12 +635,10 @@ const styles = StyleSheet.create({
   itemChip: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
-    backgroundColor: Colors.backgroundCard,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
-  itemChipText: { fontSize: FontSize.xs, color: Colors.primary, fontWeight: FontWeight.medium },
+  itemChipText: { fontSize: FontSize.xs, fontWeight: FontWeight.medium },
   statusBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -660,8 +647,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     marginBottom: Spacing.base,
   },
-  statusBannerOpen: { backgroundColor: Colors.successLight },
-  statusBannerClosed: { backgroundColor: Colors.errorLight },
   statusBannerText: { fontSize: FontSize.base, fontWeight: FontWeight.semiBold },
   modalActions: {
     flexDirection: 'row',

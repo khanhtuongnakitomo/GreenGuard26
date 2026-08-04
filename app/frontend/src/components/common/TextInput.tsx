@@ -19,7 +19,8 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Radius, FontSize, FontWeight } from '@/theme';
+import { Spacing, Radius, FontSize, FontWeight } from '@/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 interface TextInputProps extends RNTextInputProps {
   label?: string;
@@ -42,6 +43,7 @@ export const TextInput = memo(
       },
       ref,
     ) => {
+      const { colors } = useTheme();
       const [isFocused, setIsFocused] = useState(false);
       const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
@@ -49,18 +51,22 @@ export const TextInput = memo(
 
       return (
         <View style={[styles.container, containerStyle]}>
-          {label && <Text style={styles.label}>{label}</Text>}
+          {label && (
+            <Text style={[styles.label, { color: colors.textPrimary }]}>{label}</Text>
+          )}
           <View
             style={[
               styles.inputWrapper,
-              isFocused && styles.inputWrapperFocused,
-              !!error && styles.inputWrapperError,
+              {
+                borderColor: !!error ? colors.error : isFocused ? colors.primary : colors.border,
+                backgroundColor: colors.backgroundInput,
+              },
             ]}
           >
             <RNTextInput
               ref={ref}
-              style={[styles.input, style]}
-              placeholderTextColor={Colors.textMuted}
+              style={[styles.input, { color: colors.textPrimary }, style]}
+              placeholderTextColor={colors.textMuted}
               secureTextEntry={isSecure}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
@@ -77,12 +83,14 @@ export const TextInput = memo(
                 <Ionicons
                   name={isPasswordVisible ? 'eye-outline' : 'eye-off-outline'}
                   size={20}
-                  color={Colors.textMuted}
+                  color={colors.textMuted}
                 />
               </TouchableOpacity>
             )}
           </View>
-          {!!error && <Text style={styles.errorText}>{error}</Text>}
+          {!!error && (
+            <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+          )}
         </View>
       );
     },
@@ -98,7 +106,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.medium,
-    color: Colors.textPrimary,
     marginBottom: Spacing.sm,
   },
   inputWrapper: {
@@ -106,21 +113,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: Spacing.inputHeight,
     borderWidth: 1.5,
-    borderColor: Colors.border,
     borderRadius: Radius.input,
-    backgroundColor: Colors.backgroundInput,
     paddingHorizontal: Spacing.base,
-  },
-  inputWrapperFocused: {
-    borderColor: Colors.primary,
-  },
-  inputWrapperError: {
-    borderColor: Colors.error,
   },
   input: {
     flex: 1,
     fontSize: FontSize.md,
-    color: Colors.textPrimary,
     paddingVertical: 0,
   },
   iconButton: {
@@ -128,7 +126,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: FontSize.sm,
-    color: Colors.error,
     marginTop: Spacing.xs,
   },
 });

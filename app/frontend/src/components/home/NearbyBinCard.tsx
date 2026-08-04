@@ -1,8 +1,5 @@
 /**
  * GreenGuard — NearbyBinCard Component (Home Screen)
- *
- * Premium card: animated progress bar fill, scale press feedback,
- * improved icon box, cleaner fill label chip, better spacing.
  */
 import React, { memo, useEffect } from 'react';
 import {
@@ -20,7 +17,8 @@ import Animated, {
   Easing,
   interpolate,
 } from 'react-native-reanimated';
-import { Colors, Spacing, FontSize, FontWeight, Radius } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius } from '@/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 interface NearbyBin {
   id: string;
@@ -34,19 +32,21 @@ interface NearbyBinCardProps {
   onPress?: () => void;
 }
 
-function getFillColor(percent: number): string {
-  if (percent < 50) return Colors.primary;
-  if (percent < 80) return '#F59E0B';
-  return '#EF4444';
-}
-
-function getFillLabel(percent: number): string {
-  if (percent < 50) return 'Low';
-  if (percent < 80) return 'Medium';
-  return 'High';
-}
-
 export const NearbyBinCard = memo<NearbyBinCardProps>(({ bin, onPress }) => {
+  const { colors } = useTheme();
+
+  function getFillColor(percent: number): string {
+    if (percent < 50) return colors.primary;
+    if (percent < 80) return colors.warning;
+    return colors.error;
+  }
+
+  function getFillLabel(percent: number): string {
+    if (percent < 50) return 'Low';
+    if (percent < 80) return 'Medium';
+    return 'High';
+  }
+
   const fillColor = getFillColor(bin.fillPercent);
   const fillLabel = getFillLabel(bin.fillPercent);
 
@@ -83,7 +83,23 @@ export const NearbyBinCard = memo<NearbyBinCardProps>(({ bin, onPress }) => {
 
   return (
     <Animated.View
-      style={[styles.container, cardStyle]}
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.backgroundWhite,
+          borderColor: colors.cardBorder,
+          ...Platform.select({
+            ios: {
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.07,
+              shadowRadius: 8,
+            },
+            android: { elevation: 3 },
+          }),
+        },
+        cardStyle,
+      ]}
       // @ts-ignore
       onStartShouldSetResponder={() => true}
       onResponderGrant={handlePressIn}
@@ -91,20 +107,25 @@ export const NearbyBinCard = memo<NearbyBinCardProps>(({ bin, onPress }) => {
       onResponderTerminate={handlePressOut}
     >
       {/* Icon box */}
-      <View style={styles.iconBox}>
-        <Ionicons name="trash-outline" size={20} color={Colors.primary} />
+      <View
+        style={[
+          styles.iconBox,
+          { backgroundColor: colors.greenLight, borderColor: `${colors.primary}1A` },
+        ]}
+      >
+        <Ionicons name="trash-outline" size={20} color={colors.primary} />
       </View>
 
       {/* Info */}
       <View style={styles.info}>
         <View style={styles.nameRow}>
-          <Text style={styles.name} numberOfLines={1}>{bin.name}</Text>
+          <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>{bin.name}</Text>
           <View style={[styles.statusDot, { backgroundColor: fillColor }]} />
         </View>
-        <Text style={styles.distance}>{bin.distance}</Text>
+        <Text style={[styles.distance, { color: colors.textSecondaryNew }]}>{bin.distance}</Text>
 
         {/* Animated fill bar */}
-        <View style={styles.progressTrack}>
+        <View style={[styles.progressTrack, { backgroundColor: colors.cardBorder }]}>
           <Animated.View
             style={[
               styles.progressFill,
@@ -131,33 +152,20 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: Colors.backgroundWhite,
     borderRadius: Radius['2xl'],
     borderWidth: 1.5,
-    borderColor: Colors.cardBorder,
     padding: Spacing.md,
     gap: Spacing.md,
     marginBottom: Spacing.sm,
-    ...Platform.select({
-      ios: {
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.07,
-        shadowRadius: 8,
-      },
-      android: { elevation: 3 },
-    }),
   },
   iconBox: {
     width: 44,
     height: 44,
     borderRadius: Radius.lg,
-    backgroundColor: Colors.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
     borderWidth: 1,
-    borderColor: `${Colors.primary}1A`,
   },
   info: {
     flex: 1,
@@ -171,7 +179,6 @@ const styles = StyleSheet.create({
   name: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textPrimary,
     flex: 1,
   },
   statusDot: {
@@ -183,14 +190,12 @@ const styles = StyleSheet.create({
   },
   distance: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondaryNew,
     marginBottom: Spacing.sm,
     fontWeight: FontWeight.medium,
   },
   progressTrack: {
     height: 6,
     borderRadius: 6,
-    backgroundColor: Colors.cardBorder,
     overflow: 'hidden',
     marginBottom: Spacing.sm,
   },

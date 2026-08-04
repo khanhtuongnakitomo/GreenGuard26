@@ -22,7 +22,8 @@ import Animated, {
   withTiming,
   interpolate,
 } from 'react-native-reanimated';
-import { Colors, Spacing, Radius, FontSize, FontWeight, Shadows } from '@/theme';
+import { Spacing, Radius, FontSize, FontWeight } from '@/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -56,6 +57,7 @@ export const Button = memo<ButtonProps>(({
   leftIcon,
   rightIcon,
 }) => {
+  const { colors } = useTheme();
   const scale = useSharedValue(1);
   const pressed = useSharedValue(0);
 
@@ -76,14 +78,76 @@ export const Button = memo<ButtonProps>(({
 
   const isDisabled = disabled || loading;
 
+  // Dynamic variant styles
+  const variantStyle: ViewStyle = (() => {
+    switch (variant) {
+      case 'primary':
+        return {
+          backgroundColor: isDisabled ? colors.textMuted : colors.primary,
+          ...Platform.select({
+            ios: {
+              shadowColor: colors.primaryDark,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: isDisabled ? 0 : 0.35,
+              shadowRadius: 10,
+            },
+            android: { elevation: isDisabled ? 0 : 6 },
+          }),
+        };
+      case 'secondary':
+        return {
+          backgroundColor: colors.backgroundWhite,
+          borderWidth: 1.5,
+          borderColor: colors.cardBorder,
+          opacity: isDisabled ? 0.55 : 1,
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.07,
+              shadowRadius: 6,
+            },
+            android: { elevation: isDisabled ? 0 : 2 },
+          }),
+        };
+      case 'ghost':
+        return {
+          backgroundColor: colors.transparent,
+          opacity: isDisabled ? 0.45 : 1,
+        };
+      case 'danger':
+        return {
+          backgroundColor: colors.error,
+          opacity: isDisabled ? 0.50 : 1,
+          ...Platform.select({
+            ios: {
+              shadowColor: colors.error,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: isDisabled ? 0 : 0.30,
+              shadowRadius: 8,
+            },
+            android: { elevation: isDisabled ? 0 : 5 },
+          }),
+        };
+    }
+  })();
+
+  const labelColor: string = (() => {
+    switch (variant) {
+      case 'primary': return colors.textWhite;
+      case 'secondary': return colors.primary;
+      case 'ghost': return colors.primary;
+      case 'danger': return colors.textWhite;
+    }
+  })();
+
   return (
     <AnimatedTouchable
       style={[
         styles.base,
-        styles[variant],
         styles[`size_${size}`],
         fullWidth && styles.fullWidth,
-        isDisabled && styles[`disabled_${variant}`],
+        variantStyle,
         style,
         animatedStyle,
       ]}
@@ -96,17 +160,17 @@ export const Button = memo<ButtonProps>(({
       {loading ? (
         <View style={styles.loadingRow}>
           <ActivityIndicator
-            color={variant === 'primary' || variant === 'danger' ? Colors.textWhite : Colors.primary}
+            color={variant === 'primary' || variant === 'danger' ? colors.textWhite : colors.primary}
             size="small"
           />
-          <Text style={[styles.label, styles[`label_${variant}`], styles[`labelSize_${size}`], styles.loadingLabel, textStyle]}>
+          <Text style={[styles.label, styles[`labelSize_${size}`], styles.loadingLabel, { color: labelColor }, textStyle]}>
             Loading…
           </Text>
         </View>
       ) : (
         <View style={styles.content}>
           {leftIcon && <View style={styles.iconWrap}>{leftIcon}</View>}
-          <Text style={[styles.label, styles[`label_${variant}`], styles[`labelSize_${size}`], textStyle]}>
+          <Text style={[styles.label, styles[`labelSize_${size}`], { color: labelColor }, textStyle]}>
             {label}
           </Text>
           {rightIcon && <View style={styles.iconWrap}>{rightIcon}</View>}
@@ -143,71 +207,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  // ── Variants ──────────────────────────────────────────────────────────────
-  primary: {
-    backgroundColor: Colors.primary,
-    ...Platform.select({
-      ios: {
-        shadowColor: Colors.primaryDark,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.35,
-        shadowRadius: 10,
-      },
-      android: { elevation: 6 },
-    }),
-  },
-  secondary: {
-    backgroundColor: Colors.backgroundWhite,
-    borderWidth: 1.5,
-    borderColor: Colors.cardBorder,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.07,
-        shadowRadius: 6,
-      },
-      android: { elevation: 2 },
-    }),
-  },
-  ghost: {
-    backgroundColor: Colors.transparent,
-  },
-  danger: {
-    backgroundColor: Colors.error,
-    ...Platform.select({
-      ios: {
-        shadowColor: Colors.error,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.30,
-        shadowRadius: 8,
-      },
-      android: { elevation: 5 },
-    }),
-  },
-
-  // ── Disabled ──────────────────────────────────────────────────────────────
-  disabled_primary: {
-    backgroundColor: Colors.textMuted,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  disabled_secondary: {
-    opacity: 0.55,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  disabled_ghost: {
-    opacity: 0.45,
-  },
-  disabled_danger: {
-    opacity: 0.50,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-
-  // ── Sizes ─────────────────────────────────────────────────────────────────
+  // ── Sizes ──────────────────────────────────────────────────────────────────
   size_sm: {
     height: 38,
     paddingHorizontal: Spacing.md + 2,
@@ -220,7 +220,6 @@ const styles = StyleSheet.create({
     height: Spacing.buttonHeight,
     paddingHorizontal: Spacing.xl + 4,
   },
-
   // ── Labels ────────────────────────────────────────────────────────────────
   label: {
     fontWeight: FontWeight.semiBold,
@@ -228,18 +227,6 @@ const styles = StyleSheet.create({
   },
   loadingLabel: {
     opacity: 0.85,
-  },
-  label_primary: {
-    color: Colors.textWhite,
-  },
-  label_secondary: {
-    color: Colors.primary,
-  },
-  label_ghost: {
-    color: Colors.primary,
-  },
-  label_danger: {
-    color: Colors.textWhite,
   },
   labelSize_sm: {
     fontSize: FontSize.sm,
