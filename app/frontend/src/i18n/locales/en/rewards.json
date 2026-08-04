@@ -1,0 +1,11 @@
+{
+  "title": "Rewards",
+  "subtitle": "Redeem points for campus vouchers",
+  "availablePoints": "Available Points",
+  "tier": "{{tier}} Tier",
+  "getRewarded": "Get Rewarded",
+  "milestones": "Milestones",
+  "noMilestones": "No milestones yet.",
+  "bronzeTier": "Bronze",
+  "wallet": "Wallet ›"
+}

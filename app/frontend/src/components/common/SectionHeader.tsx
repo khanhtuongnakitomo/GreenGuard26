@@ -1,7 +1,6 @@
 /**
  * GreenGuard — SectionHeader Component
- * Refined: bold title with green accent dot, animated link hover,
- * tighter vertical rhythm.
+ * Bold title with green accent bar + link.
  */
 import React, { memo } from 'react';
 import {
@@ -11,7 +10,8 @@ import {
   TouchableOpacity,
   ViewStyle,
 } from 'react-native';
-import { Colors, Spacing, FontSize, FontWeight } from '@/theme';
+import { Spacing, FontSize, FontWeight } from '@/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 interface SectionHeaderProps {
   title: string;
@@ -26,11 +26,13 @@ export const SectionHeader = memo<SectionHeaderProps>((({
   onLinkPress,
   style,
 }) => {
+  const { colors } = useTheme();
+
   return (
     <View style={[styles.container, style]}>
       <View style={styles.titleRow}>
-        <View style={styles.accentBar} />
-        <Text style={styles.title}>{title}</Text>
+        <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />
+        <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
       </View>
       {linkLabel && (
         <TouchableOpacity
@@ -38,7 +40,7 @@ export const SectionHeader = memo<SectionHeaderProps>((({
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           activeOpacity={0.6}
         >
-          <Text style={styles.link}>{linkLabel}</Text>
+          <Text style={[styles.link, { color: colors.primary }]}>{linkLabel}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -63,18 +65,15 @@ const styles = StyleSheet.create({
     width: 3,
     height: 16,
     borderRadius: 2,
-    backgroundColor: Colors.primary,
   },
   title: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
     letterSpacing: 0.05,
   },
   link: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semiBold,
-    color: Colors.primary,
     letterSpacing: 0.1,
   },
 });

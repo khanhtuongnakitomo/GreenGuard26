@@ -18,12 +18,14 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useForm, Controller } from 'react-hook-form';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
 import { TextInput } from '@/components/common/TextInput';
 import { Button } from '@/components/common/Button';
 import { useResponsive } from '@/hooks/useResponsive';
 import { authService } from '@/services/auth.service';
 import { getApiErrorMessage } from '@/utils/mappers';
+import { useTheme } from '@/hooks/useTheme';
+import { useI18n } from '@/hooks/useI18n';
 
 // ─── Password strength ─────────────────────────────────────────────────────────
 
@@ -33,22 +35,23 @@ interface StrengthLevel {
   bars: number;
 }
 
-function getPasswordStrength(password: string): StrengthLevel {
-  if (!password) return { label: '', color: Colors.borderMuted, bars: 0 };
+function getPasswordStrength(password: string, colors: any): StrengthLevel {
+  if (!password) return { label: '', color: colors.borderMuted, bars: 0 };
   let score = 0;
   if (password.length >= 8) score++;
   if (/[A-Z]/.test(password)) score++;
   if (/[0-9]/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
 
-  if (score <= 1) return { label: 'Weak', color: Colors.error, bars: 1 };
-  if (score === 2) return { label: 'Fair', color: Colors.warning, bars: 2 };
-  if (score === 3) return { label: 'Good', color: Colors.info, bars: 3 };
-  return { label: 'Strong', color: Colors.success, bars: 4 };
+  if (score <= 1) return { label: 'Weak', color: colors.error, bars: 1 };
+  if (score === 2) return { label: 'Fair', color: colors.warning, bars: 2 };
+  if (score === 3) return { label: 'Good', color: colors.info, bars: 3 };
+  return { label: 'Strong', color: colors.success, bars: 4 };
 }
 
 const PasswordStrengthBar = ({ password }: { password: string }) => {
-  const strength = getPasswordStrength(password);
+  const { colors } = useTheme();
+  const strength = getPasswordStrength(password, colors);
   if (!password) return null;
 
   return (
@@ -59,7 +62,7 @@ const PasswordStrengthBar = ({ password }: { password: string }) => {
             key={bar}
             style={[
               styles.strengthBar,
-              { backgroundColor: bar <= strength.bars ? strength.color : Colors.borderMuted },
+              { backgroundColor: bar <= strength.bars ? strength.color : colors.borderMuted },
             ]}
           />
         ))}
@@ -78,6 +81,9 @@ interface FormValues {
 
 export default function ResetPasswordScreen() {
   const { isLargeScreen } = useResponsive();
+  const { colors } = useTheme();
+  const { t } = useI18n();
+
   const params = useLocalSearchParams<{ phone?: string; otp?: string }>();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -107,31 +113,31 @@ export default function ResetPasswordScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.backgroundWhite }]} edges={['bottom']}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, isLargeScreen && styles.contentDesktop]}
+        contentContainerStyle={[styles.content, isLargeScreen && [styles.contentDesktop, { backgroundColor: colors.backgroundScreen }]]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <LinearGradient
-          colors={[Colors.primaryDark, Colors.primaryMedium]}
+          colors={[colors.primaryDark, '#1CA44D']} // fallback primary medium
           style={styles.topBanner}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={22} color={Colors.textWhite} />
+            <Ionicons name="arrow-back" size={22} color={colors.textWhite} />
           </TouchableOpacity>
           <View style={styles.bannerContent}>
             <Text style={styles.bannerEmoji}>🔑</Text>
           </View>
-          <View style={styles.wave} />
+          <View style={[styles.wave, { backgroundColor: colors.backgroundWhite }]} />
         </LinearGradient>
 
-        <View style={[styles.form, isLargeScreen && styles.formDesktop]}>
-          <Text style={styles.title}>New Password</Text>
-          <Text style={styles.subtitle}>Create a strong password for your account</Text>
+        <View style={[styles.form, isLargeScreen && [styles.formDesktop, { backgroundColor: colors.backgroundWhite }]]}>
+          <Text style={[styles.title, { color: colors.primary }]}>{t('auth.newPasswordTitle', 'New Password')}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('auth.newPasswordSubtitle', 'Create a strong password for your account')}</Text>
 
           <Controller
             control={control}
@@ -143,8 +149,8 @@ export default function ResetPasswordScreen() {
             render={({ field: { onChange, value, onBlur } }) => (
               <>
                 <TextInput
-                  label="New Password"
-                  placeholder="Enter new password"
+                  label={t('auth.newPasswordLabel', 'New Password')}
+                  placeholder={t('auth.newPasswordPlaceholder', 'Enter new password')}
                   showPasswordToggle
                   value={value}
                   onChangeText={onChange}
@@ -157,21 +163,21 @@ export default function ResetPasswordScreen() {
           />
 
           {/* Tips */}
-          <View style={styles.tipBox}>
-            <Text style={styles.tipTitle}>Password Tips</Text>
+          <View style={[styles.tipBox, { backgroundColor: colors.backgroundCard, borderColor: colors.border }]}>
+            <Text style={[styles.tipTitle, { color: colors.textSecondary }]}>{t('auth.passwordTips', 'Password Tips')}</Text>
             {[
-              ['At least 8 characters', password.length >= 8],
-              ['One uppercase letter (A–Z)', /[A-Z]/.test(password)],
-              ['One number (0–9)', /[0-9]/.test(password)],
-              ['One special character', /[^A-Za-z0-9]/.test(password)],
+              [t('auth.tipLength', 'At least 8 characters'), password.length >= 8],
+              [t('auth.tipUpper', 'One uppercase letter (A–Z)'), /[A-Z]/.test(password)],
+              [t('auth.tipNumber', 'One number (0–9)'), /[0-9]/.test(password)],
+              [t('auth.tipSpecial', 'One special character'), /[^A-Za-z0-9]/.test(password)],
             ].map(([tip, met]) => (
               <View key={String(tip)} style={styles.tipRow}>
                 <Ionicons
                   name={met ? 'checkmark-circle' : 'ellipse-outline'}
                   size={16}
-                  color={met ? Colors.success : Colors.borderMuted}
+                  color={met ? colors.success : colors.borderMuted}
                 />
-                <Text style={[styles.tipText, met && styles.tipTextMet]}>{String(tip)}</Text>
+                <Text style={[styles.tipText, { color: colors.textMuted }, met && { color: colors.success }]}>{String(tip)}</Text>
               </View>
             ))}
           </View>
@@ -185,8 +191,8 @@ export default function ResetPasswordScreen() {
             }}
             render={({ field: { onChange, value, onBlur } }) => (
               <TextInput
-                label="Confirm Password"
-                placeholder="Re-enter your password"
+                label={t('auth.confirmPassword', 'Confirm Password')}
+                placeholder={t('auth.confirmPasswordPlaceholder', 'Re-enter your password')}
                 showPasswordToggle
                 value={value}
                 onChangeText={onChange}
@@ -197,11 +203,11 @@ export default function ResetPasswordScreen() {
           />
 
           <Button
-            label={isLoading ? 'Saving...' : 'Set New Password'}
+            label={isLoading ? t('auth.saving', 'Saving...') : t('auth.setNewPassword', 'Set New Password')}
             onPress={handleSubmit(onSubmit)}
             loading={isLoading}
             style={styles.btn}
-            leftIcon={!isLoading ? <Ionicons name="lock-closed" size={18} color={Colors.textWhite} /> : undefined}
+            leftIcon={!isLoading ? <Ionicons name="lock-closed" size={18} color={colors.textWhite} /> : undefined}
           />
         </View>
       </ScrollView>
@@ -210,22 +216,22 @@ export default function ResetPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.backgroundWhite },
+  safe: { flex: 1 },
   scroll: { flex: 1 },
   content: { flexGrow: 1 },
-  contentDesktop: { justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.backgroundScreen, padding: Spacing['2xl'] },
+  contentDesktop: { justifyContent: 'center', alignItems: 'center', padding: Spacing['2xl'] },
 
   topBanner: { height: 240, position: 'relative', justifyContent: 'flex-end' },
   backBtn: { position: 'absolute', top: 20, left: Spacing.base, zIndex: 2, padding: Spacing.sm },
   bannerContent: { alignItems: 'center', paddingBottom: Spacing['3xl'] },
   bannerEmoji: { fontSize: 64 },
-  wave: { position: 'absolute', bottom: -1, left: 0, right: 0, height: 40, backgroundColor: Colors.backgroundWhite, borderTopLeftRadius: 32, borderTopRightRadius: 32 },
+  wave: { position: 'absolute', bottom: -1, left: 0, right: 0, height: 40, borderTopLeftRadius: 32, borderTopRightRadius: 32 },
 
   form: { paddingHorizontal: Spacing.base, paddingTop: Spacing.base, paddingBottom: Spacing['2xl'] },
-  formDesktop: { width: 440, backgroundColor: Colors.backgroundWhite, borderRadius: 32, padding: Spacing['2xl'], ...Shadows.lg },
+  formDesktop: { width: 440, borderRadius: 32, padding: Spacing['2xl'], ...Shadows.lg },
 
-  title: { fontSize: FontSize['3xl'], fontWeight: FontWeight.bold, color: Colors.primary, marginBottom: Spacing.sm },
-  subtitle: { fontSize: FontSize.base, color: Colors.textSecondary, lineHeight: 22, marginBottom: Spacing.xl },
+  title: { fontSize: FontSize['3xl'], fontWeight: FontWeight.bold, marginBottom: Spacing.sm },
+  subtitle: { fontSize: FontSize.base, lineHeight: 22, marginBottom: Spacing.xl },
 
   strengthContainer: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: -Spacing.sm, marginBottom: Spacing.md },
   strengthBars: { flex: 1, flexDirection: 'row', gap: 4 },
@@ -233,17 +239,14 @@ const styles = StyleSheet.create({
   strengthLabel: { fontSize: FontSize.sm, fontWeight: FontWeight.semiBold, minWidth: 46 },
 
   tipBox: {
-    backgroundColor: Colors.backgroundCard,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     marginBottom: Spacing.base,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
-  tipTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.semiBold, color: Colors.textSecondary, marginBottom: Spacing.sm },
+  tipTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.semiBold, marginBottom: Spacing.sm },
   tipRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: 4 },
-  tipText: { fontSize: FontSize.sm, color: Colors.textMuted },
-  tipTextMet: { color: Colors.success },
+  tipText: { fontSize: FontSize.sm },
 
   btn: { marginTop: Spacing.base },
 });

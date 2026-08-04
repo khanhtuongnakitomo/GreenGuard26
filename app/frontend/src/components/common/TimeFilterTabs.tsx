@@ -10,7 +10,8 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import { Colors, Spacing, Radius, FontSize, FontWeight } from '@/theme';
+import { Spacing, Radius, FontSize, FontWeight } from '@/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 interface Tab {
   value: string;
@@ -30,18 +31,29 @@ export const TimeFilterTabs = memo<TimeFilterTabsProps>(({
   onTabPress,
   style,
 }) => {
+  const { colors } = useTheme();
+
   return (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, { backgroundColor: colors.backgroundCard }, style]}>
       {tabs.map((tab) => {
         const isActive = tab.value === activeValue;
         return (
           <TouchableOpacity
             key={tab.value}
-            style={[styles.tab, isActive && styles.tabActive]}
+            style={[
+              styles.tab,
+              isActive && { backgroundColor: colors.primary },
+            ]}
             onPress={() => onTabPress(tab.value)}
             activeOpacity={0.75}
           >
-            <Text style={[styles.label, isActive && styles.labelActive]}>
+            <Text
+              style={[
+                styles.label,
+                { color: isActive ? colors.textWhite : colors.textMuted },
+                isActive && styles.labelActive,
+              ]}
+            >
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -56,7 +68,6 @@ TimeFilterTabs.displayName = 'TimeFilterTabs';
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: Colors.backgroundCard,
     borderRadius: Radius.pill,
     padding: 3,
     alignSelf: 'center',
@@ -66,16 +77,11 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     borderRadius: Radius.pill,
   },
-  tabActive: {
-    backgroundColor: Colors.primary,
-  },
   label: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
-    color: Colors.textMuted,
   },
   labelActive: {
-    color: Colors.textWhite,
     fontWeight: FontWeight.semiBold,
   },
 });

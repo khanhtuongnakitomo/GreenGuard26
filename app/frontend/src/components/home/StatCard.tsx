@@ -13,8 +13,9 @@ import Animated, {
   withSpring,
   Easing,
 } from 'react-native-reanimated';
-import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius } from '@/theme';
 import { formatNumber } from '@/utils/formatters';
+import { useTheme } from '@/hooks/useTheme';
 
 interface StatCardProps {
   label: string;
@@ -31,6 +32,7 @@ export const StatCard = memo<StatCardProps>((({
   icon,
   style,
 }) => {
+  const { colors } = useTheme();
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(10);
 
@@ -45,20 +47,47 @@ export const StatCard = memo<StatCardProps>((({
   }));
 
   return (
-    <Animated.View style={[styles.container, style, animatedStyle]}>
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.backgroundWhite,
+          borderColor: colors.cardBorder,
+          ...Platform.select({
+            ios: {
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.08,
+              shadowRadius: 8,
+            },
+            android: { elevation: 3 },
+          }),
+        },
+        style,
+        animatedStyle,
+      ]}
+    >
       {/* Icon box */}
-      <View style={styles.iconRow}>
+      <View
+        style={[
+          styles.iconRow,
+          {
+            backgroundColor: colors.greenLight,
+            borderColor: `${colors.primary}1A`,
+          },
+        ]}
+      >
         {icon}
       </View>
 
       {/* Label */}
-      <Text style={styles.label} numberOfLines={1}>{label}</Text>
+      <Text style={[styles.label, { color: colors.textSecondaryNew }]} numberOfLines={1}>{label}</Text>
 
       {/* Big number */}
-      <Text style={styles.value} numberOfLines={1}>{formatNumber(value)}</Text>
+      <Text style={[styles.value, { color: colors.textPrimary }]} numberOfLines={1}>{formatNumber(value)}</Text>
 
       {/* Unit */}
-      <Text style={styles.unit} numberOfLines={1}>{unit}</Text>
+      <Text style={[styles.unit, { color: colors.textSecondaryNew }]} numberOfLines={1}>{unit}</Text>
     </Animated.View>
   );
 }));
@@ -68,38 +97,24 @@ StatCard.displayName = 'StatCard';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.backgroundWhite,
     borderRadius: Radius['2xl'],
     paddingVertical: Spacing.md + 2,
     paddingHorizontal: Spacing.sm,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: Colors.cardBorder,
-    ...Platform.select({
-      ios: {
-        shadowColor: Colors.primary,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-      },
-      android: { elevation: 3 },
-    }),
   },
   iconRow: {
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: Colors.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.xs + 2,
     borderWidth: 1,
-    borderColor: `${Colors.primary}1A`,
   },
   label: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textSecondaryNew,
     marginTop: Spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -107,14 +122,12 @@ const styles = StyleSheet.create({
   value: {
     fontSize: FontSize['3xl'],
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
     lineHeight: 36,
     letterSpacing: -0.8,
     marginTop: 2,
   },
   unit: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondaryNew,
     marginTop: 1,
     fontWeight: FontWeight.medium,
   },

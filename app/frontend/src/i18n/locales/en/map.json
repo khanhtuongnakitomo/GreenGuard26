@@ -1,0 +1,10 @@
+{
+  "title": "Map",
+  "searchPlaceholder": "Search recycling bins…",
+  "nearYou": "Near You",
+  "recyclingPoints": "Recycling Points",
+  "noLocations": "No locations found",
+  "loadingMap": "Loading map…",
+  "directions": "Directions",
+  "close": "Close"
+}

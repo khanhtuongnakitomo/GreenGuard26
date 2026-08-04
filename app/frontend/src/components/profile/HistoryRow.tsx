@@ -12,9 +12,10 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
 import { HistoryEntry } from '@/types/user.types';
 import { formatDate } from '@/utils/formatters';
+import { useTheme } from '@/hooks/useTheme';
 
 interface HistoryRowProps {
   entry: HistoryEntry;
@@ -22,6 +23,8 @@ interface HistoryRowProps {
 }
 
 export const HistoryRow = memo<HistoryRowProps>(({ entry, style }) => {
+  const { colors } = useTheme();
+
   const itemsText = entry.items
     .map((item) => `${item.quantity} ${item.type}`)
     .join(' / ');
@@ -29,17 +32,21 @@ export const HistoryRow = memo<HistoryRowProps>(({ entry, style }) => {
   const totalPoints = entry.items.reduce((sum, item) => sum + item.pointsEarned, 0);
 
   return (
-    <View style={[styles.container, style]}>
+    <View style={[
+      styles.container,
+      { backgroundColor: colors.backgroundWhite, borderColor: colors.border },
+      style
+    ]}>
       <View style={styles.header}>
         <View style={styles.iconRow}>
-          <View style={styles.leafCircle}>
-            <Ionicons name="leaf-outline" size={14} color={Colors.primary} />
+          <View style={[styles.leafCircle, { backgroundColor: colors.backgroundCard }]}>
+            <Ionicons name="leaf-outline" size={14} color={colors.primary} />
           </View>
-          <Text style={styles.items}>{itemsText}</Text>
+          <Text style={[styles.items, { color: colors.textPrimary }]}>{itemsText}</Text>
         </View>
-        <Text style={styles.points}>+{totalPoints} pts</Text>
+        <Text style={[styles.points, { color: colors.primary }]}>+{totalPoints} pts</Text>
       </View>
-      <Text style={styles.timestamp}>{formatDate(entry.createdAt)}</Text>
+      <Text style={[styles.timestamp, { color: colors.textMuted }]}>{formatDate(entry.createdAt)}</Text>
     </View>
   );
 });
@@ -48,14 +55,12 @@ HistoryRow.displayName = 'HistoryRow';
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.backgroundWhite,
     borderRadius: Radius.cardSm,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm + 2,
     marginBottom: Spacing.sm,
     ...Shadows.xs,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
   header: {
     flexDirection: 'row',
@@ -73,24 +78,20 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: Colors.backgroundCard,
     alignItems: 'center',
     justifyContent: 'center',
   },
   items: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textPrimary,
     flex: 1,
   },
   points: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
-    color: Colors.primary,
   },
   timestamp: {
     fontSize: FontSize.xs,
-    color: Colors.textMuted,
     marginLeft: 28 + Spacing.xs,
     fontWeight: FontWeight.medium,
   },

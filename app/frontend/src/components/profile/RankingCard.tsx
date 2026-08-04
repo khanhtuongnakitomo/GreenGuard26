@@ -13,9 +13,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressBar } from '@/components/common/ProgressBar';
-import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
 import { User } from '@/types/user.types';
 import { calcProgress, formatNumber } from '@/utils/formatters';
+import { useTheme } from '@/hooks/useTheme';
 
 interface RankingCardProps {
   user: User;
@@ -23,15 +24,20 @@ interface RankingCardProps {
 }
 
 export const RankingCard = memo<RankingCardProps>(({ user, style }) => {
+  const { colors } = useTheme();
   const progress = calcProgress(user.rankingPoints, user.rankingMaxPoints);
 
-  const tierColor = user.rankingTier === 'Gold' ? Colors.rankingGold
-    : user.rankingTier === 'Silver' ? Colors.rankingSilver
-    : Colors.rankingBronze;
+  const tierColor = user.rankingTier === 'Gold' ? colors.rankingGold
+    : user.rankingTier === 'Silver' ? colors.rankingSilver
+    : colors.rankingBronze;
 
   return (
-    <View style={[styles.container, style]}>
-      <Text style={styles.sectionTitle}>Ranking</Text>
+    <View style={[
+      styles.container,
+      { backgroundColor: colors.backgroundWhite, borderColor: colors.border },
+      style
+    ]}>
+      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Ranking</Text>
 
       <View style={styles.rankingRow}>
         {/* Left: Medal + tier name */}
@@ -52,17 +58,17 @@ export const RankingCard = memo<RankingCardProps>(({ user, style }) => {
             progress={progress}
             height={8}
             color={tierColor}
-            trackColor={Colors.backgroundCard}
+            trackColor={colors.backgroundCard}
             style={styles.progressBar}
           />
         </View>
 
         {/* Right: Trophy */}
-        <Ionicons name="trophy-outline" size={22} color={Colors.rankingGold} />
+        <Ionicons name="trophy-outline" size={22} color={colors.rankingGold} />
       </View>
 
       {/* Points value right-aligned */}
-      <Text style={styles.pointsValue}>{formatNumber(user.rankingPoints)}</Text>
+      <Text style={[styles.pointsValue, { color: colors.textPrimary }]}>{formatNumber(user.rankingPoints)}</Text>
     </View>
   );
 });
@@ -71,19 +77,16 @@ RankingCard.displayName = 'RankingCard';
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.backgroundWhite,
     borderRadius: Radius.card,
     padding: Spacing.base,
     ...Shadows.card,
     marginBottom: Spacing.xl,
     borderWidth: 1,
-    borderColor: Colors.border,
     width: '100%',
   },
   sectionTitle: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
     marginBottom: Spacing.md,
   },
   rankingRow: {
@@ -111,7 +114,6 @@ const styles = StyleSheet.create({
   pointsValue: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
     textAlign: 'right',
   },
 });

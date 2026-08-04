@@ -1,12 +1,5 @@
 /**
  * GreenGuard — PointsBanner Component (Home Screen)
- *
- * Design (GREENGUARD APP reference):
- * - Solid primary green card with white text
- * - Top-left: "GreenGuard Member" badge, large points number, week trend
- * - Top-right: decorative tree icon box
- * - Bottom: progress bar toward next tier
- * - Decorative semi-transparent circle in top-right
  */
 import React, { memo, useEffect } from 'react';
 import {
@@ -25,9 +18,10 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useResponsive } from '@/hooks/useResponsive';
-import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius } from '@/theme';
 import { User, UserStats } from '@/types/user.types';
 import { formatNumber } from '@/utils/formatters';
+import { useTheme } from '@/hooks/useTheme';
 
 interface PointsBannerProps {
   user: User;
@@ -45,6 +39,7 @@ const TIER_THRESHOLDS: Record<string, { next: string; target: number }> = {
 
 export const PointsBanner = memo<PointsBannerProps>(({ user, stats, style }) => {
   const { isLargeScreen } = useResponsive();
+  const { colors } = useTheme();
 
   const tier = user.memberTier || 'Bronze';
   const { next, target } = TIER_THRESHOLDS[tier] ?? TIER_THRESHOLDS['Silver'];
@@ -66,7 +61,26 @@ export const PointsBanner = memo<PointsBannerProps>(({ user, stats, style }) => 
   }));
 
   return (
-    <Animated.View style={[styles.container, style, bannerStyle]}>
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.primary,
+          borderColor: colors.primaryDark,
+          ...Platform.select({
+            ios: {
+              shadowColor: colors.primaryDark,
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.38,
+              shadowRadius: 14,
+            },
+            android: { elevation: 8 },
+          }),
+        },
+        style,
+        bannerStyle,
+      ]}
+    >
       {/* Decorative circle overlay */}
       <View style={styles.decorCircle} />
       <View style={styles.decorCircleSmall} />
@@ -130,21 +144,10 @@ PointsBanner.displayName = 'PointsBanner';
 const styles = StyleSheet.create({
   container: {
     borderRadius: Radius['3xl'],
-    backgroundColor: Colors.primary,
     borderWidth: 1.5,
-    borderColor: Colors.primaryDark,
     padding: Spacing.lg,
     overflow: 'hidden',
     position: 'relative',
-    ...Platform.select({
-      ios: {
-        shadowColor: Colors.primaryDark,
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.38,
-        shadowRadius: 14,
-      },
-      android: { elevation: 8 },
-    }),
   },
   decorCircle: {
     position: 'absolute',

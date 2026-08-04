@@ -25,12 +25,14 @@ import Animated, {
   withSpring,
   Easing,
 } from 'react-native-reanimated';
-import { Colors, Spacing, FontSize, FontWeight, Radius } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius } from '@/theme';
 import { AppHeader } from '@/components/common/AppHeader';
 import { EmptyState } from '@/components/common/EmptyState';
 import { ProgressBar } from '@/components/common/ProgressBar';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useImpact, useMilestoneTasks } from '@/hooks/useApi';
+import { useTheme } from '@/hooks/useTheme';
+import { useI18n } from '@/hooks/useI18n';
 
 // ─── Animated entrance wrapper ──────────────────────────────────────────────
 
@@ -61,16 +63,18 @@ interface StatRowItemProps {
   value: number;
   label: string;
   color?: string;
+  colors: any;
 }
 
-function StatRowItem({ icon, value, label, color = Colors.primary }: StatRowItemProps) {
+function StatRowItem({ icon, value, label, color, colors }: StatRowItemProps) {
+  const activeColor = color || colors.primary;
   return (
-    <View style={[statRowStyles.item]}>
-      <View style={[statRowStyles.iconBox, { backgroundColor: `${color}18` }]}>
-        <Ionicons name={icon} size={18} color={color} />
+    <View style={[statRowStyles.item, { backgroundColor: colors.backgroundWhite, borderColor: colors.cardBorder }]}>
+      <View style={[statRowStyles.iconBox, { backgroundColor: `${activeColor}18` }]}>
+        <Ionicons name={icon} size={18} color={activeColor} />
       </View>
-      <Text style={statRowStyles.value}>{value.toLocaleString()}</Text>
-      <Text style={statRowStyles.label}>{label}</Text>
+      <Text style={[statRowStyles.value, { color: colors.textPrimary }]}>{value.toLocaleString()}</Text>
+      <Text style={[statRowStyles.label, { color: colors.textSecondaryNew }]}>{label}</Text>
     </View>
   );
 }
@@ -79,18 +83,16 @@ const statRowStyles = StyleSheet.create({
   item: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: Colors.backgroundWhite,
     borderRadius: Radius.xl,
     paddingVertical: Spacing.md + 2,
     paddingHorizontal: Spacing.sm,
     borderWidth: 1.5,
-    borderColor: Colors.cardBorder,
     gap: 4,
     ...Platform.select({
       ios: {
-        shadowColor: Colors.primary,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.07,
+        shadowOpacity: 0.05,
         shadowRadius: 6,
       },
       android: { elevation: 2 },
@@ -107,14 +109,12 @@ const statRowStyles = StyleSheet.create({
   value: {
     fontSize: FontSize['2xl'],
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
     letterSpacing: -0.5,
     lineHeight: 30,
   },
   label: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textSecondaryNew,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
@@ -127,46 +127,48 @@ function MilestoneRow({
   current,
   target,
   status,
+  colors,
 }: {
   title: string;
   current: number;
   target: number;
   status: string;
+  colors: any;
 }) {
   const done = status === 'completed';
   const pct = Math.min((current / target) * 100, 100);
 
   return (
-    <View style={milestoneStyles.row}>
+    <View style={[milestoneStyles.row, { backgroundColor: colors.backgroundWhite, borderColor: colors.cardBorder }]}>
       {/* Left: icon */}
-      <View style={[milestoneStyles.iconBox, done && milestoneStyles.iconBoxDone]}>
+      <View style={[milestoneStyles.iconBox, { backgroundColor: colors.greenLight, borderColor: `${colors.primary}1A` }, done && { backgroundColor: colors.primary, borderColor: colors.primaryDark }]}>
         <Ionicons
           name={done ? 'checkmark' : 'trophy-outline'}
           size={16}
-          color={done ? Colors.textWhite : Colors.primary}
+          color={done ? colors.textWhite : colors.primary}
         />
       </View>
 
       {/* Center: info + progress */}
       <View style={{ flex: 1 }}>
         <View style={milestoneStyles.titleRow}>
-          <Text style={milestoneStyles.title} numberOfLines={1}>{title}</Text>
+          <Text style={[milestoneStyles.title, { color: colors.textPrimary }]} numberOfLines={1}>{title}</Text>
           {done && (
-            <View style={milestoneStyles.donePill}>
-              <Text style={milestoneStyles.donePillText}>Done</Text>
+            <View style={[milestoneStyles.donePill, { backgroundColor: colors.accentSoft }]}>
+              <Text style={[milestoneStyles.donePillText, { color: colors.primary }]}>Done</Text>
             </View>
           )}
         </View>
-        <Text style={milestoneStyles.meta}>
+        <Text style={[milestoneStyles.meta, { color: colors.textSecondaryNew }]}>
           {current} / {target}
         </Text>
         <View style={{ marginTop: Spacing.xs }}>
-          <ProgressBar progress={pct} height={5} color={done ? Colors.primaryLight : Colors.primary} />
+          <ProgressBar progress={pct} height={5} color={done ? colors.primaryLight : colors.primary} />
         </View>
       </View>
 
       {/* Right: percent */}
-      <Text style={[milestoneStyles.pct, done && { color: Colors.primary }]}>
+      <Text style={[milestoneStyles.pct, { color: colors.textMuted }, done && { color: colors.primary }]}>
         {Math.round(pct)}%
       </Text>
     </View>
@@ -178,12 +180,10 @@ const milestoneStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    backgroundColor: Colors.backgroundWhite,
     borderRadius: Radius.xl,
     padding: Spacing.md,
     marginBottom: Spacing.sm,
     borderWidth: 1.5,
-    borderColor: Colors.cardBorder,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -198,16 +198,10 @@ const milestoneStyles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: Colors.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
     borderWidth: 1,
-    borderColor: `${Colors.primary}1A`,
-  },
-  iconBoxDone: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primaryDark,
   },
   titleRow: {
     flexDirection: 'row',
@@ -219,28 +213,23 @@ const milestoneStyles = StyleSheet.create({
     flex: 1,
     fontSize: FontSize.base,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textPrimary,
   },
   meta: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondaryNew,
     fontWeight: FontWeight.medium,
   },
   donePill: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.accentSoft,
   },
   donePillText: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
-    color: Colors.primary,
   },
   pct: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
-    color: Colors.textMuted,
     minWidth: 36,
     textAlign: 'right',
   },
@@ -248,13 +237,13 @@ const milestoneStyles = StyleSheet.create({
 
 // ─── Section Header ───────────────────────────────────────────────────────────
 
-function SectionLabel({ title, icon }: { title: string; icon: React.ComponentProps<typeof Ionicons>['name'] }) {
+function SectionLabel({ title, icon, colors }: { title: string; icon: React.ComponentProps<typeof Ionicons>['name']; colors: any }) {
   return (
     <View style={sectionStyles.row}>
-      <View style={sectionStyles.iconWrap}>
-        <Ionicons name={icon} size={14} color={Colors.primary} />
+      <View style={[sectionStyles.iconWrap, { backgroundColor: colors.greenLight }]}>
+        <Ionicons name={icon} size={14} color={colors.primary} />
       </View>
-      <Text style={sectionStyles.text}>{title}</Text>
+      <Text style={[sectionStyles.text, { color: colors.textPrimary }]}>{title}</Text>
     </View>
   );
 }
@@ -271,14 +260,12 @@ const sectionStyles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 7,
-    backgroundColor: Colors.greenLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   text: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
     letterSpacing: 0.1,
   },
 });
@@ -287,11 +274,13 @@ const sectionStyles = StyleSheet.create({
 
 export default function ImpactScreen() {
   const { isLargeScreen } = useResponsive();
+  const { colors } = useTheme();
+  const { t } = useI18n();
   const { data: impact, isLoading, isError } = useImpact();
   const { data: milestones = [] } = useMilestoneTasks();
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.backgroundScreen }]} edges={['top']}>
       {!isLargeScreen && <AppHeader showBack rightIcon="none" />}
 
       <ScrollView
@@ -300,29 +289,29 @@ export default function ImpactScreen() {
       >
         {/* ── Page title ── */}
         <FadeSlideIn delay={0}>
-          <Text style={styles.title}>Your Impact</Text>
-          <Text style={styles.subtitle}>Your environmental contribution so far</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{t('impact.title', 'Your Impact')}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondaryNew }]}>{t('impact.subtitle', 'Your environmental contribution so far')}</Text>
         </FadeSlideIn>
 
         {isLoading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
+          <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />
         ) : isError || !impact ? (
-          <EmptyState title="Could not load impact" description="Try again later." />
+          <EmptyState title={t('impact.errorTitle', 'Could not load impact')} description={t('impact.errorDesc', 'Try again later.')} />
         ) : (
           <>
             {/* ── Hero CO₂ banner ── */}
             <FadeSlideIn delay={80}>
-              <View style={styles.heroBanner}>
+              <View style={[styles.heroBanner, { backgroundColor: colors.primary, borderColor: colors.primaryDark }]}>
                 {/* Decorative circles */}
                 <View style={styles.decoCircle1} />
                 <View style={styles.decoCircle2} />
 
                 <View style={{ zIndex: 1, alignItems: 'center' }}>
                   <View style={styles.heroIconBox}>
-                    <Ionicons name="leaf" size={28} color={Colors.textWhite} />
+                    <Ionicons name="leaf" size={28} color={colors.textWhite} />
                   </View>
-                  <Text style={styles.heroCo2}>{impact.co2KgEstimate} kg</Text>
-                  <Text style={styles.heroCo2Label}>Estimated CO₂ saved</Text>
+                  <Text style={[styles.heroCo2, { color: colors.textWhite }]}>{impact.co2KgEstimate} kg</Text>
+                  <Text style={styles.heroCo2Label}>{t('impact.co2Saved', 'Estimated CO₂ saved')}</Text>
 
                   {/* Divider */}
                   <View style={styles.heroDivider} />
@@ -330,18 +319,18 @@ export default function ImpactScreen() {
                   {/* 3 quick stats in a row */}
                   <View style={styles.heroStatsRow}>
                     <View style={styles.heroStat}>
-                      <Text style={styles.heroStatVal}>{impact.allTime.items}</Text>
-                      <Text style={styles.heroStatLbl}>Items</Text>
+                      <Text style={[styles.heroStatVal, { color: colors.textWhite }]}>{impact.allTime.items}</Text>
+                      <Text style={styles.heroStatLbl}>{t('impact.items', 'Items')}</Text>
                     </View>
                     <View style={styles.heroStatSep} />
                     <View style={styles.heroStat}>
-                      <Text style={styles.heroStatVal}>{impact.allTime.bottles}</Text>
-                      <Text style={styles.heroStatLbl}>Bottles</Text>
+                      <Text style={[styles.heroStatVal, { color: colors.textWhite }]}>{impact.allTime.bottles}</Text>
+                      <Text style={styles.heroStatLbl}>{t('impact.bottles', 'Bottles')}</Text>
                     </View>
                     <View style={styles.heroStatSep} />
                     <View style={styles.heroStat}>
-                      <Text style={styles.heroStatVal}>{impact.allTime.points}</Text>
-                      <Text style={styles.heroStatLbl}>Points</Text>
+                      <Text style={[styles.heroStatVal, { color: colors.textWhite }]}>{impact.allTime.points}</Text>
+                      <Text style={styles.heroStatLbl}>{t('impact.points', 'Points')}</Text>
                     </View>
                   </View>
                 </View>
@@ -350,34 +339,34 @@ export default function ImpactScreen() {
 
             {/* ── This month ── */}
             <FadeSlideIn delay={160}>
-              <SectionLabel title="This Month" icon="calendar-outline" />
+              <SectionLabel title={t('impact.thisMonth', 'This Month')} icon="calendar-outline" colors={colors} />
               <View style={styles.statGrid}>
-                <StatRowItem icon="water-outline"   value={impact.month.bottles} label="Bottles" />
-                <StatRowItem icon="beer-outline"     value={impact.month.cans}    label="Cans"    />
+                <StatRowItem icon="water-outline"   value={impact.month.bottles} label={t('impact.bottles', 'Bottles')} colors={colors} />
+                <StatRowItem icon="beer-outline"     value={impact.month.cans}    label={t('impact.cans', 'Cans')}    colors={colors} />
               </View>
               <View style={[styles.statGrid, { marginTop: Spacing.sm }]}>
-                <StatRowItem icon="cube-outline"    value={impact.month.cartons} label="Cartons" color={Colors.primaryLight} />
-                <StatRowItem icon="star-outline"    value={impact.month.points}  label="Points"  color="#F59E0B" />
+                <StatRowItem icon="cube-outline"    value={impact.month.cartons} label={t('impact.cartons', 'Cartons')} color={colors.primaryLight} colors={colors} />
+                <StatRowItem icon="star-outline"    value={impact.month.points}  label={t('impact.points', 'Points')}  color="#F59E0B" colors={colors} />
               </View>
             </FadeSlideIn>
 
             {/* ── All time ── */}
             <FadeSlideIn delay={240}>
-              <SectionLabel title="All Time" icon="stats-chart-outline" />
+              <SectionLabel title={t('impact.allTime', 'All Time')} icon="stats-chart-outline" colors={colors} />
               <View style={styles.statGrid}>
-                <StatRowItem icon="water-outline"    value={impact.allTime.bottles} label="Bottles" />
-                <StatRowItem icon="beer-outline"      value={impact.allTime.cans}    label="Cans"    />
+                <StatRowItem icon="water-outline"    value={impact.allTime.bottles} label={t('impact.bottles', 'Bottles')} colors={colors} />
+                <StatRowItem icon="beer-outline"      value={impact.allTime.cans}    label={t('impact.cans', 'Cans')}    colors={colors} />
               </View>
               <View style={[styles.statGrid, { marginTop: Spacing.sm }]}>
-                <StatRowItem icon="layers-outline"  value={impact.allTime.items}   label="Items"   color={Colors.primaryLight} />
-                <StatRowItem icon="star-outline"    value={impact.allTime.points}  label="Points"  color="#F59E0B" />
+                <StatRowItem icon="layers-outline"  value={impact.allTime.items}   label={t('impact.items', 'Items')}   color={colors.primaryLight} colors={colors} />
+                <StatRowItem icon="star-outline"    value={impact.allTime.points}  label={t('impact.points', 'Points')}  color="#F59E0B" colors={colors} />
               </View>
             </FadeSlideIn>
 
             {/* ── Milestones ── */}
             {milestones.length > 0 && (
               <FadeSlideIn delay={320}>
-                <SectionLabel title="Milestones" icon="trophy-outline" />
+                <SectionLabel title={t('impact.milestones', 'Milestones')} icon="trophy-outline" colors={colors} />
                 {milestones.map((m) => (
                   <MilestoneRow
                     key={m.id}
@@ -385,6 +374,7 @@ export default function ImpactScreen() {
                     current={m.currentPoints}
                     target={m.targetPoints}
                     status={m.status}
+                    colors={colors}
                   />
                 ))}
               </FadeSlideIn>
@@ -403,7 +393,6 @@ export default function ImpactScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: Colors.backgroundScreen,
   },
   content: {
     paddingHorizontal: Spacing.base,
@@ -419,13 +408,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FontSize['2xl'],
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
     marginTop: Spacing.sm,
     letterSpacing: 0.1,
   },
   subtitle: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondaryNew,
     marginTop: 4,
     fontWeight: FontWeight.medium,
   },
@@ -433,17 +420,15 @@ const styles = StyleSheet.create({
   // Hero CO₂ banner
   heroBanner: {
     marginTop: Spacing.lg,
-    backgroundColor: Colors.primary,
     borderRadius: Radius['3xl'],
     paddingVertical: Spacing.xl,
     paddingHorizontal: Spacing.lg,
     alignItems: 'center',
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: Colors.primaryDark,
     ...Platform.select({
       ios: {
-        shadowColor: Colors.primaryDark,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.38,
         shadowRadius: 14,
@@ -483,7 +468,6 @@ const styles = StyleSheet.create({
   heroCo2: {
     fontSize: 42,
     fontWeight: FontWeight.bold,
-    color: Colors.textWhite,
     letterSpacing: -1.5,
     lineHeight: 48,
   },
@@ -511,7 +495,6 @@ const styles = StyleSheet.create({
   heroStatVal: {
     fontSize: FontSize.xl,
     fontWeight: FontWeight.bold,
-    color: Colors.textWhite,
     letterSpacing: -0.5,
   },
   heroStatLbl: {

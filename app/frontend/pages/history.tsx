@@ -13,12 +13,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Colors, Spacing, FontSize, FontWeight, Radius } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius } from '@/theme';
 import { AppHeader } from '@/components/common/AppHeader';
 import { EmptyState } from '@/components/common/EmptyState';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useHistory } from '@/hooks/useApi';
 import type { PointTransaction } from '@/types/user.types';
+import { useTheme } from '@/hooks/useTheme';
+import { useI18n } from '@/hooks/useI18n';
 
 type HistorySection = 'all' | 'earn' | 'redeem' | 'bonus';
 
@@ -39,6 +41,8 @@ function formatWhen(iso: string) {
 
 export default function HistoryScreen() {
   const { isLargeScreen } = useResponsive();
+  const { colors } = useTheme();
+  const { t } = useI18n();
   const [section, setSection] = useState<HistorySection>('all');
   const { data = [], isLoading, isError, refetch } = useHistory();
 
@@ -48,31 +52,31 @@ export default function HistoryScreen() {
   }, [data, section]);
 
   const tabs: { value: HistorySection; label: string }[] = [
-    { value: 'all', label: 'All' },
-    { value: 'earn', label: 'Recycling' },
-    { value: 'redeem', label: 'Redeem' },
-    { value: 'bonus', label: 'Bonus' },
+    { value: 'all', label: t('history.tabAll', 'All') },
+    { value: 'earn', label: t('history.tabEarn', 'Recycling') },
+    { value: 'redeem', label: t('history.tabRedeem', 'Redeem') },
+    { value: 'bonus', label: t('history.tabBonus', 'Bonus') },
   ];
 
   const renderItem = ({ item }: { item: PointTransaction }) => {
     const { date, time } = formatWhen(item.createdAt);
     const positive = item.points >= 0;
     return (
-      <View style={styles.card}>
-        <View style={styles.cardIcon}>
+      <View style={[styles.card, { backgroundColor: colors.backgroundWhite }]}>
+        <View style={[styles.cardIcon, { backgroundColor: colors.backgroundCard }]}>
           <Ionicons
             name={positive ? 'leaf-outline' : 'gift-outline'}
             size={20}
-            color={Colors.primary}
+            color={colors.primary}
           />
         </View>
         <View style={styles.cardBody}>
-          <Text style={styles.cardTitle}>{item.description || item.source}</Text>
-          <Text style={styles.cardMeta}>
+          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{item.description || item.source}</Text>
+          <Text style={[styles.cardMeta, { color: colors.textMuted }]}>
             {date} · {time} · {item.type}
           </Text>
         </View>
-        <Text style={[styles.points, positive ? styles.pointsPlus : styles.pointsMinus]}>
+        <Text style={[styles.points, positive ? { color: colors.primary } : { color: colors.error }]}>
           {positive ? '+' : ''}
           {item.points}
         </Text>
@@ -81,31 +85,31 @@ export default function HistoryScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.backgroundScreen }]} edges={['top']}>
       {!isLargeScreen && (
         <AppHeader showBack rightIcon="none" />
       )}
 
       <View style={styles.tabs}>
-        {tabs.map((t) => (
+        {tabs.map((tabItem) => (
           <TouchableOpacity
-            key={t.value}
-            style={[styles.tab, section === t.value && styles.tabActive]}
-            onPress={() => setSection(t.value)}
+            key={tabItem.value}
+            style={[styles.tab, { backgroundColor: colors.backgroundWhite }, section === tabItem.value && { backgroundColor: colors.primary }]}
+            onPress={() => setSection(tabItem.value)}
           >
-            <Text style={[styles.tabText, section === t.value && styles.tabTextActive]}>
-              {t.label}
+            <Text style={[styles.tabText, { color: colors.textMuted }, section === tabItem.value && { color: colors.textWhite }]}>
+              {tabItem.label}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
       {isLoading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color={Colors.primary} />
+        <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />
       ) : isError ? (
-        <EmptyState title="Failed to load history" description="Tap retry below." />
+        <EmptyState title={t('history.errorTitle', 'Failed to load history')} description={t('history.errorDesc', 'Tap retry below.')} />
       ) : filtered.length === 0 ? (
-        <EmptyState title="No transactions yet" description="Scan a QR code to earn your first points." />
+        <EmptyState title={t('history.emptyTitle', 'No transactions yet')} description={t('history.emptyDesc', 'Scan a QR code to earn your first points.')} />
       ) : (
         <FlatList
           data={filtered}
@@ -119,7 +123,7 @@ export default function HistoryScreen() {
 
       {isError && (
         <TouchableOpacity onPress={() => refetch()} style={styles.retryBtn}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={[styles.retryText, { color: colors.primary }]}>{t('common.retry', 'Retry')}</Text>
         </TouchableOpacity>
       )}
     </SafeAreaView>
@@ -127,7 +131,7 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.backgroundScreen },
+  safe: { flex: 1 },
   tabs: {
     flexDirection: 'row',
     paddingHorizontal: Spacing.base,
@@ -138,16 +142,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.backgroundWhite,
   },
-  tabActive: { backgroundColor: Colors.primary },
-  tabText: { fontSize: FontSize.sm, color: Colors.textMuted, fontWeight: FontWeight.medium },
-  tabTextActive: { color: Colors.textWhite },
+  tabText: { fontSize: FontSize.sm, fontWeight: FontWeight.medium },
   list: { paddingHorizontal: Spacing.base, paddingBottom: Spacing['3xl'] },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.backgroundWhite,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     marginBottom: Spacing.sm,
@@ -157,7 +157,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.backgroundCard,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -165,12 +164,9 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textPrimary,
   },
-  cardMeta: { fontSize: FontSize.sm, color: Colors.textMuted, marginTop: 2 },
+  cardMeta: { fontSize: FontSize.sm, marginTop: 2 },
   points: { fontSize: FontSize.lg, fontWeight: FontWeight.bold },
-  pointsPlus: { color: Colors.primary },
-  pointsMinus: { color: Colors.error },
   retryBtn: { alignSelf: 'center', marginBottom: Spacing.xl },
-  retryText: { color: Colors.primary, fontWeight: FontWeight.semiBold },
+  retryText: { fontWeight: FontWeight.semiBold },
 });

@@ -17,9 +17,10 @@ import {
   ViewStyle,
   Alert,
 } from 'react-native';
-import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
 import { Reward } from '@/types/reward.types';
 import { formatExpiry } from '@/utils/formatters';
+import { useTheme } from '@/hooks/useTheme';
 
 interface RewardCardProps {
   reward: Reward;
@@ -28,8 +29,10 @@ interface RewardCardProps {
 }
 
 export const RewardCard = memo<RewardCardProps>(({ reward, onPress, style }) => {
+  const { colors } = useTheme();
+
   const brandInitial = reward.brandName.charAt(0).toUpperCase();
-  const brandColor = reward.brandColor ?? Colors.primary;
+  const brandColor = reward.brandColor ?? colors.primary;
   const isClaimed = reward.status === 'claimed';
 
   const handleClaim = () => {
@@ -45,36 +48,55 @@ export const RewardCard = memo<RewardCardProps>(({ reward, onPress, style }) => 
 
   return (
     <TouchableOpacity
-      style={[styles.container, isClaimed && styles.containerClaimed, style]}
+      style={[
+        styles.container,
+        {
+          backgroundColor: isClaimed ? colors.claimedBg : colors.backgroundWhite,
+          borderColor: isClaimed ? colors.borderMuted : colors.cardBorder,
+        },
+        isClaimed && styles.containerClaimed,
+        style,
+      ]}
       onPress={handleClaim}
       activeOpacity={0.85}
       disabled={isClaimed}
     >
       {/* Brand logo circle */}
       <View style={[
-        styles.brandCircle, 
-        { backgroundColor: isClaimed ? Colors.borderMuted : brandColor }
+        styles.brandCircle,
+        { backgroundColor: isClaimed ? colors.borderMuted : brandColor }
       ]}>
         <Text style={styles.brandInitial}>{brandInitial}</Text>
       </View>
 
       {/* Text info */}
-      <Text 
-        style={[styles.title, isClaimed && styles.titleClaimed]} 
+      <Text
+        style={[
+          styles.title,
+          { color: isClaimed ? colors.claimedText : colors.textPrimary }
+        ]}
         numberOfLines={2}
       >
         {reward.title}
       </Text>
-      <Text style={styles.expiry}>{formatExpiry(reward.expiresAt)}</Text>
+      <Text style={[styles.expiry, { color: colors.textSecondaryNew }]}>{formatExpiry(reward.expiresAt)}</Text>
 
       {/* Claim button */}
-      <TouchableOpacity 
-        style={[styles.claimButton, isClaimed && styles.claimButtonClaimed]} 
+      <TouchableOpacity
+        style={[
+          styles.claimButton,
+          { backgroundColor: isClaimed ? colors.borderMuted : colors.primary }
+        ]}
         onPress={handleClaim}
         disabled={isClaimed}
         activeOpacity={0.8}
       >
-        <Text style={[styles.claimLabel, isClaimed && styles.claimLabelClaimed]}>
+        <Text
+          style={[
+            styles.claimLabel,
+            { color: isClaimed ? colors.claimedText : colors.textWhite }
+          ]}
+        >
           {isClaimed ? 'Claimed' : 'Claim Voucher'}
         </Text>
       </TouchableOpacity>
@@ -87,18 +109,14 @@ RewardCard.displayName = 'RewardCard';
 const styles = StyleSheet.create({
   container: {
     width: 160,
-    backgroundColor: Colors.backgroundWhite,
     borderRadius: 20,
     padding: Spacing.md,
     alignItems: 'flex-start',
     ...Shadows.card,
     borderWidth: 1.5,
-    borderColor: Colors.cardBorder,
     marginRight: Spacing.md,
   },
   containerClaimed: {
-    backgroundColor: Colors.claimedBg,
-    borderColor: Colors.borderMuted,
     opacity: 0.7,
   },
   brandCircle: {
@@ -112,42 +130,29 @@ const styles = StyleSheet.create({
   brandInitial: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
-    color: Colors.textWhite,
+    color: '#fff',
   },
   title: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textPrimary,
     marginBottom: Spacing.xs,
     lineHeight: 18,
     minHeight: 36,
   },
-  titleClaimed: {
-    color: Colors.claimedText,
-  },
   expiry: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondaryNew,
     marginBottom: Spacing.sm,
     fontWeight: FontWeight.medium,
   },
   claimButton: {
-    backgroundColor: Colors.primary,
     borderRadius: 20,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs + 2,
     alignSelf: 'stretch',
     alignItems: 'center',
   },
-  claimButtonClaimed: {
-    backgroundColor: Colors.borderMuted,
-  },
   claimLabel: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semiBold,
-    color: Colors.textWhite,
-  },
-  claimLabelClaimed: {
-    color: Colors.claimedText,
   },
 });

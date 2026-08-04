@@ -15,7 +15,7 @@ import { SectionHeader } from '@/components/common/SectionHeader';
 import { DonutChart } from '@/components/rewards/DonutChart';
 import { RewardCard } from '@/components/rewards/RewardCard';
 import { TaskProgressRow } from '@/components/rewards/TaskProgressRow';
-import { Colors, Spacing, FontSize, FontWeight, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Shadows } from '@/theme';
 import { useUserStore } from '@/store/userStore';
 import { useResponsive } from '@/hooks/useResponsive';
 import {
@@ -25,9 +25,14 @@ import {
   useUserSummary,
 } from '@/hooks/useApi';
 import { mapImpactToTotalAmount } from '@/utils/mappers';
+import { useTheme } from '@/hooks/useTheme';
+import { useI18n } from '@/hooks/useI18n';
 
 export default function RewardsScreen() {
   const { isLargeScreen } = useResponsive();
+  const { colors } = useTheme();
+  const { t } = useI18n();
+
   useUserSummary();
   const user = useUserStore((s) => s.user);
   const { data: rewards = [], isLoading: rewardsLoading } = useRewards();
@@ -40,7 +45,7 @@ export default function RewardsScreen() {
   const claimable = rewards.filter((r) => r.status === 'claimable');
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.backgroundScreen }]} edges={['top']}>
       {!isLargeScreen && (
         <AppHeader rightIcon="bell" onRightIconPress={() => router.push('/wallet' as any)} />
       )}
@@ -51,17 +56,17 @@ export default function RewardsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Page header */}
-        <Text style={styles.title}>Rewards</Text>
-        <Text style={styles.subtitle}>Redeem points for campus vouchers</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>{t('rewards.title', 'Rewards')}</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondaryNew }]}>{t('rewards.subtitle', 'Redeem points for campus vouchers')}</Text>
 
         {/* Points / Tier summary card */}
         {user && (
-          <View style={styles.pointsCard}>
+          <View style={[styles.pointsCard, { backgroundColor: colors.backgroundWhite, borderColor: colors.cardBorder }]}>
             <View>
-              <Text style={styles.pointsCardLabel}>Available Points</Text>
-              <Text style={styles.pointsCardValue}>{user.totalPoints?.toLocaleString() ?? '0'}</Text>
+              <Text style={[styles.pointsCardLabel, { color: colors.textSecondaryNew }]}>{t('rewards.availablePoints', 'Available Points')}</Text>
+              <Text style={[styles.pointsCardValue, { color: colors.textPrimary }]}>{user.totalPoints?.toLocaleString() ?? '0'}</Text>
             </View>
-            <View style={styles.tierBadge}>
+            <View style={[styles.tierBadge, { backgroundColor: colors.primaryDark }]}>
               <Ionicons name="trophy-outline" size={13} color="#fff" />
               <Text style={styles.tierBadgeText}>{user.memberTier || 'Bronze'} Tier</Text>
             </View>
@@ -75,7 +80,7 @@ export default function RewardsScreen() {
             breakdown={
               totalAmount.breakdown.length
                 ? totalAmount.breakdown
-                : [{ label: 'None', percentage: 100, color: Colors.borderMuted }]
+                : [{ label: t('rewards.none', 'None'), percentage: 100, color: colors.borderMuted }]
             }
             size={isLargeScreen ? 250 : 200}
             strokeWidth={isLargeScreen ? 35 : 30}
@@ -83,13 +88,13 @@ export default function RewardsScreen() {
         </View>
 
         <SectionHeader
-          title="Get Rewarded"
-          linkLabel="Wallet ›"
+          title={t('rewards.getRewarded', 'Get Rewarded')}
+          linkLabel={t('rewards.wallet', 'Wallet ›')}
           onLinkPress={() => router.push('/wallet' as any)}
         />
 
         {rewardsLoading ? (
-          <ActivityIndicator color={Colors.primary} />
+          <ActivityIndicator color={colors.primary} />
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rewardScroll}>
             {claimable.map((reward) => (
@@ -107,9 +112,9 @@ export default function RewardsScreen() {
           </ScrollView>
         )}
 
-        <SectionHeader title="Milestones" />
+        <SectionHeader title={t('rewards.milestones', 'Milestones')} />
         {tasks.length === 0 ? (
-          <Text style={styles.empty}>No milestones yet.</Text>
+          <Text style={[styles.empty, { color: colors.textMuted }]}>{t('rewards.noMilestones', 'No milestones yet.')}</Text>
         ) : (
           tasks.map((task) => (
             <TaskProgressRow
@@ -128,7 +133,7 @@ export default function RewardsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.backgroundScreen },
+  safe: { flex: 1 },
   scroll: { flex: 1 },
   content: {
     paddingHorizontal: Spacing.screenHorizontal,
@@ -143,11 +148,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FontSize['2xl'],
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
     marginTop: Spacing.sm,
   },
   subtitle: {
-    color: Colors.textSecondaryNew,
     marginBottom: Spacing.md,
     fontSize: FontSize.sm,
   },
@@ -156,10 +159,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.backgroundWhite,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: Colors.cardBorder,
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.md,
     marginBottom: Spacing.base,
@@ -167,21 +168,18 @@ const styles = StyleSheet.create({
   },
   pointsCardLabel: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondaryNew,
     fontWeight: FontWeight.medium,
     marginBottom: 2,
   },
   pointsCardValue: {
     fontSize: 30,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
     lineHeight: 36,
   },
   tierBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: Colors.primaryDark,
     borderRadius: 20,
     paddingHorizontal: Spacing.md,
     paddingVertical: 6,
@@ -199,7 +197,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   empty: {
-    color: Colors.textMuted,
     marginBottom: Spacing.lg,
   },
 });

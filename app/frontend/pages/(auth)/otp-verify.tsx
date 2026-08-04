@@ -22,23 +22,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
-  withSpring,
   withTiming,
   useAnimatedStyle,
   withSequence,
 } from 'react-native-reanimated';
-import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
 import { Button } from '@/components/common/Button';
 import { useResponsive } from '@/hooks/useResponsive';
 import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/store/authStore';
 import { getApiErrorMessage } from '@/utils/mappers';
+import { useTheme } from '@/hooks/useTheme';
+import { useI18n } from '@/hooks/useI18n';
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 60;
 
 export default function OtpVerifyScreen() {
   const { isLargeScreen } = useResponsive();
+  const { colors } = useTheme();
+  const { t } = useI18n();
+
   const params = useLocalSearchParams<{ phone?: string; purpose?: string; otp?: string }>();
   const phone = params.phone ?? '';
   const purpose = (params.purpose as 'login' | 'register' | 'reset_password') || 'reset_password';
@@ -103,12 +107,12 @@ export default function OtpVerifyScreen() {
   const handleVerify = async () => {
     const code = otp.join('');
     if (code.length < OTP_LENGTH) {
-      setError('Please enter all 6 digits');
+      setError(t('auth.enterAllDigits', 'Please enter all 6 digits'));
       triggerShake();
       return;
     }
     if (!phone) {
-      setError('Missing phone number');
+      setError(t('auth.missingPhone', 'Missing phone number'));
       return;
     }
 
@@ -131,7 +135,7 @@ export default function OtpVerifyScreen() {
         response.user,
       );
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Invalid OTP. Please try again.'));
+      setError(getApiErrorMessage(err, t('auth.invalidOtp', 'Invalid OTP. Please try again.')));
       triggerShake();
       setOtp(Array(OTP_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
@@ -158,41 +162,41 @@ export default function OtpVerifyScreen() {
         }
       }
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to resend OTP'));
+      setError(getApiErrorMessage(err, t('auth.failedResendOtp', 'Failed to resend OTP')));
     }
   };
 
   const isComplete = otp.every((d) => d !== '');
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.backgroundWhite }]} edges={['bottom']}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, isLargeScreen && styles.contentDesktop]}
+        contentContainerStyle={[styles.content, isLargeScreen && [styles.contentDesktop, { backgroundColor: colors.backgroundScreen }]]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         {/* Illustration */}
         <LinearGradient
-          colors={[Colors.primaryDark, Colors.primary]}
+          colors={[colors.primaryDark, colors.primary]}
           style={styles.topBanner}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={22} color={Colors.textWhite} />
+            <Ionicons name="arrow-back" size={22} color={colors.textWhite} />
           </TouchableOpacity>
           <View style={styles.bannerContent}>
             <Text style={styles.bannerEmoji}>📱</Text>
           </View>
-          <View style={styles.wave} />
+          <View style={[styles.wave, { backgroundColor: colors.backgroundWhite }]} />
         </LinearGradient>
 
-        <View style={[styles.form, isLargeScreen && styles.formDesktop]}>
-          <Text style={styles.title}>Verification Code</Text>
-          <Text style={styles.subtitle}>
-            We sent a 6-digit code to{'\n'}
-            <Text style={styles.phoneText}>{phone || 'your phone'}</Text>
+        <View style={[styles.form, isLargeScreen && [styles.formDesktop, { backgroundColor: colors.backgroundWhite }]]}>
+          <Text style={[styles.title, { color: colors.primary }]}>{t('auth.verificationCodeTitle', 'Verification Code')}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            {t('auth.sentCodeTo', 'We sent a 6-digit code to')}{'\n'}
+            <Text style={[styles.phoneText, { color: colors.textPrimary }]}>{phone || 'your phone'}</Text>
             {devHint ? `\n(Dev OTP: ${devHint})` : ''}
           </Text>
 
@@ -204,8 +208,9 @@ export default function OtpVerifyScreen() {
                 ref={(ref) => { inputRefs.current[i] = ref; }}
                 style={[
                   styles.otpBox,
-                  otp[i] ? styles.otpBoxFilled : styles.otpBoxEmpty,
-                  error ? styles.otpBoxError : undefined,
+                  { color: colors.textPrimary },
+                  otp[i] ? { borderColor: colors.primary, backgroundColor: colors.successLight } : { borderColor: colors.border, backgroundColor: colors.backgroundCard },
+                  error ? { borderColor: colors.error, backgroundColor: colors.errorLight } : undefined,
                 ]}
                 value={otp[i]}
                 onChangeText={(t) => handleChange(t, i)}
@@ -220,8 +225,8 @@ export default function OtpVerifyScreen() {
 
           {error ? (
             <View style={styles.errorRow}>
-              <Ionicons name="warning-outline" size={14} color={Colors.error} />
-              <Text style={styles.errorText}>{error}</Text>
+              <Ionicons name="warning-outline" size={14} color={colors.error} />
+              <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
             </View>
           ) : null}
 
@@ -229,24 +234,24 @@ export default function OtpVerifyScreen() {
           <View style={styles.resendRow}>
             {canResend ? (
               <TouchableOpacity onPress={handleResend}>
-                <Text style={styles.resendActive}>Resend OTP</Text>
+                <Text style={[styles.resendActive, { color: colors.primary }]}>{t('auth.resendOtp', 'Resend OTP')}</Text>
               </TouchableOpacity>
             ) : (
-              <Text style={styles.resendInactive}>
-                Resend in <Text style={styles.countdown}>{countdown}s</Text>
+              <Text style={[styles.resendInactive, { color: colors.textMuted }]}>
+                {t('auth.resendIn', 'Resend in')} <Text style={[styles.countdown, { color: colors.textPrimary }]}>{countdown}s</Text>
               </Text>
             )}
           </View>
 
           <Button
-            label={isVerifying ? 'Verifying...' : 'Verify Code'}
+            label={isVerifying ? t('auth.verifying', 'Verifying...') : t('auth.verifyCode', 'Verify Code')}
             onPress={handleVerify}
             loading={isVerifying}
             disabled={!isComplete || isVerifying}
             style={styles.btn}
           />
 
-          <Text style={styles.hint}>
+          <Text style={[styles.hint, { color: colors.textMuted }]}>
             💡 For demo purposes, any code except <Text style={{ fontWeight: FontWeight.bold }}>000000</Text> works.
           </Text>
         </View>
@@ -256,23 +261,23 @@ export default function OtpVerifyScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.backgroundWhite },
+  safe: { flex: 1 },
   scroll: { flex: 1 },
   content: { flexGrow: 1 },
-  contentDesktop: { justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.backgroundScreen, padding: Spacing['2xl'] },
+  contentDesktop: { justifyContent: 'center', alignItems: 'center', padding: Spacing['2xl'] },
 
   topBanner: { height: 240, position: 'relative', justifyContent: 'flex-end' },
   backBtn: { position: 'absolute', top: 20, left: Spacing.base, zIndex: 2, padding: Spacing.sm },
   bannerContent: { alignItems: 'center', paddingBottom: Spacing['3xl'] },
   bannerEmoji: { fontSize: 64 },
-  wave: { position: 'absolute', bottom: -1, left: 0, right: 0, height: 40, backgroundColor: Colors.backgroundWhite, borderTopLeftRadius: 32, borderTopRightRadius: 32 },
+  wave: { position: 'absolute', bottom: -1, left: 0, right: 0, height: 40, borderTopLeftRadius: 32, borderTopRightRadius: 32 },
 
   form: { paddingHorizontal: Spacing.base, paddingTop: Spacing.base, paddingBottom: Spacing['2xl'] },
-  formDesktop: { width: 440, backgroundColor: Colors.backgroundWhite, borderRadius: 32, padding: Spacing['2xl'], ...Shadows.lg },
+  formDesktop: { width: 440, borderRadius: 32, padding: Spacing['2xl'], ...Shadows.lg },
 
-  title: { fontSize: FontSize['3xl'], fontWeight: FontWeight.bold, color: Colors.primary, marginBottom: Spacing.sm },
-  subtitle: { fontSize: FontSize.base, color: Colors.textSecondary, lineHeight: 22, marginBottom: Spacing.xl },
-  phoneText: { fontWeight: FontWeight.bold, color: Colors.textPrimary },
+  title: { fontSize: FontSize['3xl'], fontWeight: FontWeight.bold, marginBottom: Spacing.sm },
+  subtitle: { fontSize: FontSize.base, lineHeight: 22, marginBottom: Spacing.xl },
+  phoneText: { fontWeight: FontWeight.bold },
 
   otpRow: { flexDirection: 'row', gap: Spacing.sm, justifyContent: 'center', marginBottom: Spacing.base },
   otpBox: {
@@ -283,20 +288,16 @@ const styles = StyleSheet.create({
     fontSize: FontSize['2xl'],
     fontWeight: FontWeight.bold,
     textAlign: 'center',
-    color: Colors.textPrimary,
   },
-  otpBoxEmpty: { borderColor: Colors.border, backgroundColor: Colors.backgroundCard },
-  otpBoxFilled: { borderColor: Colors.primary, backgroundColor: Colors.successLight },
-  otpBoxError: { borderColor: Colors.error, backgroundColor: Colors.errorLight },
 
   errorRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: Spacing.sm },
-  errorText: { fontSize: FontSize.sm, color: Colors.error },
+  errorText: { fontSize: FontSize.sm },
 
   resendRow: { alignItems: 'center', marginBottom: Spacing.base },
-  resendActive: { fontSize: FontSize.base, color: Colors.primary, fontWeight: FontWeight.semiBold },
-  resendInactive: { fontSize: FontSize.base, color: Colors.textMuted },
-  countdown: { fontWeight: FontWeight.bold, color: Colors.textPrimary },
+  resendActive: { fontSize: FontSize.base, fontWeight: FontWeight.semiBold },
+  resendInactive: { fontSize: FontSize.base },
+  countdown: { fontWeight: FontWeight.bold },
 
   btn: { marginTop: Spacing.md, marginBottom: Spacing.base },
-  hint: { fontSize: FontSize.sm, color: Colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  hint: { fontSize: FontSize.sm, textAlign: 'center', lineHeight: 20 },
 });

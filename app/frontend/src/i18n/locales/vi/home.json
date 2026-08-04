@@ -1,0 +1,20 @@
+{
+  "greetingSub": "Chào buổi sáng,",
+  "greeting": "Xin chào, {{name}}! 👋",
+  "myImpact": "Tác động của tôi",
+  "rewards": "Phần thưởng",
+  "nearbyBins": "Thùng rác gần đây",
+  "month": "Tháng",
+  "cans": "Lon",
+  "allTime": "Toàn thời gian",
+  "noRewardsYet": "Chưa có phần thưởng nào.",
+  "couldNotLoadHome": "Không thể tải trang chủ",
+  "checkApiReachable": "Kiểm tra kết nối API, sau đó thử lại.",
+  "loadingProfile": "Đang tải hồ sơ…",
+  "fetchingAccount": "Đang tải tài khoản…",
+  "scanQR": "Quét mã QR",
+  "scanToEarn": "Quét mã để tích điểm",
+  "viewMap": "Xem bản đồ ›",
+  "recentRewards": "Phần thưởng gần đây",
+  "seeAll": "Xem tất cả ›"
+}

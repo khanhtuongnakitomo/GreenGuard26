@@ -23,13 +23,15 @@ import Animated, {
   withSequence,
   interpolate,
 } from 'react-native-reanimated';
-import { Colors, Spacing, FontSize, FontWeight, Radius } from '@/theme';
+import { Spacing, FontSize, FontWeight, Radius } from '@/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 interface ScanQRBannerProps {
   style?: ViewStyle;
 }
 
 export const ScanQRBanner = memo<ScanQRBannerProps>(({ style }) => {
+  const { colors } = useTheme();
   const scale = useSharedValue(1);
   const pressed = useSharedValue(0);
 
@@ -68,7 +70,24 @@ export const ScanQRBanner = memo<ScanQRBannerProps>(({ style }) => {
 
   return (
     <Animated.View
-      style={[styles.container, style, cardStyle]}
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.primary,
+          borderColor: colors.primaryDark,
+          ...Platform.select({
+            ios: {
+              shadowColor: colors.primaryDark,
+              shadowOffset: { width: 0, height: 5 },
+              shadowOpacity: 0.32,
+              shadowRadius: 12,
+            },
+            android: { elevation: 7 },
+          }),
+        },
+        style,
+        cardStyle,
+      ]}
       // @ts-ignore
       onStartShouldSetResponder={() => true}
       onResponderGrant={handlePressIn}
@@ -80,18 +99,18 @@ export const ScanQRBanner = memo<ScanQRBannerProps>(({ style }) => {
     >
       {/* QR icon */}
       <Animated.View style={[styles.iconContainer, iconStyle]}>
-        <Ionicons name="qr-code-outline" size={26} color={Colors.textWhite} />
+        <Ionicons name="qr-code-outline" size={26} color={colors.textWhite} />
       </Animated.View>
 
       {/* Text content */}
       <View style={styles.textContainer}>
-        <Text style={styles.title}>Scan QR Code</Text>
+        <Text style={[styles.title, { color: colors.textWhite }]}>Scan QR Code</Text>
         <Text style={styles.subtitle}>Tap to claim your green points</Text>
       </View>
 
       {/* Right arrow circle */}
       <View style={styles.arrowCircle}>
-        <Ionicons name="chevron-forward" size={18} color={Colors.textWhite} />
+        <Ionicons name="chevron-forward" size={18} color={colors.textWhite} />
       </View>
     </Animated.View>
   );
@@ -103,22 +122,11 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary,
     borderRadius: Radius['2xl'],
     borderWidth: 1.5,
-    borderColor: Colors.primaryDark,
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.md + 2,
     gap: Spacing.md,
-    ...Platform.select({
-      ios: {
-        shadowColor: Colors.primaryDark,
-        shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.32,
-        shadowRadius: 12,
-      },
-      android: { elevation: 7 },
-    }),
   },
   iconContainer: {
     width: 50,
@@ -136,7 +144,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
-    color: Colors.textWhite,
     letterSpacing: 0.1,
     lineHeight: 22,
   },

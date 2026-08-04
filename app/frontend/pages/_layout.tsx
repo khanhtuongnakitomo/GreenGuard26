@@ -3,10 +3,12 @@
  *
  * Responsibilities:
  * 1. Load fonts (Inter family)
- * 2. Hide splash screen when ready
- * 3. Initialize auth state from AsyncStorage
- * 4. Wrap app in QueryClientProvider
- * 5. Auth gate: redirect to auth or main tabs
+ * 2. Initialize i18n (language detection + persistence)
+ * 3. Hide splash screen when ready
+ * 4. Initialize auth state from AsyncStorage
+ * 5. Wrap app in QueryClientProvider + ThemeProvider
+ * 6. Auth gate: redirect to auth or main tabs
+ * 7. Dynamic StatusBar based on resolved theme
  */
 import React, { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
@@ -20,12 +22,15 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useAuthStore } from '@/store/authStore';
 import { NotificationProvider } from '@/components/common/NotificationProvider';
+import { ThemeProvider } from '@/theme/ThemeProvider';
+import { useThemeStore } from '@/store/themeStore';
+import { initI18n } from '@/i18n';
 
-// Keep splash visible until fonts are loaded
+// Keep splash visible until fonts + i18n are ready
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient({
@@ -37,31 +42,19 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-  });
-
+function AppContent() {
   const { initialize, isAuthenticated, isLoading } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
+  const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
 
   useEffect(() => {
     initialize().then(() => setIsReady(true));
   }, [initialize]);
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
-
-  useEffect(() => {
-    if (!isReady || isLoading || (!fontsLoaded && !fontError)) return;
+    if (!isReady || isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const isIndex = !segments[0]; // index.tsx redirects immediately, ignore
@@ -72,50 +65,88 @@ export default function RootLayout() {
     } else if (isAuthenticated && inAuthGroup) {
       router.replace('/(tabs)/home');
     }
-  }, [isAuthenticated, isLoading, isReady, segments, fontsLoaded, fontError, router]);
+  }, [isAuthenticated, isLoading, isReady, segments, router]);
 
-  if (!fontsLoaded && !fontError) {
+  return (
+    <>
+      <StatusBar style={resolvedTheme === 'dark' ? 'light' : 'dark'} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="qr-scan"
+          options={{
+            presentation: 'fullScreenModal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen name="rewards/tasks" />
+        <Stack.Screen name="rewards/brand-task" />
+        <Stack.Screen name="rewards/voucher-claim" />
+        <Stack.Screen
+          name="edit-profile"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen name="impact" />
+        <Stack.Screen name="history" />
+        <Stack.Screen
+          name="wallet"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name="settings"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+      </Stack>
+      {/* Global notification overlay */}
+      <NotificationProvider />
+    </>
+  );
+}
+
+export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
+  const [i18nReady, setI18nReady] = useState(false);
+
+  useEffect(() => {
+    initI18n().then(() => setI18nReady(true));
+  }, []);
+
+  const appReady = (fontsLoaded || !!fontError) && i18nReady;
+
+  useEffect(() => {
+    if (appReady) {
+      SplashScreen.hideAsync();
+    }
+  }, [appReady]);
+
+  if (!appReady) {
     return null;
   }
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <QueryClientProvider client={queryClient}>
-        <StatusBar style="auto" />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen
-            name="qr-scan"
-            options={{
-              presentation: 'fullScreenModal',
-              animation: 'slide_from_bottom',
-            }}
-          />
-          <Stack.Screen name="rewards/tasks" />
-          <Stack.Screen name="rewards/brand-task" />
-          <Stack.Screen name="rewards/voucher-claim" />
-          <Stack.Screen
-            name="edit-profile"
-            options={{
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
-            }}
-          />
-          <Stack.Screen name="impact" />
-          <Stack.Screen name="history" />
-          <Stack.Screen
-            name="wallet"
-            options={{
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
-            }}
-          />
-        </Stack>
-        {/* Global notification overlay */}
-        <NotificationProvider />
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <AppContent />
+        </QueryClientProvider>
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }
