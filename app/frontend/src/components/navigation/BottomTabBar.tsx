@@ -1,12 +1,12 @@
 /**
  * GreenGuard — Custom Bottom Tab Bar
  *
- * Layout from Figma:
+ * Layout from Design:
  * [ Home ] [ Map ] [  FAB (QR scan)  ] [ Rewards ] [ Profile ]
  *
- * The FAB (dark green circle) is raised in the center and opens the QR Scanner modal.
- * Active tab: icon + label in primary green.
- * Inactive tab: icon + label in gray.
+ * The FAB (green circle) is raised in the center and opens the QR Scanner modal.
+ * Active tab: icon + label in primary green + small dot indicator + greenLight bg pill.
+ * Inactive tab: icon + label in muted gray.
  */
 import React, { memo } from 'react';
 import {
@@ -115,13 +115,18 @@ export const BottomTabBar = memo<BottomTabBarProps>(({ state, navigation }) => {
         onPress={() => handleTabPress(tab.name, routeKey, routeIndex)}
         activeOpacity={0.7}
       >
+        {/* Active indicator dot */}
+        <View style={[styles.activeDot, isActive && styles.activeDotVisible]} />
+
+        {/* Icon with subtle active greenLight background */}
         <View style={[styles.iconWrapper, isActive && styles.iconWrapperActive]}>
           <Ionicons
             name={isActive ? tab.iconActive : tab.icon}
             size={22}
-            color={isActive ? Colors.primary : Colors.textMuted}
+            color={isActive ? Colors.primary : '#8FA98F'}
           />
         </View>
+
         <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
           {tab.label}
         </Text>
@@ -153,8 +158,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.backgroundWhite,
-    borderTopWidth: 1,
-    borderTopColor: Colors.divider,
+    borderTopWidth: 1.5,
+    borderTopColor: Colors.cardBorder,
     paddingTop: Spacing.xs,
     ...Shadows.modal,
   },
@@ -168,26 +173,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.xs,
+    paddingTop: 2,
+  },
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'transparent',
+    marginBottom: 4,
+  },
+  activeDotVisible: {
+    backgroundColor: Colors.primary,
   },
   iconWrapper: {
-    width: 36,
-    height: 28,
+    width: 40,
+    height: 30,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 14,
   },
   iconWrapperActive: {
-    // Subtle highlight for active tab icon
+    backgroundColor: Colors.greenLight,
   },
   tabLabel: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
-    color: Colors.textMuted,
+    color: '#8FA98F',
     marginTop: 2,
   },
   tabLabelActive: {
     color: Colors.primary,
-    fontWeight: FontWeight.semiBold,
+    fontWeight: FontWeight.bold,
   },
   fabContainer: {
     width: 72,
@@ -202,7 +218,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Shadows.fab,
+    ...Shadows.buttonGreen,
     borderWidth: 3,
     borderColor: Colors.backgroundWhite,
   },

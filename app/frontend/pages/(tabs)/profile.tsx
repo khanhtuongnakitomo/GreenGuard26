@@ -113,8 +113,6 @@ export default function ProfileScreen() {
         contentContainerStyle={[styles.content, isLargeScreen && styles.contentDesktop]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Main layout */}
-
         {isLargeScreen && (
           <View style={styles.desktopHeaderRow}>
             <AppHeader
@@ -126,53 +124,77 @@ export default function ProfileScreen() {
         )}
 
         <View style={[styles.mainLayout, isLargeScreen && styles.mainLayoutDesktop]}>
-          
-          {/* Left Column on Desktop */}
+
+          {/* Left Column */}
           <View style={[styles.column, isLargeScreen && styles.columnLeft]}>
-            <View style={styles.profileInfoContainer}>
-              {/* Green Member badge */}
-              <View style={styles.badgeRow}>
-                <Badge
-                  label={`🌱 ${user.memberTier || 'New Member'}`}
-                  color={Colors.primary}
-                  backgroundColor={Colors.backgroundWhite}
-                  style={styles.memberBadge}
-                />
-              </View>
 
-              {/* Avatar */}
-              <View style={styles.avatarContainer}>
-                <AvatarIcon size={90} />
-              </View>
-
-              {/* User info */}
-              <Text style={styles.userName}>{user.name}</Text>
-              <Text style={styles.userInfo}>{user.phoneNumber}</Text>
-              {(user.className || user.studentId) && (
-                <Text style={styles.userInfo}>
-                  {[user.className, user.studentId].filter(Boolean).join(' · ')}
-                </Text>
-              )}
-
-              {/* Edit Profile button */}
-              <Button
-                label="Edit Profile"
-                onPress={() => router.push('/edit-profile')}
-                style={styles.editButton}
-              />
-
-              {/* Total Points */}
-              <View style={styles.pointsRow}>
-                <Text style={styles.pointsLabel}>Total Points</Text>
-                <View style={styles.pointsValue}>
-                  <Text style={styles.leafEmoji}>🍃</Text>
-                  <Text style={styles.pointsText}>{formatPoints(user.totalPoints)}</Text>
+            {/* ── Hero Card (solid green) ── */}
+            <View style={styles.heroCard}>
+              {/* Decorative circle */}
+              <View style={styles.heroDecorCircle} />
+              <View style={styles.heroRow}>
+                {/* Avatar */}
+                <View style={styles.heroAvatar}>
+                  <AvatarIcon size={52} />
                 </View>
+                {/* Info */}
+                <View style={styles.heroInfo}>
+                  <Text style={styles.heroName}>{user.name}</Text>
+                  <Text style={styles.heroSub}>{user.phoneNumber}</Text>
+                  {(user.className || user.studentId) && (
+                    <Text style={styles.heroSub}>
+                      {[user.className, user.studentId].filter(Boolean).join(' · ')}
+                    </Text>
+                  )}
+                  <View style={styles.heroBadge}>
+                    <Ionicons name="trophy-outline" size={12} color="#fff" />
+                    <Text style={styles.heroBadgeText}>{user.memberTier || 'New Member'}</Text>
+                  </View>
+                </View>
+                {/* Edit icon */}
+                <TouchableOpacity
+                  style={styles.heroEditBtn}
+                  onPress={() => router.push('/edit-profile')}
+                >
+                  <Ionicons name="create-outline" size={17} color="#fff" />
+                </TouchableOpacity>
               </View>
-
-              {/* Ranking */}
-              <RankingCard user={user} />
             </View>
+
+            {/* ── Stats strip (4 cols) ── */}
+            <View style={styles.statsStrip}>
+              {[
+                { label: 'Total Points', value: user.totalPoints?.toLocaleString() ?? '0', icon: 'leaf-outline' as const },
+                { label: 'Rank', value: user.memberTier?.charAt(0) ?? 'B', icon: 'trophy-outline' as const },
+                { label: 'Streak', value: '7d', icon: 'flash-outline' as const },
+                { label: 'History', value: filteredHistory.length.toString(), icon: 'time-outline' as const },
+              ].map((s) => (
+                <View key={s.label} style={styles.statCell}>
+                  <Ionicons name={s.icon} size={15} color={Colors.primary} />
+                  <Text style={styles.statValue}>{s.value}</Text>
+                  <Text style={styles.statLabel}>{s.label}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Total Points row */}
+            <View style={styles.pointsRow}>
+              <Text style={styles.pointsLabel}>Total Points</Text>
+              <View style={styles.pointsValue}>
+                <Text style={styles.leafEmoji}>🍃</Text>
+                <Text style={styles.pointsText}>{formatPoints(user.totalPoints)}</Text>
+              </View>
+            </View>
+
+            {/* Ranking */}
+            <RankingCard user={user} />
+
+            {/* Edit Profile button */}
+            <Button
+              label="Edit Profile"
+              onPress={() => router.push('/edit-profile')}
+              style={styles.editButton}
+            />
           </View>
 
           {/* Right Column on Desktop */}
@@ -201,14 +223,13 @@ export default function ProfileScreen() {
                 <HistoryRow key={entry.id} entry={entry} />
               ))
             )}
-            
+
             {/* Logout Button */}
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={24} color={Colors.error} />
+              <Ionicons name="log-out-outline" size={20} color={Colors.error} />
               <Text style={styles.logoutText}>Logout</Text>
             </TouchableOpacity>
           </View>
-
         </View>
 
         <View style={styles.bottomSpacer} />
@@ -228,7 +249,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: Spacing.screenHorizontal,
     paddingBottom: Spacing['2xl'],
-    alignItems: 'center',
   },
   contentDesktop: {
     paddingHorizontal: Spacing['3xl'],
@@ -236,7 +256,6 @@ const styles = StyleSheet.create({
     maxWidth: 1200,
     alignSelf: 'center',
     width: '100%',
-    alignItems: 'stretch',
   },
   desktopHeaderRow: {
     alignItems: 'flex-end',
@@ -245,7 +264,6 @@ const styles = StyleSheet.create({
   mainLayout: {
     flex: 1,
     width: '100%',
-    alignItems: 'center',
   },
   mainLayoutDesktop: {
     flexDirection: 'row',
@@ -258,50 +276,122 @@ const styles = StyleSheet.create({
   },
   columnLeft: {
     flex: 1,
-    alignItems: 'center',
-  },
-  profileInfoContainer: {
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-    alignSelf: 'center',
   },
   columnRight: {
     flex: 2,
   },
-  badgeRow: {
-    marginTop: Spacing.sm,
+  // ── Hero card (solid green) ──
+  heroCard: {
+    backgroundColor: Colors.primary,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: Colors.primaryDark,
+    padding: Spacing.lg,
     marginBottom: Spacing.md,
+    overflow: 'hidden',
+    position: 'relative',
+    ...Shadows.buttonGreen,
   },
-  avatarContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: Colors.backgroundCard,
+  heroDecorCircle: {
+    position: 'absolute',
+    top: -20,
+    right: -20,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  heroAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.30)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.md,
-    ...Shadows.sm,
-    borderWidth: 3,
-    borderColor: Colors.backgroundWhite,
+    flexShrink: 0,
+    overflow: 'hidden',
   },
-  userName: {
-    fontSize: FontSize['3xl'],
-    fontWeight: FontWeight.bold,
-    color: '#154124',
-    marginBottom: Spacing.xs,
+  heroInfo: {
+    flex: 1,
   },
-  userInfo: {
+  heroName: {
     fontSize: FontSize.lg,
-    color: '#398C49',
-    marginBottom: Spacing.xs / 2,
-    fontWeight: FontWeight.medium,
+    fontWeight: FontWeight.bold,
+    color: '#fff',
+    marginBottom: 2,
   },
-  editButton: {
-    marginTop: Spacing.base,
-    marginBottom: Spacing.xl,
-    width: '100%',
+  heroSub: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.70)',
+    marginBottom: 1,
   },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    marginTop: Spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 20,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+  },
+  heroBadgeText: {
+    fontSize: 11,
+    fontWeight: FontWeight.bold,
+    color: '#fff',
+  },
+  heroEditBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // ── Stats strip ──
+  statsStrip: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  statCell: {
+    flex: 1,
+    backgroundColor: Colors.backgroundWhite,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: Colors.cardBorder,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    ...Shadows.card,
+  },
+  statValue: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: Colors.textSecondaryNew,
+    marginTop: 3,
+    lineHeight: 13,
+    textAlign: 'center',
+  },
+  // ── Points row ──
   pointsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -331,6 +421,11 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
     color: Colors.primary,
   },
+  editButton: {
+    marginTop: Spacing.base,
+    marginBottom: Spacing.md,
+    width: '100%',
+  },
   historySectionHeader: {
     width: '100%',
     marginTop: Spacing.sm,
@@ -342,21 +437,23 @@ const styles = StyleSheet.create({
   bottomSpacer: {
     height: Spacing.base,
   },
+  // ── Logout button ──
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing.md,
     marginTop: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.errorLight,
+    backgroundColor: Colors.backgroundWhite,
     gap: Spacing.sm,
+    ...Shadows.xs,
   },
   logoutText: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.semiBold,
     color: Colors.error,
-  },
-  memberBadge: {
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
   },
 });

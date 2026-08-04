@@ -27,15 +27,19 @@ interface AppHeaderProps {
   style?: ViewStyle;
   hideLogo?: boolean;
   showBack?: boolean;
+  /** Show a user avatar initials circle next to the icon */
+  avatarInitials?: string;
 }
 
-export const AppHeader = memo<AppHeaderProps>(({
-  rightIcon = 'bell',
-  onRightIconPress,
-  style,
-  hideLogo = false,
-  showBack = false,
-}) => {
+export const AppHeader = memo<AppHeaderProps>((
+  {
+    rightIcon = 'bell',
+    onRightIconPress,
+    style,
+    hideLogo = false,
+    showBack = false,
+    avatarInitials,
+  }) => {
   return (
     <View style={[styles.container, style]}>
       {/* Left: Logo or Back Button */}
@@ -56,28 +60,37 @@ export const AppHeader = memo<AppHeaderProps>(({
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
         ) : !hideLogo ? (
-          <Image 
-            source={require('../../../assets/BKI LOGO/Horiziontal.png')} 
-            style={styles.headerLogo} 
-            resizeMode="contain" 
+          <Image
+            source={require('../../../assets/BKI LOGO/Horiziontal.png')}
+            style={styles.headerLogo}
+            resizeMode="contain"
           />
         ) : null}
       </View>
 
-      {/* Right: Action icon */}
-      {rightIcon !== 'none' && (
-        <TouchableOpacity
-          onPress={onRightIconPress}
-          style={styles.iconButton}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons
-            name={rightIcon === 'bell' ? 'notifications-outline' : 'settings-outline'}
-            size={24}
-            color={Colors.textPrimary}
-          />
-        </TouchableOpacity>
-      )}
+      {/* Right: action area */}
+      <View style={styles.rightArea}>
+        {avatarInitials ? (
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarText}>
+              {avatarInitials.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        ) : null}
+        {rightIcon !== 'none' && (
+          <TouchableOpacity
+            onPress={onRightIconPress}
+            style={styles.iconButton}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons
+              name={rightIcon === 'bell' ? 'notifications-outline' : 'settings-outline'}
+              size={24}
+              color={Colors.textPrimary}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 });
@@ -104,11 +117,31 @@ const styles = StyleSheet.create({
     marginLeft: -10,
     transform: [{ scale: 1.6 }],
   },
+  rightArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
   iconButton: {
     width: 36,
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  avatarCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.greenLight,
+    borderWidth: 1.5,
+    borderColor: Colors.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.bold,
+    color: Colors.primary,
   },
   backButton: {
     flexDirection: 'row',

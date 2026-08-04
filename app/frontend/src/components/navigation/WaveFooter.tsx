@@ -3,7 +3,7 @@ import { StyleSheet, View, ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Colors } from '@/theme';
 
-const WAVE_HEIGHT = 120;
+const WAVE_HEIGHT = 70;
 
 interface WaveFooterProps {
   style?: ViewStyle;
@@ -14,9 +14,9 @@ export const WaveFooter = memo<WaveFooterProps>(({ style }) => {
   const wavePath = `
     M 0 ${WAVE_HEIGHT}
     L 1000 ${WAVE_HEIGHT}
-    L 1000 40
-    Q 750 -20 500 40
-    Q 250 100 0 20
+    L 1000 30
+    Q 750 -10 500 30
+    Q 250 60 0 20
     Z
   `;
 

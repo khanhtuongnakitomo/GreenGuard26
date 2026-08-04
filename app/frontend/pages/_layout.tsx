@@ -64,17 +64,13 @@ export default function RootLayout() {
     if (!isReady || isLoading || (!fontsLoaded && !fontError)) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    const isSplash = segments[0] === 'splash' || !segments[0]; // !segments[0] is index
-    
-    // Protect all routes except auth and splash
-    if (!isAuthenticated && !inAuthGroup && !isSplash) {
+    const isIndex = !segments[0]; // index.tsx redirects immediately, ignore
+
+    // Protect all routes except auth
+    if (!isAuthenticated && !inAuthGroup && !isIndex) {
       router.replace('/(auth)/sign-in');
-    } else if (isAuthenticated && (inAuthGroup || isSplash)) {
-      // Wait, we don't want to interrupt splash screen animation immediately if it's splash.
-      // But if they are on auth and already authenticated, redirect to home.
-      if (inAuthGroup) {
-        router.replace('/(tabs)/home');
-      }
+    } else if (isAuthenticated && inAuthGroup) {
+      router.replace('/(tabs)/home');
     }
   }, [isAuthenticated, isLoading, isReady, segments, fontsLoaded, fontError, router]);
 

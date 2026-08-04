@@ -4,7 +4,7 @@
  * Uses Leaflet via WebView on native, and WebView html injection on web.
  * Displays recycling stations across Vietnam with search, legend and popups.
  */
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -30,7 +30,6 @@ import { AppHeader } from '@/components/common/AppHeader';
 import { Button } from '@/components/common/Button';
 import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useCollectionPoints } from '@/hooks/useApi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,58 +75,6 @@ const VIETNAM_STATIONS: RecyclingStation[] = [
     distance: '1.2 km',
     acceptedItems: ['Plastic', 'Paper', 'Metal'],
     pinColor: Colors.primary,
-  },
-  {
-    id: 's_003',
-    name: 'GreenGuard Hà Nội - Hoàn Kiếm',
-    city: 'Hà Nội',
-    address: '1 Đinh Tiên Hoàng, Hoàn Kiếm, Hà Nội',
-    latitude: 21.0285,
-    longitude: 105.8542,
-    isOpen: true,
-    openHours: '07:00 – 21:00',
-    distance: '1,200 km',
-    acceptedItems: ['Plastic', 'Paper', 'Metal', 'Glass'],
-    pinColor: Colors.primaryLight,
-  },
-  {
-    id: 's_004',
-    name: 'GreenGuard Đà Nẵng - Hải Châu',
-    city: 'Đà Nẵng',
-    address: '78 Phan Châu Trinh, Hải Châu, Đà Nẵng',
-    latitude: 16.0678,
-    longitude: 108.2208,
-    isOpen: false,
-    openHours: '08:00 – 18:00',
-    distance: '780 km',
-    acceptedItems: ['Plastic', 'Metal'],
-    pinColor: Colors.warning,
-  },
-  {
-    id: 's_005',
-    name: 'GreenGuard Cần Thơ - Ninh Kiều',
-    city: 'Cần Thơ',
-    address: '2 Hai Bà Trưng, Ninh Kiều, Cần Thơ',
-    latitude: 10.0452,
-    longitude: 105.7469,
-    isOpen: true,
-    openHours: '07:00 – 19:00',
-    distance: '170 km',
-    acceptedItems: ['Plastic', 'Paper', 'Glass'],
-    pinColor: Colors.primary,
-  },
-  {
-    id: 's_006',
-    name: 'GreenGuard Hải Phòng - Lê Chân',
-    city: 'Hải Phòng',
-    address: '5 Đinh Tiên Hoàng, Lê Chân, Hải Phòng',
-    latitude: 20.8449,
-    longitude: 106.6881,
-    isOpen: true,
-    openHours: '06:30 – 20:30',
-    distance: '1,100 km',
-    acceptedItems: ['Plastic', 'Paper', 'Metal', 'Glass'],
-    pinColor: Colors.primaryLight,
   },
 ];
 
@@ -180,7 +127,7 @@ const buildLeafletHtml = (stations: RecyclingStation[]) => {
 <body>
   <div id="map"></div>
   <script>
-    var map = L.map('map', { zoomControl: false }).setView([16.0, 106.0], 6);
+    var map = L.map('map', { zoomControl: false }).setView([10.7769, 106.7009], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       maxZoom: 18
@@ -391,36 +338,14 @@ export default function MapScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStation, setSelectedStation] = useState<RecyclingStation | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [cityFilter, setCityFilter] = useState('All');
-  const { data: apiPoints = [] } = useCollectionPoints(searchQuery || undefined);
 
-  const stations = useMemo<RecyclingStation[]>(() => {
-    if (!apiPoints.length) return VIETNAM_STATIONS;
-    return apiPoints.map((p) => ({
-      id: p.id,
-      name: p.name,
-      city: p.address.split(',').slice(-1)[0]?.trim() || 'Campus',
-      address: p.address,
-      latitude: p.latitude,
-      longitude: p.longitude,
-      isOpen: p.status === 'online' || p.isActive,
-      openHours: p.status === 'maintenance' ? 'Maintenance' : '06:00 – 22:00',
-      distance: p.machineCode ? `#${p.machineCode}` : '',
-      acceptedItems: ['Plastic', 'Metal', 'Carton'],
-      pinColor: p.brandColor ?? Colors.primary,
-    }));
-  }, [apiPoints]);
-
-  const cities = ['All', ...Array.from(new Set(stations.map((s) => s.city)))];
-
-  const filtered = stations.filter((s) => {
-    const matchCity = cityFilter === 'All' || s.city === cityFilter;
+  const filtered = VIETNAM_STATIONS.filter((s) => {
     const matchSearch =
       !searchQuery ||
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.address.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchCity && matchSearch;
+    return matchSearch;
   });
 
   const handleStationPress = (station: RecyclingStation) => {
@@ -446,25 +371,6 @@ export default function MapScreen() {
           </TouchableOpacity>
         )}
       </View>
-
-      {/* City filter pills */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.cityFilterScroll}
-      >
-        {cities.map((city) => (
-          <TouchableOpacity
-            key={city}
-            style={[styles.cityChip, cityFilter === city && styles.cityChipActive]}
-            onPress={() => setCityFilter(city)}
-          >
-            <Text style={[styles.cityChipText, cityFilter === city && styles.cityChipTextActive]}>
-              {city}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
 
       {/* Results count */}
       <View style={styles.resultsRow}>
@@ -492,27 +398,27 @@ export default function MapScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {!isLargeScreen && <AppHeader rightIcon="bell" onRightIconPress={() => {}} />}
+      {!isLargeScreen && <AppHeader rightIcon="bell" onRightIconPress={() => { }} />}
 
       {isLargeScreen ? (
         // ── Desktop: sidebar + map side-by-side
         <View style={styles.desktopLayout}>
           <View style={styles.desktopSidebar}>
             <View style={styles.desktopTitleRow}>
-              <AppHeader rightIcon="bell" onRightIconPress={() => {}} hideLogo />
+              <AppHeader rightIcon="bell" onRightIconPress={() => { }} hideLogo />
             </View>
             <Text style={styles.titleDesktop}>Recycling Stations</Text>
             {renderSidebar()}
           </View>
           <View style={styles.desktopMap}>
-            <LeafletMap stations={stations} />
+            <LeafletMap stations={VIETNAM_STATIONS} />
           </View>
         </View>
       ) : (
         // ── Mobile: map top half, list bottom half
         <View style={styles.mobileLayout}>
           <View style={{ height: SCREEN_H * 0.42 }}>
-            <LeafletMap stations={stations} />
+            <LeafletMap stations={VIETNAM_STATIONS} />
           </View>
           <View style={styles.mobileList}>
             {renderSidebar()}
@@ -588,11 +494,11 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: Colors.cardBorder,
     gap: Spacing.sm,
-    ...Shadows.sm,
+    ...Shadows.card,
   },
   searchInput: {
     flex: 1,
@@ -601,30 +507,6 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
 
-  // City chips
-  cityFilterScroll: {
-    paddingHorizontal: Spacing.base,
-    paddingBottom: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  cityChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.backgroundWhite,
-  },
-  cityChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  cityChipText: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    fontWeight: FontWeight.medium,
-  },
-  cityChipTextActive: { color: Colors.textWhite },
 
   // Results
   resultsRow: {
@@ -645,11 +527,11 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.base,
     marginBottom: Spacing.sm,
     backgroundColor: Colors.backgroundWhite,
-    borderRadius: Radius.lg,
+    borderRadius: 20,
     padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.xs,
+    borderWidth: 1.5,
+    borderColor: Colors.cardBorder,
+    ...Shadows.card,
   },
   stationCardLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   stationDot: { width: 12, height: 12, borderRadius: 6, flexShrink: 0 },

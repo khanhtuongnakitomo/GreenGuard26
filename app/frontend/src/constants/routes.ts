@@ -4,7 +4,6 @@
 
 export const Routes = {
   // Root
-  SPLASH: '/splash',
 
   // Auth
   SIGN_IN: '/(auth)/sign-in',
