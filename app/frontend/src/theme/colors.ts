@@ -73,6 +73,23 @@ export const Colors = {
   // ─── Social Auth ─────────────────────────────────────────────────────────
   googleRed: '#EA4335',
   facebookBlue: '#1877F2',
+
+  // ─── New Design System (GREENGUARD APP reference) ────────────────────────
+  // Card & layout helpers
+  greenLight: '#E7F4EA',       // Icon box tint / subtle card highlight
+  cardBorder: '#D6DDD2',       // Card border in new design
+  textSecondaryNew: '#647067', // Muted secondary text in new design
+  // Warning badge
+  warningBg: '#FEF3C7',
+  warningBorder: '#FDE68A',
+  // Info badge
+  infoBg: '#EFF6FF',
+  infoBorder: '#BFDBFE',
+  infoText: '#1D4ED8',
+  // Active indicator dot on tab bar
+  tabActiveDot: '#156B2F',
+  // Section title secondary colour
+  sectionLinkColor: '#156B2F',
 } as const;
 
 export type ColorKey = keyof typeof Colors;

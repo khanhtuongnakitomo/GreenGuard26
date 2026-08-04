@@ -19,14 +19,21 @@ import { BottleIcon } from '@/components/icons/BottleIcon';
 import { PaperIcon } from '@/components/icons/PaperIcon';
 import { CalendarIcon } from '@/components/icons/CalendarIcon';
 import { EmptyState } from '@/components/common/EmptyState';
+import { NearbyBinCard } from '@/components/home/NearbyBinCard';
 import { Colors, Spacing, FontSize, FontWeight } from '@/theme';
 import { useUserStore } from '@/store/userStore';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useHomeRewards, useUserSummary } from '@/hooks/useApi';
 import { emptyUserStats } from '@/utils/mappers';
 
+const NEARBY_BINS = [
+  { id: '1', name: 'B4 Recycling Hub', distance: '~80m away', fillPercent: 35 },
+  { id: '2', name: 'Library Station', distance: '~150m away', fillPercent: 72 },
+];
+
 export default function HomeScreen() {
   const { isLargeScreen } = useResponsive();
+
   const user = useUserStore((s) => s.user);
   const stats = useUserStore((s) => s.stats) ?? emptyUserStats();
   const { isLoading: summaryLoading, isError, refetch } = useUserSummary();
@@ -77,7 +84,10 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={isLargeScreen ? styles.desktopHeaderRow : undefined}>
-          <Text style={styles.greeting}>Hi, {user.name}!</Text>
+          <View>
+            <Text style={styles.greetingSub}>Good morning,</Text>
+            <Text style={styles.greeting}>Hi, {user.name}! 👋</Text>
+          </View>
           {isLargeScreen && (
             <AppHeader rightIcon="bell" onRightIconPress={() => router.push('/wallet' as any)} hideLogo />
           )}
@@ -145,6 +155,22 @@ export default function HomeScreen() {
               )}
             </View>
           </View>
+
+          {/* Nearby Bins */}
+          <View style={styles.section}>
+            <SectionHeader
+              title="Nearby Bins"
+              linkLabel="View map ›"
+              onLinkPress={() => router.push('/(tabs)/map')}
+            />
+            {NEARBY_BINS.map((bin) => (
+              <NearbyBinCard
+                key={bin.id}
+                bin={bin}
+                onPress={() => router.push('/(tabs)/map')}
+              />
+            ))}
+          </View>
         </View>
 
         <View style={styles.bottomSpacer} />
@@ -188,8 +214,14 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
-    marginTop: Spacing.sm,
     letterSpacing: 0.1,
+  },
+  greetingSub: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    color: Colors.textSecondaryNew,
+    marginTop: Spacing.sm,
+    marginBottom: 2,
   },
   pointsBanner: {
     marginBottom: Spacing.md,
@@ -206,7 +238,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
   },
   column: {
-    flex: 1,
   },
   columnLeft: {
     flex: 2,
@@ -215,11 +246,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   section: {
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing['2xl'],
   },
   statsRow: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    gap: Spacing.sm + 2,
   },
   emptyText: {
     color: Colors.textMuted,

@@ -15,7 +15,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { Colors, FontSize, FontWeight, Spacing } from '@/theme';
 
-const WAVE_HEIGHT = 140;
+const WAVE_HEIGHT = 80;
 
 interface WaveHeaderProps {
   style?: ViewStyle;
@@ -26,9 +26,9 @@ export const WaveHeader = memo<WaveHeaderProps>(({ style }) => {
   const wavePath = `
     M 0 0
     L 1000 0
-    L 1000 ${WAVE_HEIGHT - 60}
-    Q 750 ${WAVE_HEIGHT + 20} 500 ${WAVE_HEIGHT - 20}
-    Q 250 ${WAVE_HEIGHT - 60} 0 ${WAVE_HEIGHT - 30}
+    L 1000 ${WAVE_HEIGHT - 40}
+    Q 750 ${WAVE_HEIGHT + 10} 500 ${WAVE_HEIGHT - 10}
+    Q 250 ${WAVE_HEIGHT - 40} 0 ${WAVE_HEIGHT - 20}
     Z
   `;
 

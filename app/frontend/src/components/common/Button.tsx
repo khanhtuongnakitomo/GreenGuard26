@@ -2,7 +2,7 @@
  * GreenGuard — Button Component
  *
  * Variants: primary | secondary | ghost | danger
- * Supports: loading state, disabled state, animated press
+ * Supports: loading state, disabled state, animated press (scale + opacity)
  */
 import React, { memo } from 'react';
 import {
@@ -13,11 +13,14 @@ import {
   ViewStyle,
   TextStyle,
   View,
+  Platform,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
+  interpolate,
 } from 'react-native-reanimated';
 import { Colors, Spacing, Radius, FontSize, FontWeight, Shadows } from '@/theme';
 
@@ -54,17 +57,21 @@ export const Button = memo<ButtonProps>(({
   rightIcon,
 }) => {
   const scale = useSharedValue(1);
+  const pressed = useSharedValue(0);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
+    opacity: interpolate(pressed.value, [0, 1], [1, 0.88]),
   }));
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
+    scale.value = withSpring(0.965, { damping: 18, stiffness: 350, mass: 0.8 });
+    pressed.value = withTiming(1, { duration: 80 });
   };
 
   const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+    scale.value = withSpring(1, { damping: 18, stiffness: 350, mass: 0.8 });
+    pressed.value = withTiming(0, { duration: 160 });
   };
 
   const isDisabled = disabled || loading;
@@ -72,32 +79,37 @@ export const Button = memo<ButtonProps>(({
   return (
     <AnimatedTouchable
       style={[
-        animatedStyle,
         styles.base,
         styles[variant],
         styles[`size_${size}`],
         fullWidth && styles.fullWidth,
-        isDisabled && styles.disabled,
+        isDisabled && styles[`disabled_${variant}`],
         style,
+        animatedStyle,
       ]}
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      activeOpacity={0.85}
+      activeOpacity={1}
       disabled={isDisabled}
     >
       {loading ? (
-        <ActivityIndicator
-          color={variant === 'primary' ? Colors.textWhite : Colors.primary}
-          size="small"
-        />
+        <View style={styles.loadingRow}>
+          <ActivityIndicator
+            color={variant === 'primary' || variant === 'danger' ? Colors.textWhite : Colors.primary}
+            size="small"
+          />
+          <Text style={[styles.label, styles[`label_${variant}`], styles[`labelSize_${size}`], styles.loadingLabel, textStyle]}>
+            Loading…
+          </Text>
+        </View>
       ) : (
         <View style={styles.content}>
-          {leftIcon}
+          {leftIcon && <View style={styles.iconWrap}>{leftIcon}</View>}
           <Text style={[styles.label, styles[`label_${variant}`], styles[`labelSize_${size}`], textStyle]}>
             {label}
           </Text>
-          {rightIcon}
+          {rightIcon && <View style={styles.iconWrap}>{rightIcon}</View>}
         </View>
       )}
     </AnimatedTouchable>
@@ -112,7 +124,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    ...Shadows.button,
+    overflow: 'hidden',
   },
   fullWidth: {
     width: '100%',
@@ -120,45 +132,102 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.sm + 2,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.sm,
   },
+  iconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-  // Variants
+  // ── Variants ──────────────────────────────────────────────────────────────
   primary: {
     backgroundColor: Colors.primary,
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.primaryDark,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.35,
+        shadowRadius: 10,
+      },
+      android: { elevation: 6 },
+    }),
   },
   secondary: {
-    backgroundColor: Colors.backgroundCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    backgroundColor: Colors.backgroundWhite,
+    borderWidth: 1.5,
+    borderColor: Colors.cardBorder,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.07,
+        shadowRadius: 6,
+      },
+      android: { elevation: 2 },
+    }),
   },
   ghost: {
     backgroundColor: Colors.transparent,
   },
   danger: {
     backgroundColor: Colors.error,
-  },
-  disabled: {
-    opacity: 0.5,
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.error,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.30,
+        shadowRadius: 8,
+      },
+      android: { elevation: 5 },
+    }),
   },
 
-  // Sizes
+  // ── Disabled ──────────────────────────────────────────────────────────────
+  disabled_primary: {
+    backgroundColor: Colors.textMuted,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  disabled_secondary: {
+    opacity: 0.55,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  disabled_ghost: {
+    opacity: 0.45,
+  },
+  disabled_danger: {
+    opacity: 0.50,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+
+  // ── Sizes ─────────────────────────────────────────────────────────────────
   size_sm: {
-    height: 36,
-    paddingHorizontal: Spacing.md,
+    height: 38,
+    paddingHorizontal: Spacing.md + 2,
   },
   size_md: {
-    height: 44,
+    height: 46,
     paddingHorizontal: Spacing.lg,
   },
   size_lg: {
     height: Spacing.buttonHeight,
-    paddingHorizontal: Spacing.xl,
+    paddingHorizontal: Spacing.xl + 4,
   },
 
-  // Labels
+  // ── Labels ────────────────────────────────────────────────────────────────
   label: {
     fontWeight: FontWeight.semiBold,
+    letterSpacing: 0.2,
+  },
+  loadingLabel: {
+    opacity: 0.85,
   },
   label_primary: {
     color: Colors.textWhite,
@@ -179,6 +248,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
   },
   labelSize_lg: {
-    fontSize: FontSize.lg,
+    fontSize: FontSize.md,
+    letterSpacing: 0.15,
   },
 });

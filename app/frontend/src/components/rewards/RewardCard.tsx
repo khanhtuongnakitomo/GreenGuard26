@@ -86,23 +86,25 @@ RewardCard.displayName = 'RewardCard';
 
 const styles = StyleSheet.create({
   container: {
-    width: 152,
+    width: 160,
     backgroundColor: Colors.backgroundWhite,
-    borderRadius: Radius.card,
+    borderRadius: 20,
     padding: Spacing.md,
     alignItems: 'flex-start',
     ...Shadows.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderWidth: 1.5,
+    borderColor: Colors.cardBorder,
+    marginRight: Spacing.md,
   },
   containerClaimed: {
     backgroundColor: Colors.claimedBg,
     borderColor: Colors.borderMuted,
+    opacity: 0.7,
   },
   brandCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
@@ -125,13 +127,13 @@ const styles = StyleSheet.create({
   },
   expiry: {
     fontSize: FontSize.xs,
-    color: Colors.textMuted,
+    color: Colors.textSecondaryNew,
     marginBottom: Spacing.sm,
     fontWeight: FontWeight.medium,
   },
   claimButton: {
     backgroundColor: Colors.primary,
-    borderRadius: Radius.pill,
+    borderRadius: 20,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs + 2,
     alignSelf: 'stretch',

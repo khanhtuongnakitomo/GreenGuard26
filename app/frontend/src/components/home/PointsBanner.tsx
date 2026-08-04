@@ -1,25 +1,30 @@
 /**
  * GreenGuard — PointsBanner Component (Home Screen)
  *
- * Figma:
- * - Rounded card with deep green gradient background
- * - Left: avatar circle + name + "Green Member" badge + large points number
- * - Right: Earth illustration
- * - Bottom separator: "This month: 34 bottles · 12 cans"
+ * Design (GREENGUARD APP reference):
+ * - Solid primary green card with white text
+ * - Top-left: "GreenGuard Member" badge, large points number, week trend
+ * - Top-right: decorative tree icon box
+ * - Bottom: progress bar toward next tier
+ * - Decorative semi-transparent circle in top-right
  */
-import React, { memo } from 'react';
+import React, { memo, useEffect } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   ViewStyle,
-  ImageBackground,
+  Platform,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  Easing,
+} from 'react-native-reanimated';
 import { useResponsive } from '@/hooks/useResponsive';
-import { Badge } from '@/components/common/Badge';
-import { ProfileEarthIcon } from '@/components/icons/ProfileEarthIcon';
-import { AvatarIcon } from '@/components/icons/AvatarIcon';
 import { Colors, Spacing, FontSize, FontWeight, Radius, Shadows } from '@/theme';
 import { User, UserStats } from '@/types/user.types';
 import { formatNumber } from '@/utils/formatters';
@@ -30,59 +35,93 @@ interface PointsBannerProps {
   style?: ViewStyle;
 }
 
+/** Tier thresholds for progress bar */
+const TIER_THRESHOLDS: Record<string, { next: string; target: number }> = {
+  Bronze: { next: 'Silver', target: 1000 },
+  Silver: { next: 'Gold', target: 3500 },
+  Gold: { next: 'Platinum', target: 8000 },
+  Platinum: { next: 'Platinum', target: 8000 },
+};
+
 export const PointsBanner = memo<PointsBannerProps>(({ user, stats, style }) => {
   const { isLargeScreen } = useResponsive();
 
+  const tier = user.memberTier || 'Bronze';
+  const { next, target } = TIER_THRESHOLDS[tier] ?? TIER_THRESHOLDS['Silver'];
+  const pts = user.totalPoints ?? 0;
+  const progress = Math.min(pts / target, 1);
+  const ptsToNext = Math.max(target - pts, 0);
+
+  // Entrance animation
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(16);
+  useEffect(() => {
+    opacity.value = withTiming(1, { duration: 500, easing: Easing.out(Easing.quad) });
+    translateY.value = withSpring(0, { damping: 16, stiffness: 180 });
+  }, []);
+
+  const bannerStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
+
   return (
-    <LinearGradient
-      colors={['#EAF3E1', '#E0ECD3']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[styles.container, style, { overflow: 'hidden' }]}
-    >
-      <View style={styles.topRow}>
-        {/* Left: Avatar + info */}
-        <View style={styles.leftSection}>
-          {/* Avatar circle */}
-          <View style={styles.avatarContainer}>
-            <AvatarIcon size={52} />
+    <Animated.View style={[styles.container, style, bannerStyle]}>
+      {/* Decorative circle overlay */}
+      <View style={styles.decorCircle} />
+      <View style={styles.decorCircleSmall} />
+
+      <View style={{ position: 'relative', zIndex: 1 }}>
+        {/* Top row: info + icon */}
+        <View style={styles.topRow}>
+          <View style={styles.leftSection}>
+            {/* Member badge */}
+            <View style={styles.memberBadge}>
+              <Ionicons name="leaf" size={11} color="#fff" />
+              <Text style={styles.memberBadgeText}>GreenGuard Member</Text>
+            </View>
+
+            {/* Points label */}
+            <Text style={styles.ptsLabel}>Total Green Points</Text>
+
+            {/* Big number */}
+            <View style={styles.ptsRow}>
+              <Text style={styles.ptsNumber}>{formatNumber(pts)}</Text>
+              <Text style={styles.ptsSuffix}>pts</Text>
+            </View>
+
+            {/* Weekly trend */}
+            <View style={styles.trendRow}>
+              <Ionicons name="trending-up" size={12} color="rgba(255,255,255,0.80)" />
+              <Text style={styles.trendText}>
+                +{formatNumber(stats.monthlyBottles * 2)} this week
+              </Text>
+            </View>
           </View>
 
-          {/* Name + badge + points */}
-          <View style={styles.infoSection}>
-            <View style={styles.nameRow}>
-              <Text style={styles.userName}>{user.name}</Text>
-              <Badge
-                label={`🌱 ${user.memberTier}`}
-                color={Colors.primary}
-                backgroundColor={Colors.backgroundScreen}
-                size="sm"
-                style={styles.memberBadge}
-              />
-            </View>
-            <Text style={styles.points}>
-              {formatNumber(user.totalPoints)}{' '}
-              <Text style={styles.ptsLabel}>pts</Text>
+          {/* Right: decorative tree box */}
+          <View style={styles.treeBox}>
+            <Ionicons name="leaf-outline" size={28} color="#fff" />
+          </View>
+        </View>
+
+        {/* Progress bar toward next tier */}
+        <View style={styles.progressCard}>
+          <View style={styles.progressHeader}>
+            <Text style={styles.progressLabel}>Progress to {next}</Text>
+            <Text style={styles.progressValue}>
+              {formatNumber(pts)} / {formatNumber(target)}
             </Text>
           </View>
-        </View>
-
-        {/* Right: Earth illustration */}
-        <View style={[styles.earthContainer, !isLargeScreen && styles.earthContainerMobile]}>
-          <ProfileEarthIcon size={isLargeScreen ? 140 : 180} />
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` as any }]} />
+          </View>
+          <Text style={styles.progressSubtext}>
+            {ptsToNext > 0 ? `${formatNumber(ptsToNext)} pts until ${next} tier` : `${next} tier achieved! 🎉`}
+          </Text>
         </View>
       </View>
-
-      {/* Bottom: monthly stats */}
-      <View style={styles.statsRow}>
-        <Text style={styles.statsText}>
-          {'This month: '}
-          <Text style={styles.statsValue}>{stats.monthlyBottles} bottles</Text>
-          {'  ·  '}
-          <Text style={styles.statsValue}>{stats.monthlyCans} cans</Text>
-        </Text>
-      </View>
-    </LinearGradient>
+    </Animated.View>
   );
 });
 
@@ -90,99 +129,152 @@ PointsBanner.displayName = 'PointsBanner';
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 20,
-    paddingHorizontal: Spacing.base,
-    paddingTop: Spacing.base,
-    paddingBottom: Spacing.sm,
-    overflow: 'hidden', // PREVENT IMAGE BLEEDING
-    ...Shadows.md,
+    borderRadius: Radius['3xl'],
+    backgroundColor: Colors.primary,
+    borderWidth: 1.5,
+    borderColor: Colors.primaryDark,
+    padding: Spacing.lg,
+    overflow: 'hidden',
+    position: 'relative',
+    ...Platform.select({
+      ios: {
+        shadowColor: Colors.primaryDark,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.38,
+        shadowRadius: 14,
+      },
+      android: { elevation: 8 },
+    }),
+  },
+  decorCircle: {
+    position: 'absolute',
+    top: -36,
+    right: -36,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  decorCircleSmall: {
+    position: 'absolute',
+    bottom: -24,
+    left: -24,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(255,255,255,0.07)',
   },
   topRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.base,
   },
   leftSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
     flex: 1,
-  },
-  avatarContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  infoSection: {
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: 3,
-    flexWrap: 'wrap',
-  },
-  userName: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.bold,
-    color: '#0D3E1A',
-    letterSpacing: 0.2,
   },
   memberBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.28)',
+    borderRadius: 20,
+    paddingHorizontal: Spacing.sm + 2,
+    paddingVertical: 4,
+    marginBottom: Spacing.sm,
   },
-  points: {
-    fontSize: FontSize['5xl'],
+  memberBadgeText: {
+    fontSize: 11,
     fontWeight: FontWeight.bold,
-    color: '#0D3E1A',
-    lineHeight: 48,
-    letterSpacing: -1,
+    color: '#fff',
   },
   ptsLabel: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.bold,
-    color: '#398C49',
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.75)',
+    fontWeight: FontWeight.medium,
+    marginBottom: 2,
   },
-  earthContainer: {
-    width: 140,
-    height: 70,
+  ptsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  ptsNumber: {
+    fontSize: 38,
+    fontWeight: FontWeight.bold,
+    color: '#fff',
+    lineHeight: 44,
+    letterSpacing: -1,
+  },
+  ptsSuffix: {
+    fontSize: 14,
+    fontWeight: FontWeight.semiBold,
+    color: 'rgba(255,255,255,0.75)',
+    marginBottom: 6,
+  },
+  trendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: Spacing.xs,
+  },
+  trendText: {
+    fontSize: 12,
+    fontWeight: FontWeight.semiBold,
+    color: 'rgba(255,255,255,0.80)',
+  },
+  treeBox: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.28)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: -Spacing.sm,
-    zIndex: 1,
+    flexShrink: 0,
+    marginLeft: Spacing.md,
   },
-  earthContainerMobile: {
-    position: 'absolute',
-    right: -20,
-    bottom: -10,
-    width: 180,
-    height: 90,
+  progressCard: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.22)',
+    borderRadius: 14,
+    padding: Spacing.md,
   },
-  statsRow: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.1)',
-    paddingTop: Spacing.sm,
-    marginTop: 2,
-    zIndex: 2,
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
   },
-  statsText: {
-    fontSize: FontSize.sm,
-    color: '#398C49',
-    fontWeight: FontWeight.regular,
+  progressLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.75)',
+    fontWeight: FontWeight.medium,
   },
-  statsValue: {
+  progressValue: {
+    fontSize: 12,
+    color: '#fff',
     fontWeight: FontWeight.bold,
-    color: '#398C49',
+  },
+  progressTrack: {
+    width: '100%',
+    height: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  progressSubtext: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.65)',
+    marginTop: Spacing.xs,
   },
 });

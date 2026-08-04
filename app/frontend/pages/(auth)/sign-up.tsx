@@ -259,8 +259,8 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: Spacing.xl,
-    marginTop: -Spacing.xl,
+    marginBottom: Spacing.sm,
+    marginTop: -Spacing.md,
   },
   logoImage: {
     width: 200,
@@ -274,16 +274,16 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.5 }],
   },
   title: {
-    fontSize: FontSize['3xl'],
+    fontSize: FontSize['2xl'],
     fontWeight: FontWeight.bold,
     color: Colors.primary,
     textAlign: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.md,
   },
   termsRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: Spacing.base,
+    marginBottom: Spacing.sm,
     gap: Spacing.sm,
   },
   checkbox: {
@@ -323,8 +323,8 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   signUpButton: {
-    marginTop: Spacing.xl,
-    marginBottom: Spacing['2xl'],
+    marginTop: Spacing.md,
+    marginBottom: Spacing.md,
   },
   footer: {
     flexDirection: 'row',

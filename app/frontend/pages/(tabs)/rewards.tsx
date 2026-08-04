@@ -1,6 +1,3 @@
-/**
- * GreenGuard — Rewards Screen (live API)
- */
 import React from 'react';
 import {
   StyleSheet,
@@ -9,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -17,7 +15,8 @@ import { SectionHeader } from '@/components/common/SectionHeader';
 import { DonutChart } from '@/components/rewards/DonutChart';
 import { RewardCard } from '@/components/rewards/RewardCard';
 import { TaskProgressRow } from '@/components/rewards/TaskProgressRow';
-import { Colors, Spacing, FontSize, FontWeight } from '@/theme';
+import { Colors, Spacing, FontSize, FontWeight, Shadows } from '@/theme';
+import { useUserStore } from '@/store/userStore';
 import { useResponsive } from '@/hooks/useResponsive';
 import {
   useImpact,
@@ -30,6 +29,7 @@ import { mapImpactToTotalAmount } from '@/utils/mappers';
 export default function RewardsScreen() {
   const { isLargeScreen } = useResponsive();
   useUserSummary();
+  const user = useUserStore((s) => s.user);
   const { data: rewards = [], isLoading: rewardsLoading } = useRewards();
   const { data: impact } = useImpact();
   const { data: tasks = [] } = useMilestoneTasks();
@@ -50,9 +50,25 @@ export default function RewardsScreen() {
         contentContainerStyle={[styles.content, isLargeScreen && styles.contentDesktop]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Page header */}
         <Text style={styles.title}>Rewards</Text>
         <Text style={styles.subtitle}>Redeem points for campus vouchers</Text>
 
+        {/* Points / Tier summary card */}
+        {user && (
+          <View style={styles.pointsCard}>
+            <View>
+              <Text style={styles.pointsCardLabel}>Available Points</Text>
+              <Text style={styles.pointsCardValue}>{user.totalPoints?.toLocaleString() ?? '0'}</Text>
+            </View>
+            <View style={styles.tierBadge}>
+              <Ionicons name="trophy-outline" size={13} color="#fff" />
+              <Text style={styles.tierBadgeText}>{user.memberTier || 'Bronze'} Tier</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Donut chart */}
         <View style={styles.chartContainer}>
           <DonutChart
             totalKg={totalAmount.totalKg}
@@ -131,8 +147,49 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   subtitle: {
-    color: Colors.textMuted,
-    marginBottom: Spacing.lg,
+    color: Colors.textSecondaryNew,
+    marginBottom: Spacing.md,
+    fontSize: FontSize.sm,
+  },
+  // Points / Tier card
+  pointsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.backgroundWhite,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: Colors.cardBorder,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.base,
+    ...Shadows.card,
+  },
+  pointsCardLabel: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondaryNew,
+    fontWeight: FontWeight.medium,
+    marginBottom: 2,
+  },
+  pointsCardValue: {
+    fontSize: 30,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+    lineHeight: 36,
+  },
+  tierBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Colors.primaryDark,
+    borderRadius: 20,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+  },
+  tierBadgeText: {
+    fontSize: 12,
+    fontWeight: FontWeight.bold,
+    color: '#fff',
   },
   chartContainer: {
     alignItems: 'center',
