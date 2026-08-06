@@ -42,10 +42,7 @@ import type { HistoryEntry } from '@/types/user.types';
 import { useTheme } from '@/hooks/useTheme';
 import { useI18n } from '@/hooks/useI18n';
 
-const HISTORY_FILTERS = [
-  { value: '1day', label: '1 Days' },
-  { value: '1week', label: '1 Weeks' },
-];
+
 
 function toHistoryEntries(txs: Array<{ _id: string; description?: string; points: number; createdAt: string; type: string }>): HistoryEntry[] {
   return txs.slice(0, 5).map((tx) => ({
@@ -152,7 +149,7 @@ export default function ProfileScreen() {
                   )}
                   <View style={styles.heroBadge}>
                     <Ionicons name="trophy-outline" size={12} color="#fff" />
-                    <Text style={styles.heroBadgeText}>{user.memberTier || 'New Member'}</Text>
+                    <Text style={styles.heroBadgeText}>{user.memberTier || t('profile.newMember', 'New Member')}</Text>
                   </View>
                 </View>
                 <View style={{ flexDirection: 'column', gap: Spacing.sm }}>
@@ -219,7 +216,10 @@ export default function ProfileScreen() {
             />
 
             <TimeFilterTabs
-              tabs={HISTORY_FILTERS}
+              tabs={[
+                { value: '1day', label: t('profile.1day', '1 Day') },
+                { value: '1week', label: t('profile.1week', '1 Week') },
+              ]}
               activeValue={historyFilter}
               onTabPress={setHistoryFilter}
               style={styles.historyFilterTabs}

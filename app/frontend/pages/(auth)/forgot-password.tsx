@@ -48,9 +48,9 @@ export default function ForgotPasswordScreen() {
         params: { phone, purpose: 'reset_password', otp: res.devOtp ?? '' },
       } as any);
     } catch (err) {
-      const message = getApiErrorMessage(err, 'Failed to send OTP');
+      const message = getApiErrorMessage(err, t('auth.failedToSendOtp', 'Failed to send OTP'));
       if (Platform.OS === 'web') window.alert(message);
-      else Alert.alert('Error', message);
+      else Alert.alert(t('common.error', 'Error'), message);
     } finally {
       setIsLoading(false);
     }

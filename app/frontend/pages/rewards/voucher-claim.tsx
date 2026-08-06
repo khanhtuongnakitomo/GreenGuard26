@@ -22,6 +22,7 @@ import { useRedeemReward } from '@/hooks/useApi';
 import { useUserStore } from '@/store/userStore';
 import type { Reward } from '@/types/reward.types';
 import { getApiErrorMessage } from '@/utils/mappers';
+import { useI18n } from '@/hooks/useI18n';
 
 export default function VoucherClaimScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -31,6 +32,7 @@ export default function VoucherClaimScreen() {
   const redeem = useRedeemReward();
   const user = useUserStore((s) => s.user);
   const refreshProfile = useUserStore((s) => s.refreshProfile);
+  const { t } = useI18n();
 
   useEffect(() => {
     let mounted = true;
@@ -44,7 +46,7 @@ export default function VoucherClaimScreen() {
         if (mounted) setReward(data);
       } catch (err) {
         if (Platform.OS === 'web') window.alert(getApiErrorMessage(err));
-        else Alert.alert('Error', getApiErrorMessage(err));
+        else Alert.alert(t('common.error', 'Error'), getApiErrorMessage(err));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -57,7 +59,7 @@ export default function VoucherClaimScreen() {
   const handleRedeem = async () => {
     if (!reward) return;
     if ((user?.totalPoints ?? 0) < reward.pointsValue) {
-      Alert.alert('Not enough points', `You need ${reward.pointsValue} points to redeem this.`);
+      Alert.alert(t('rewards.notEnoughPoints', 'Not enough points'), t('rewards.needPointsToRedeem', 'You need {{points}} points to redeem this.', { points: reward.pointsValue }));
       return;
     }
 
@@ -65,12 +67,12 @@ export default function VoucherClaimScreen() {
       const result = await redeem.mutateAsync(reward.id);
       await refreshProfile();
       setSuccessCode(result.voucher.redeemCode);
-      Alert.alert('Redeemed!', `Code: ${result.voucher.redeemCode}`, [
-        { text: 'Open Wallet', onPress: () => router.replace('/wallet' as any) },
-        { text: 'OK' },
+      Alert.alert(t('rewards.redeemed', 'Redeemed!'), t('rewards.code', 'Code: {{code}}', { code: result.voucher.redeemCode }), [
+        { text: t('rewards.openWallet', 'Open Wallet'), onPress: () => router.replace('/wallet' as any) },
+        { text: t('common.ok', 'OK') },
       ]);
     } catch (err) {
-      Alert.alert('Redeem failed', getApiErrorMessage(err));
+      Alert.alert(t('rewards.redeemFailed', 'Redeem failed'), getApiErrorMessage(err));
     }
   };
 
@@ -87,7 +89,7 @@ export default function VoucherClaimScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <AppHeader showBack rightIcon="none" />
-        <Text style={styles.missing}>Reward not found.</Text>
+        <Text style={styles.missing}>{t('rewards.rewardNotFound', 'Reward not found.')}</Text>
       </SafeAreaView>
     );
   }
@@ -103,23 +105,23 @@ export default function VoucherClaimScreen() {
         <Text style={styles.desc}>{reward.description || 'Campus partner reward'}</Text>
 
         <View style={styles.metaCard}>
-          <Row label="Points required" value={`${reward.pointsValue} pts`} />
-          <Row label="Your balance" value={`${user?.totalPoints ?? 0} pts`} />
-          <Row label="Expires" value={reward.expiresAt} />
+          <Row label={t('rewards.pointsRequired', 'Points required')} value={`${reward.pointsValue} ${t('rewards.pts', 'pts')}`} />
+          <Row label={t('rewards.yourBalance', 'Your balance')} value={`${user?.totalPoints ?? 0} ${t('rewards.pts', 'pts')}`} />
+          <Row label={t('rewards.expires', 'Expires')} value={reward.expiresAt} />
           {typeof reward.remainingQty === 'number' && (
-            <Row label="Remaining" value={String(reward.remainingQty)} />
+            <Row label={t('rewards.remaining', 'Remaining')} value={String(reward.remainingQty)} />
           )}
           {typeof reward.valueVnd === 'number' && (
-            <Row label="Value" value={`${reward.valueVnd.toLocaleString()} VND`} />
+            <Row label={t('rewards.value', 'Value')} value={`${reward.valueVnd.toLocaleString()} VND`} />
           )}
         </View>
 
         {reward.terms.length > 0 && (
           <View style={styles.terms}>
-            <Text style={styles.termsTitle}>Terms</Text>
-            {reward.terms.map((t) => (
-              <Text key={t} style={styles.termItem}>
-                • {t}
+            <Text style={styles.termsTitle}>{t('rewards.terms', 'Terms')}</Text>
+            {reward.terms.map((tItem) => (
+              <Text key={tItem} style={styles.termItem}>
+                • {tItem}
               </Text>
             ))}
           </View>
@@ -128,11 +130,11 @@ export default function VoucherClaimScreen() {
         {successCode ? (
           <View style={styles.successBox}>
             <Ionicons name="checkmark-circle" size={28} color={Colors.primary} />
-            <Text style={styles.successText}>Redeemed · {successCode}</Text>
+            <Text style={styles.successText}>{t('rewards.redeemed', 'Redeemed')} · {successCode}</Text>
           </View>
         ) : (
           <Button
-            label={redeem.isPending ? 'Redeeming...' : `Redeem for ${reward.pointsValue} pts`}
+            label={redeem.isPending ? t('rewards.redeeming', 'Redeeming...') : t('rewards.redeemFor', 'Redeem for {{points}} pts', { points: reward.pointsValue })}
             onPress={handleRedeem}
             loading={redeem.isPending}
             disabled={reward.status !== 'claimable'}

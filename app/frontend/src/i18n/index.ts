@@ -20,6 +20,9 @@ import enRewards from './locales/en/rewards.json';
 import enMap from './locales/en/map.json';
 import enAuth from './locales/en/auth.json';
 import enSettings from './locales/en/settings.json';
+import enImpact from './locales/en/impact.json';
+import enHistory from './locales/en/history.json';
+import enWallet from './locales/en/wallet.json';
 
 // Vietnamese translations
 import viCommon from './locales/vi/common.json';
@@ -29,6 +32,9 @@ import viRewards from './locales/vi/rewards.json';
 import viMap from './locales/vi/map.json';
 import viAuth from './locales/vi/auth.json';
 import viSettings from './locales/vi/settings.json';
+import viImpact from './locales/vi/impact.json';
+import viHistory from './locales/vi/history.json';
+import viWallet from './locales/vi/wallet.json';
 
 export const LANGUAGE_STORAGE_KEY = '@greenguard/language';
 export type SupportedLanguage = 'en' | 'vi';
@@ -71,6 +77,9 @@ export async function initI18n(): Promise<void> {
         map: enMap,
         auth: enAuth,
         settings: enSettings,
+        impact: enImpact,
+        history: enHistory,
+        wallet: enWallet,
       },
       vi: {
         common: viCommon,
@@ -80,6 +89,9 @@ export async function initI18n(): Promise<void> {
         map: viMap,
         auth: viAuth,
         settings: viSettings,
+        impact: viImpact,
+        history: viHistory,
+        wallet: viWallet,
       },
     },
     lng: language,

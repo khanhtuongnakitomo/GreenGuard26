@@ -22,5 +22,11 @@
   "cans": "lon",
   "thisMonth": "tháng này",
   "noMilestones": "Chưa có mốc nào.",
-  "tapToRetry": "Nhấn để thử lại"
+  "tapToRetry": "Nhấn để thử lại",
+  "and": "và",
+  "success": "Thành công",
+  "ok": "OK",
+  "optional": "Không bắt buộc",
+  "done": "Hoàn thành",
+  "error": "Lỗi"
 }

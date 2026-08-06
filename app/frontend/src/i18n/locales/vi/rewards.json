@@ -17,5 +17,7 @@
   "completeTasks": "Hoàn thành nhiệm vụ",
   "viewAll": "Xem tất cả",
   "noRewards": "Chưa có phần thưởng",
-  "points": "điểm"
+  "points": "điểm",
+  "none": "Không có",
+  "tierLabel": "Hạng {{tier}}"
 }

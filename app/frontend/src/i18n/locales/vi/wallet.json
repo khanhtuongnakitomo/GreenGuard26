@@ -1,0 +1,12 @@
+{
+  "title": "Ví của tôi",
+  "subtitle": "Voucher bạn đã đổi",
+  "errorTitle": "Không thể tải ví",
+  "errorDesc": "Vui lòng kiểm tra kết nối mạng.",
+  "emptyTitle": "Chưa có voucher nào",
+  "emptyDesc": "Đổi phần thưởng để làm đầy ví của bạn.",
+  "code": "Mã:",
+  "expires": "Hết hạn",
+  "voucherFallback": "Voucher",
+  "partnerFallback": "Đối tác"
+}

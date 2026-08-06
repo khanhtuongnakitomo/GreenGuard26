@@ -1,0 +1,12 @@
+{
+  "title": "My Wallet",
+  "subtitle": "Your redeemed vouchers",
+  "errorTitle": "Could not load wallet",
+  "errorDesc": "Check your connection.",
+  "emptyTitle": "No vouchers yet",
+  "emptyDesc": "Redeem rewards to fill your wallet.",
+  "code": "Code:",
+  "expires": "Expires",
+  "voucherFallback": "Voucher",
+  "partnerFallback": "Partner"
+}
