@@ -6,5 +6,19 @@
   "noLocations": "Không tìm thấy địa điểm",
   "loadingMap": "Đang tải bản đồ…",
   "directions": "Chỉ đường",
-  "close": "Đóng"
+  "close": "Đóng",
+  "noStationsFound": "Không tìm thấy trạm nào",
+  "open": "Mở cửa",
+  "closed": "Đóng cửa",
+  "currentlyOpen": "Đang mở cửa",
+  "currentlyClosed": "Đang đóng cửa",
+  "openStation": "Trạm đang mở",
+  "closedStation": "Trạm đang đóng",
+  "fromLocation": "từ vị trí hiện tại",
+  "navigate": "Chỉ đường",
+  "details": "Chi tiết",
+  "stationsFound": "{{count}} trạm được tìm thấy",
+  "stationsFoundPlural": "{{count}} trạm được tìm thấy",
+  "legend": "Chú giải",
+  "mapNotAvailable": "Cài đặt react-native-webview để bật bản đồ"
 }

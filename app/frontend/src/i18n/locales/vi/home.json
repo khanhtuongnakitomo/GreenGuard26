@@ -1,5 +1,5 @@
 {
-  "greetingSub": "Chào buổi sáng,",
+  "greetingSub": "Xin chào,",
   "greeting": "Xin chào, {{name}}! 👋",
   "myImpact": "Tác động của tôi",
   "rewards": "Phần thưởng",
@@ -16,5 +16,10 @@
   "scanToEarn": "Quét mã để tích điểm",
   "viewMap": "Xem bản đồ ›",
   "recentRewards": "Phần thưởng gần đây",
-  "seeAll": "Xem tất cả ›"
+  "seeAll": "Xem tất cả ›",
+  "viewDetails": "Xem chi tiết ›",
+  "viewAll": "Xem tất cả ›",
+  "bottles": "Chai",
+  "thisMonth": "Tháng này",
+  "noRewards": "Chưa có phần thưởng"
 }

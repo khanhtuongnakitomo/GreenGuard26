@@ -128,12 +128,14 @@ function MilestoneRow({
   target,
   status,
   colors,
+  t,
 }: {
   title: string;
   current: number;
   target: number;
   status: string;
   colors: any;
+  t: any;
 }) {
   const done = status === 'completed';
   const pct = Math.min((current / target) * 100, 100);
@@ -155,7 +157,7 @@ function MilestoneRow({
           <Text style={[milestoneStyles.title, { color: colors.textPrimary }]} numberOfLines={1}>{title}</Text>
           {done && (
             <View style={[milestoneStyles.donePill, { backgroundColor: colors.accentSoft }]}>
-              <Text style={[milestoneStyles.donePillText, { color: colors.primary }]}>Done</Text>
+              <Text style={[milestoneStyles.donePillText, { color: colors.primary }]}>{t('common.done', 'Done')}</Text>
             </View>
           )}
         </View>
@@ -375,6 +377,7 @@ export default function ImpactScreen() {
                     target={m.targetPoints}
                     status={m.status}
                     colors={colors}
+                    t={t}
                   />
                 ))}
               </FadeSlideIn>

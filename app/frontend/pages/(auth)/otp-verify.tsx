@@ -252,7 +252,7 @@ export default function OtpVerifyScreen() {
           />
 
           <Text style={[styles.hint, { color: colors.textMuted }]}>
-            💡 For demo purposes, any code except <Text style={{ fontWeight: FontWeight.bold }}>000000</Text> works.
+            {t('auth.demoHint', '💡 For demo purposes, any code except ')}<Text style={{ fontWeight: FontWeight.bold }}>000000</Text>{t('auth.demoHintSuffix', ' works.')}
           </Text>
         </View>
       </ScrollView>

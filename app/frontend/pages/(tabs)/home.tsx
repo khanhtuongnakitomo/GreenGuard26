@@ -57,16 +57,16 @@ export default function HomeScreen() {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.backgroundScreen }]} edges={['top']}>
         <EmptyState
-          title={isError ? 'Could not load home' : 'Loading profile…'}
+          title={isError ? t('home.couldNotLoadHome', 'Could not load home') : t('home.loadingProfile', 'Loading profile…')}
           description={
             isError
-              ? 'Check that the API is reachable, then tap retry.'
-              : 'Fetching your account…'
+              ? t('home.checkApiReachable', 'Check that the API is reachable, then tap retry.')
+              : t('home.fetchingAccount', 'Fetching your account…')
           }
         />
         {isError && (
           <Text style={[styles.retry, { color: colors.primary }]} onPress={() => refetch()}>
-            Tap to retry
+            {t('common.tapToRetry', 'Tap to retry')}
           </Text>
         )}
       </SafeAreaView>

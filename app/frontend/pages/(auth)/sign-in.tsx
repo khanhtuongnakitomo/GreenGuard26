@@ -82,7 +82,7 @@ export default function SignInScreen() {
       if (Platform.OS === 'web') {
         window.alert(message);
       } else {
-        Alert.alert('Sign In Failed', message);
+        Alert.alert(t('auth.signInFailed', 'Sign In Failed'), message);
       }
     } finally {
       setIsLoading(false);

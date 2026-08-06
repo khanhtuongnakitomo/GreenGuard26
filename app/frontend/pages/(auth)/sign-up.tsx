@@ -82,7 +82,7 @@ export default function SignUpScreen() {
       if (Platform.OS === 'web') {
         window.alert(message);
       } else {
-        Alert.alert('Sign Up Failed', message);
+        Alert.alert(t('auth.signUpFailed', 'Sign Up Failed'), message);
       }
     } finally {
       setIsLoading(false);

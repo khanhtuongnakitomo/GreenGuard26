@@ -51,7 +51,7 @@ interface RecyclingStation {
 
 // ─── Leaflet HTML ─────────────────────────────────────────────────────────────
 
-const buildLeafletHtml = (stations: RecyclingStation[], colors: any) => {
+const buildLeafletHtml = (stations: RecyclingStation[], colors: any, t: any) => {
   const markersJs = stations
     .map(
       (s) => `
@@ -67,7 +67,7 @@ const buildLeafletHtml = (stations: RecyclingStation[], colors: any) => {
         '<div style="font-family: sans-serif; min-width: 200px; color:${colors.textPrimary};">' +
         '<b style="font-size:14px; color:${colors.primary};">${s.name}</b>' +
         '<p style="margin:4px 0; font-size:12px; color:${colors.textMuted};">${s.address}</p>' +
-        '<span style="display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; background:${s.isOpen ? colors.successLight : colors.errorLight}; color:${s.isOpen ? colors.primary : colors.error};">${s.isOpen ? '● Open' : '● Closed'}</span>' +
+        '<span style="display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; background:${s.isOpen ? colors.successLight : colors.errorLight}; color:${s.isOpen ? colors.primary : colors.error};">${s.isOpen ? '● ' + t('map.open', 'Open') : '● ' + t('map.closed', 'Closed')}</span>' +
         '<p style="margin:6px 0; font-size:12px;">🕐 ${s.openHours}</p>' +
         '<p style="margin:4px 0; font-size:12px;">📦 ${s.acceptedItems.join(', ')}</p>' +
         '<p style="margin:4px 0; font-size:12px; color:${colors.textSecondary};">📍 ${s.distance} away</p>' +
@@ -128,6 +128,7 @@ interface StationCardProps {
 
 const StationCard = ({ station, onPress }: StationCardProps) => {
   const { colors } = useTheme();
+  const { t } = useI18n();
   return (
     <TouchableOpacity style={[styles.stationCard, { backgroundColor: colors.backgroundWhite, borderColor: colors.cardBorder }]} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.stationCardLeft}>
@@ -138,7 +139,7 @@ const StationCard = ({ station, onPress }: StationCardProps) => {
           <View style={styles.stationMeta}>
             <View style={[styles.statusBadge, { backgroundColor: station.isOpen ? colors.successLight : colors.errorLight }]}>
               <Text style={[styles.statusText, { color: station.isOpen ? colors.primary : colors.error }]}>
-                {station.isOpen ? 'Open' : 'Closed'}
+                {station.isOpen ? t('map.open', 'Open') : t('map.closed', 'Closed')}
               </Text>
             </View>
             <Text style={[styles.distanceText, { color: colors.textMuted }]}>📍 {station.distance}</Text>
@@ -158,6 +159,7 @@ interface StationDetailModalProps {
 
 const StationDetailModal = ({ station, visible, onClose }: StationDetailModalProps) => {
   const { colors } = useTheme();
+  const { t } = useI18n();
   if (!station) return null;
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -186,7 +188,7 @@ const StationDetailModal = ({ station, visible, onClose }: StationDetailModalPro
             </View>
             <View style={styles.modalRow}>
               <Ionicons name="navigate-outline" size={18} color={colors.primary} />
-              <Text style={[styles.modalRowText, { color: colors.textSecondary }]}>{station.distance} from current location</Text>
+              <Text style={[styles.modalRowText, { color: colors.textSecondary }]}>{station.distance} {t('map.fromLocation', 'from current location')}</Text>
             </View>
 
             <View style={[styles.modalRow, { alignItems: 'flex-start' }]}>
@@ -210,13 +212,13 @@ const StationDetailModal = ({ station, visible, onClose }: StationDetailModalPro
                 color={station.isOpen ? colors.primary : colors.error}
               />
               <Text style={[styles.statusBannerText, { color: station.isOpen ? colors.primary : colors.error }]}>
-                {station.isOpen ? 'Currently Open' : 'Currently Closed'}
+                {station.isOpen ? t('map.currentlyOpen', 'Currently Open') : t('map.currentlyClosed', 'Currently Closed')}
               </Text>
             </View>
 
             <View style={styles.modalActions}>
               <Button
-                label="Navigate"
+                label={t('map.navigate', 'Navigate')}
                 variant="secondary"
                 fullWidth={false}
                 style={styles.modalBtn}
@@ -224,7 +226,7 @@ const StationDetailModal = ({ station, visible, onClose }: StationDetailModalPro
                 leftIcon={<Ionicons name="navigate" size={16} color={colors.primary} />}
               />
               <Button
-                label="Details"
+                label={t('map.details', 'Details')}
                 variant="primary"
                 fullWidth={false}
                 style={styles.modalBtn}
@@ -243,16 +245,17 @@ const StationDetailModal = ({ station, visible, onClose }: StationDetailModalPro
 
 const MapLegend = () => {
   const { colors } = useTheme();
+  const { t } = useI18n();
   return (
     <View style={[styles.legend, { backgroundColor: colors.backgroundWhite }]}>
-      <Text style={[styles.legendTitle, { color: colors.textPrimary }]}>Legend</Text>
+      <Text style={[styles.legendTitle, { color: colors.textPrimary }]}>{t('map.legend', 'Legend')}</Text>
       <View style={styles.legendRow}>
         <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
-        <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>Open Station</Text>
+        <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>{t('map.openStation', 'Open Station')}</Text>
       </View>
       <View style={styles.legendRow}>
         <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />
-        <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>Closed Station</Text>
+        <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>{t('map.closedStation', 'Closed Station')}</Text>
       </View>
     </View>
   );
@@ -262,7 +265,8 @@ const MapLegend = () => {
 
 const LeafletMap = ({ stations }: { stations: RecyclingStation[] }) => {
   const { colors } = useTheme();
-  const html = buildLeafletHtml(stations, colors);
+  const { t } = useI18n();
+  const html = buildLeafletHtml(stations, colors, t);
 
   if (Platform.OS === 'web') {
     return (
@@ -290,7 +294,7 @@ const LeafletMap = ({ stations }: { stations: RecyclingStation[] }) => {
     return (
       <View style={[styles.mapContainer, styles.mapFallback, { backgroundColor: colors.backgroundCard }]}>
         <Ionicons name="map-outline" size={48} color={colors.textMuted} />
-        <Text style={[styles.fallbackText, { color: colors.textMuted }]}>Install react-native-webview to enable the map</Text>
+        <Text style={[styles.fallbackText, { color: colors.textMuted }]}>{t('map.mapNotAvailable', 'Install react-native-webview to enable the map')}</Text>
       </View>
     );
   }
@@ -388,7 +392,11 @@ export default function MapScreen() {
 
       {/* Results count */}
       <View style={styles.resultsRow}>
-        <Text style={[styles.resultsCount, { color: colors.textMuted }]}>{filtered.length} station{filtered.length !== 1 ? 's' : ''} found</Text>
+        <Text style={[styles.resultsCount, { color: colors.textMuted }]}>
+          {filtered.length === 1
+            ? t('map.stationsFound', '{{count}} station found', { count: filtered.length })
+            : t('map.stationsFoundPlural', '{{count}} stations found', { count: filtered.length })}
+        </Text>
       </View>
 
       {/* Station list */}

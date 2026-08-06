@@ -68,7 +68,7 @@ export default function RewardsScreen() {
             </View>
             <View style={[styles.tierBadge, { backgroundColor: colors.primaryDark }]}>
               <Ionicons name="trophy-outline" size={13} color="#fff" />
-              <Text style={styles.tierBadgeText}>{user.memberTier || 'Bronze'} Tier</Text>
+              <Text style={styles.tierBadgeText}>{t('rewards.tierLabel', 'Bronze Tier', { tier: user.memberTier || t('rewards.bronzeTier', 'Bronze') })}</Text>
             </View>
           </View>
         )}

@@ -35,7 +35,7 @@ interface StrengthLevel {
   bars: number;
 }
 
-function getPasswordStrength(password: string, colors: any): StrengthLevel {
+function getPasswordStrength(password: string, colors: any, t: any): StrengthLevel {
   if (!password) return { label: '', color: colors.borderMuted, bars: 0 };
   let score = 0;
   if (password.length >= 8) score++;
@@ -43,15 +43,16 @@ function getPasswordStrength(password: string, colors: any): StrengthLevel {
   if (/[0-9]/.test(password)) score++;
   if (/[^A-Za-z0-9]/.test(password)) score++;
 
-  if (score <= 1) return { label: 'Weak', color: colors.error, bars: 1 };
-  if (score === 2) return { label: 'Fair', color: colors.warning, bars: 2 };
-  if (score === 3) return { label: 'Good', color: colors.info, bars: 3 };
-  return { label: 'Strong', color: colors.success, bars: 4 };
+  if (score <= 1) return { label: t('auth.weak', 'Weak'), color: colors.error, bars: 1 };
+  if (score === 2) return { label: t('auth.fair', 'Fair'), color: colors.warning, bars: 2 };
+  if (score === 3) return { label: t('auth.good', 'Good'), color: colors.info, bars: 3 };
+  return { label: t('auth.strong', 'Strong'), color: colors.success, bars: 4 };
 }
 
 const PasswordStrengthBar = ({ password }: { password: string }) => {
   const { colors } = useTheme();
-  const strength = getPasswordStrength(password, colors);
+  const { t } = useI18n();
+  const strength = getPasswordStrength(password, colors, t);
   if (!password) return null;
 
   return (
@@ -96,7 +97,7 @@ export default function ResetPasswordScreen() {
   const onSubmit = async (values: FormValues) => {
     if (values.password !== values.confirmPassword) return;
     if (!params.phone || !params.otp) {
-      Alert.alert('Error', 'Missing verification details. Please restart the reset flow.');
+      Alert.alert(t('common.error', 'Error'), t('auth.missingVerification', 'Missing verification details. Please restart the reset flow.'));
       return;
     }
     setIsLoading(true);
@@ -104,9 +105,9 @@ export default function ResetPasswordScreen() {
       await authService.resetPassword(params.phone, params.otp, values.password);
       router.push('/(auth)/password-changed' as any);
     } catch (err) {
-      const message = getApiErrorMessage(err, 'Failed to reset password');
+      const message = getApiErrorMessage(err, t('auth.resetFailed', 'Failed to reset password'));
       if (Platform.OS === 'web') window.alert(message);
-      else Alert.alert('Error', message);
+      else Alert.alert(t('common.error', 'Error'), message);
     } finally {
       setIsLoading(false);
     }
