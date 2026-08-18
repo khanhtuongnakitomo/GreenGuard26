@@ -5,6 +5,20 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+import numpy as np
+
+
+class _NumpyEncoder(json.JSONEncoder):
+    """Custom encoder to handle numpy scalar types that are not JSON serializable."""
+    def default(self, obj):
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
+
 
 def utc_timestamp():
     return datetime.now(timezone.utc).isoformat()
@@ -50,7 +64,7 @@ class TelemetryLogger:
             return
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as file:
-            file.write(json.dumps(payload, ensure_ascii=False) + "\n")
+            file.write(json.dumps(payload, ensure_ascii=False, cls=_NumpyEncoder) + "\n")
 
     def event(
         self,

@@ -16,9 +16,9 @@ def main():
     print(f"Loading model from {args.weights}...")
     model = YOLO(args.weights)
 
-    print("Exporting model to TFLite (INT8 Quantization) for optimal performance on Raspberry Pi...")
-    # int8=True applies quantization, reducing size and increasing speed with minimal accuracy loss
-    model.export(format='tflite', int8=True, imgsz=320, data='configs/data.yaml')
+    print("Exporting model to TFLite (Float16) for optimal performance on Raspberry Pi...")
+    # half=True applies float16, reducing size and increasing speed with minimal accuracy loss
+    model.export(format='tflite', half=True, imgsz=320, data='configs/data.yaml')
     
     print("Export complete!")
 

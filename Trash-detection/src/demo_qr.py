@@ -14,7 +14,7 @@ def main():
     print(f"Backend: {api_client.BACKEND_URL}  Machine: {api_client.MACHINE_CODE}")
 
     items_list = []
-    classes = ["plastic_bottle", "can", "carton"]
+    classes = ["metal_can", "pet_bottle", "pp_cup"]
 
     for cls in classes:
         if random.random() < 0.8:
@@ -22,7 +22,7 @@ def main():
             items_list.append({"itemType": cls, "quantity": qty})
 
     if not items_list:
-        items_list.append({"itemType": "plastic_bottle", "quantity": 1})
+        items_list.append({"itemType": "pet_bottle", "quantity": 1})
 
     points = calculate_points(items_list)
 

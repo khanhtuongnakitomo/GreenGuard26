@@ -2,6 +2,22 @@ import cv2
 import time
 import numpy as np
 
+
+def _draw_bbox(annotated, best, color=(0, 200, 255)):
+    """Vẽ bounding box từ bbox chuẩn hóa [ymin, xmin, ymax, xmax] (0.0-1.0)."""
+    if best is None:
+        return
+    h, w = annotated.shape[:2]
+    ymin, xmin, ymax, xmax = best["bbox"]
+    x1, y1 = int(xmin * w), int(ymin * h)
+    x2, y2 = int(xmax * w), int(ymax * h)
+    if x2 > x1 and y2 > y1:
+        cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+        label = f"{best['class_name']} {best['confidence']:.1%}"
+        cv2.putText(annotated, label, (x1, max(y1 - 10, 15)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
+
 def draw_session_ui(frame, session, fps):
     annotated = frame.copy()
     h, w = annotated.shape[:2]
@@ -44,10 +60,7 @@ def draw_session_ui(frame, session, fps):
         
         # If we have a detection, draw a box
         best = session.last_best_detection
-        if best:
-            x1, y1, x2, y2 = [int(v) for v in best["bbox"]]
-            cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 200, 255), 2)
-            cv2.putText(annotated, f"{best['class_name']} {best['confidence']:.1%}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 200, 255), 2)
+        _draw_bbox(annotated, best, color=(0, 200, 255))
             
     elif state == "accepted":
         best = session.last_best_detection
@@ -58,6 +71,7 @@ def draw_session_ui(frame, session, fps):
         text_y = (h + text_size[1]) // 2
         cv2.rectangle(annotated, (0, 0), (w, h), (0, 255, 0), 10)
         cv2.putText(annotated, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
+        _draw_bbox(annotated, best, color=(0, 255, 0))
         
     elif state == "countdown":
         elapsed = now - session.state_start_time

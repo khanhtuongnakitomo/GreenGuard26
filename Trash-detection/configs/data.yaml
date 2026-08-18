@@ -5,6 +5,6 @@ test: images/test
 
 nc: 3  # number of classes
 names:
-  0: plastic_bottle
-  1: milk_carton
-  2: tin_can
+  0: metal_can
+  1: pet_bottle
+  2: pp_cup
