@@ -45,7 +45,7 @@ def get_interpreter_class():
 class BeverageClassifier:
     def __init__(self, model_path, min_conf_threshold=0.05):
         self.min_conf_threshold = min_conf_threshold
-        self.labels = ["plastic_bottle", "milk_carton", "tin_can"]
+        self.labels = ["metal_can", "pet_bottle", "pp_cup"]
 
         print(f"Loading TFLite model from {model_path}...")
         Interpreter = get_interpreter_class()
@@ -57,10 +57,20 @@ class BeverageClassifier:
         self.input_shape = self.input_details[0]["shape"]
 
     def preprocess(self, frame):
-        h, w = self.input_shape[1], self.input_shape[2]
+        is_nchw = self.input_shape[1] == 3
+        if is_nchw:
+            h, w = self.input_shape[2], self.input_shape[3]
+        else:
+            h, w = self.input_shape[1], self.input_shape[2]
+            
         img = cv2.resize(frame, (w, h))
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        return np.expand_dims(img, axis=0).astype(np.uint8)
+        img = img.astype(np.float32) / 255.0
+        
+        if is_nchw:
+            img = np.transpose(img, (2, 0, 1))
+            
+        return np.expand_dims(img, axis=0)
 
     def predict(self, frame):
         """Returns detection dicts with raw TFLite bbox values."""
@@ -69,30 +79,76 @@ class BeverageClassifier:
         self.interpreter.set_tensor(self.input_details[0]["index"], img)
         self.interpreter.invoke()
 
-        # YOLOv8 TFLite output shape can vary by export version. This parser
-        # supports the common [1, num_detections, 6] layout documented here.
+        # YOLOv8 TFLite standard output shape is [1, 4 + num_classes, num_anchors]
         output = self.interpreter.get_tensor(self.output_details[0]["index"])
+        
+        # Transpose to [num_anchors, 4 + num_classes]
+        output = output[0].T
+        
+        boxes = output[:, :4]
+        scores = output[:, 4:]
+        
+        class_ids = np.argmax(scores, axis=1)
+        confidences = np.max(scores, axis=1)
+        
+        is_nchw = self.input_shape[1] == 3
+        # img_h, img_w = (self.input_shape[2], self.input_shape[3]) if is_nchw else (self.input_shape[1], self.input_shape[2])
 
         detections = []
-        for det in output[0]:
-            if len(det) < 6:
-                continue
-
-            confidence = float(det[4])
+        for i in range(len(output)):
+            confidence = float(confidences[i])
             if confidence < self.min_conf_threshold:
                 continue
-
-            class_id = int(det[5])
+                
+            class_id = int(class_ids[i])
             if 0 <= class_id < len(self.labels):
+                # YOLOv8 TFLite outputs [cx, cy, w, h] already normalized to 0.0 - 1.0
+                cx, cy, w, h = boxes[i]
+                
+                ymin = max(0.0, cy - h / 2)
+                xmin = max(0.0, cx - w / 2)
+                ymax = min(1.0, cy + h / 2)
+                xmax = min(1.0, cx + w / 2)
+                
                 detections.append(
                     {
                         "class_name": self.labels[class_id],
                         "confidence": confidence,
-                        "bbox": normalize_bbox(det[:4]),
+                        "bbox": [float(ymin), float(xmin), float(ymax), float(xmax)],
                     }
                 )
 
-        return detections
+        return self.nms(detections)
+
+    def nms(self, detections, iou_threshold=0.45):
+        if not detections:
+            return []
+        detections = sorted(detections, key=lambda x: x['confidence'], reverse=True)
+        keep = []
+        for det in detections:
+            overlap = False
+            for kept in keep:
+                if self.compute_iou(det['bbox'], kept['bbox']) > iou_threshold:
+                    overlap = True
+                    break
+            if not overlap:
+                keep.append(det)
+        return keep
+        
+    def compute_iou(self, boxA, boxB):
+        yA = max(boxA[0], boxB[0])
+        xA = max(boxA[1], boxB[1])
+        yB = min(boxA[2], boxB[2])
+        xB = min(boxA[3], boxB[3])
+
+        interArea = max(0.0, xB - xA) * max(0.0, yB - yA)
+        if interArea == 0.0:
+            return 0.0
+
+        boxAArea = (boxA[2] - boxA[0]) * (boxA[3] - boxA[1])
+        boxBArea = (boxB[2] - boxB[0]) * (boxB[3] - boxB[1])
+
+        return interArea / float(boxAArea + boxBArea - interArea)
 
     def classify_single_object(self, frame, conf_threshold=0.60):
         detections = self.predict(frame)

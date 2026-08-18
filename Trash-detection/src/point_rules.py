@@ -1,15 +1,15 @@
 # Must match app/backend/src/config/constants.ts POINT_RULES
 POINT_RULES = {
-    "plastic_bottle": 10,
-    "can": 8,
-    "carton": 6,
+    "pet_bottle": 10,
+    "metal_can": 8,
+    "pp_cup": 6,
 }
 
-# The model outputs 'tin_can' and 'milk_carton', but the backend expects 'can' and 'carton'
+# The model outputs 'metal_can', 'pet_bottle', 'pp_cup'
 CLASS_NAME_MAP = {
-    "plastic_bottle": "plastic_bottle",
-    "tin_can": "can",
-    "milk_carton": "carton",
+    "pet_bottle": "pet_bottle",
+    "metal_can": "metal_can",
+    "pp_cup": "pp_cup",
 }
 
 

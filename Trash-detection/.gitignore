@@ -27,12 +27,18 @@ __pycache__/
 .DS_Store
 *.swp
 
+# Calibration and temp data
+*.npy
+rebuild_pt.py
+
 # Model weights and exports (ignore auto-generated, allow committed models)
 *.pt
 *.tflite
 *.onnx
 *.engine
+best_saved_model/
+
 # Exception: keep the final trained models folder in git
 !models/
-!models/*.pt
-!models/*.tflite
+!models/best.pt
+!models/best_float16.tflite

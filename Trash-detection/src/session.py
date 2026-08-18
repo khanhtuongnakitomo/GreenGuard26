@@ -52,12 +52,12 @@ class RecyclingSession:
     def _generate_random_items(self):
         """Generate random items for demo QR codes."""
         items = {}
-        classes = ["plastic_bottle", "can", "carton"]
+        classes = ["metal_can", "pet_bottle", "pp_cup"]
         for cls in classes:
             if random.random() < 0.8:
                 items[cls] = random.randint(1, 5)
         if not items:
-            items["plastic_bottle"] = 1
+            items["pet_bottle"] = 1
         return items
 
     def generate_qr(self):
