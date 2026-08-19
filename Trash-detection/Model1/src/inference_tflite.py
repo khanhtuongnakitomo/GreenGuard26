@@ -8,6 +8,7 @@ import numpy as np
 from telemetry import TelemetryLogger, normalize_bbox, now_ms
 from session import RecyclingSession
 from ui import draw_session_ui
+from model2_bridge import default_model2_path, load_component_pipeline
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -15,7 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def resolve_path(path):
     candidate = Path(path)
-    if candidate.exists():
+    if candidate.exists() or candidate.is_absolute():
         return candidate
 
     repo_candidate = REPO_ROOT / path
@@ -175,6 +176,14 @@ def parse_args():
     parser.add_argument("--device-id", default="local-dev", help="Device identifier included in telemetry")
     parser.add_argument("--save-rejects", action="store_true", help="Save rejected frames to snapshot directory")
     parser.add_argument("--no-telemetry", action="store_true", help="Disable telemetry writes")
+    parser.add_argument(
+        "--model2",
+        default=str(default_model2_path()),
+        help="Path to Model 2 cap/label weights (YOLO OBB .pt)",
+    )
+    parser.add_argument("--model2-conf", type=float, default=0.75, help="Cap/label confidence threshold")
+    parser.add_argument("--model2-margin", type=float, default=0.15, help="Extra crop margin around the PET box")
+    parser.add_argument("--no-model2", action="store_true", help="Disable PET cap/label inspection")
     return parser.parse_args()
 
 
@@ -196,6 +205,24 @@ def main():
         return
 
     classifier = BeverageClassifier(model_path=os.fspath(model_path), min_conf_threshold=args.min_log_conf)
+
+    model2_pipeline = None
+    best_pet_detection = None
+    if not args.no_model2:
+        model2_path = resolve_path(args.model2)
+        if not model2_path.exists():
+            print(
+                f"WARNING: Model 2 weights not found at {model2_path}. "
+                "PET cap/label checks are disabled until you train Model2."
+            )
+        else:
+            print(f"Loading Model 2 from {model2_path} (conf={args.model2_conf})...")
+            model2_pipeline, best_pet_detection = load_component_pipeline(
+                model2_path,
+                conf_threshold=args.model2_conf,
+                crop_margin=args.model2_margin,
+            )
+
     cap = cv2.VideoCapture(args.camera)
 
     if not cap.isOpened():
@@ -228,9 +255,15 @@ def main():
             detections = classifier.predict(frame)
             inference_ms = now_ms() - start_ms
             fps = 1000.0 / inference_ms if inference_ms > 0 else 0.0
+
+            component_inspection = None
+            if model2_pipeline is not None:
+                pet = best_pet_detection(detections, args.conf)
+                if pet is not None:
+                    component_inspection = model2_pipeline.inspect_pet(frame, pet)
             
             # Process frame through session state machine
-            state = session.process_frame(detections, args.conf)
+            state = session.process_frame(detections, args.conf, component_inspection=component_inspection)
             decision = "accepted" if state == "accepted" else "low_conf" # map for telemetry
 
             snapshot_path = None

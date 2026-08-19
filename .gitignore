@@ -1,0 +1,53 @@
+# Local datasets (download from Roboflow on each machine)
+Trash-detection/Model1/data/
+Trash-detection/Model2/data/
+
+# Training outputs and logs
+runs/
+Trash-detection/Model1/runs/
+Trash-detection/Model2/runs/
+Trash-detection/Model1/logs/
+Trash-detection/Model2/logs/
+Trash-detection/Model1/failed/
+Trash-detection/Model2/failed/
+
+# Python environments and secrets
+.venv/
+venv/
+env/
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+
+# Tool caches
+.ultralytics/
+.matplotlib/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Archives and temp data
+*.zip
+*.npy
+rebuild_pt.py
+
+# Model weights (keep only release artifacts below)
+*.pt
+*.tflite
+*.onnx
+*.engine
+best_saved_model/
+
+!Trash-detection/Model1/models/
+!Trash-detection/Model1/models/best.pt
+!Trash-detection/Model1/models/best_float16.tflite
+!Trash-detection/Model2/models/
+!Trash-detection/Model2/models/best.pt

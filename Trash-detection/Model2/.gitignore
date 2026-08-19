@@ -1,0 +1,14 @@
+runs/
+logs/
+data/
+.ultralytics/
+.matplotlib/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# Ignore training artifacts except the exported inference weights
+*.pt
+!models/best.pt

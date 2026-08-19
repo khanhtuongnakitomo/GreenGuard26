@@ -13,8 +13,10 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 QR_SECRET = os.getenv("QR_SECRET")
 if not QR_SECRET:
-    print("WARNING: QR_SECRET not found in .env, falling back to empty string for dev")
-    QR_SECRET = ""
+    raise RuntimeError(
+        "QR_SECRET is not set in Trash-detection/.env — "
+        "it must match QR_SECRET in GreenPoint-Backend/.env"
+    )
 
 MACHINE_CODE = os.getenv("MACHINE_CODE", "0001")
 

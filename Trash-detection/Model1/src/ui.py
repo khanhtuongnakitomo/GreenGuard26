@@ -3,19 +3,67 @@ import time
 import numpy as np
 
 
+CLASS_COLORS = {
+    "cap": (0, 140, 255),
+    "label": (255, 180, 0),
+}
+
+
+def _box_to_px(bbox, frame_shape):
+    height, width = frame_shape[:2]
+    values = [float(v) for v in bbox]
+    if max(abs(v) for v in values) <= 1.5:
+        ymin, xmin, ymax, xmax = values
+        return int(xmin * width), int(ymin * height), int(xmax * width), int(ymax * height)
+    x1, y1, x2, y2 = values
+    return int(x1), int(y1), int(x2), int(y2)
+
+
 def _draw_bbox(annotated, best, color=(0, 200, 255)):
-    """Vẽ bounding box từ bbox chuẩn hóa [ymin, xmin, ymax, xmax] (0.0-1.0)."""
+    """Draw a Model 1 box from either normalized or pixel coordinates."""
     if best is None:
         return
-    h, w = annotated.shape[:2]
-    ymin, xmin, ymax, xmax = best["bbox"]
-    x1, y1 = int(xmin * w), int(ymin * h)
-    x2, y2 = int(xmax * w), int(ymax * h)
+    x1, y1, x2, y2 = _box_to_px(best["bbox"], annotated.shape)
     if x2 > x1 and y2 > y1:
         cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
         label = f"{best['class_name']} {best['confidence']:.1%}"
         cv2.putText(annotated, label, (x1, max(y1 - 10, 15)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
+
+def _draw_component_inspection(annotated, inspection):
+    if not inspection:
+        return
+    for item in inspection.get("detections", []):
+        color = CLASS_COLORS.get(item["class_name"], (0, 255, 255))
+        polygon = item.get("polygon")
+        if polygon:
+            contour = np.array([(int(x), int(y)) for x, y in polygon], dtype=np.int32)
+            cv2.polylines(annotated, [contour], True, color, 2)
+        else:
+            x1, y1, x2, y2 = _box_to_px(item["bbox"], annotated.shape)
+            cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+
+
+def _draw_reject_details(annotated, inspection):
+    if not inspection:
+        return
+    height, width = annotated.shape[:2]
+    lines = ["REJECT"]
+    for item in inspection.get("detections", []):
+        lines.append(f"{item['class_name']} {item['confidence']:.2f}")
+    if len(lines) == 1:
+        lines.append(inspection.get("reason", "violation"))
+
+    cv2.rectangle(annotated, (0, 0), (width, height), (0, 0, 255), 10)
+    y = height // 2 - 20 * len(lines)
+    for index, text in enumerate(lines):
+        scale = 1.5 if index == 0 else 0.9
+        thickness = 3 if index == 0 else 2
+        text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, scale, thickness)[0]
+        x = (width - text_size[0]) // 2
+        cv2.putText(annotated, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, scale, (0, 0, 255), thickness)
+        y += text_size[1] + 18
 
 
 def draw_session_ui(frame, session, fps):
@@ -24,6 +72,7 @@ def draw_session_ui(frame, session, fps):
     now = time.time()
     
     state = session.state
+    inspection = getattr(session, "last_component_inspection", None)
     
     # Common HUD (always show FPS)
     cv2.putText(annotated, f"{int(fps)} FPS", (w - 80, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 2)
@@ -58,9 +107,9 @@ def draw_session_ui(frame, session, fps):
         text_y = (h + text_size[1]) // 2
         cv2.putText(annotated, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 200, 255), 3)
         
-        # If we have a detection, draw a box
         best = session.last_best_detection
         _draw_bbox(annotated, best, color=(0, 200, 255))
+        _draw_component_inspection(annotated, inspection)
             
     elif state == "accepted":
         best = session.last_best_detection
@@ -72,6 +121,12 @@ def draw_session_ui(frame, session, fps):
         cv2.rectangle(annotated, (0, 0), (w, h), (0, 255, 0), 10)
         cv2.putText(annotated, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
         _draw_bbox(annotated, best, color=(0, 255, 0))
+        _draw_component_inspection(annotated, inspection)
+
+    elif state == "rejected":
+        _draw_bbox(annotated, session.last_best_detection, color=(0, 0, 255))
+        _draw_component_inspection(annotated, inspection)
+        _draw_reject_details(annotated, inspection)
         
     elif state == "countdown":
         elapsed = now - session.state_start_time

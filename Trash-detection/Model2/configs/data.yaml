@@ -1,0 +1,11 @@
+# YOLO11 OBB dataset for cap / label detection.
+# Paths are relative to Model2/ (train.py sets that as the working directory).
+path: data/dataset-2
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 2
+names:
+  0: cap
+  1: label
