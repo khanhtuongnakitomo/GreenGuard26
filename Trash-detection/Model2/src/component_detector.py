@@ -12,6 +12,19 @@ def _class_name(names, class_id):
     return str(class_id)
 
 
+def _polygon_points(polygon):
+    """Normalize Ultralytics OBB corners to [[x, y], ...].
+
+    xyxyxyxy is (N, 4, 2) — already four [x, y] points — or rarely a flat (N, 8).
+    """
+    if not polygon:
+        return []
+    first = polygon[0]
+    if isinstance(first, (list, tuple)):
+        return [list(point[:2]) for point in polygon if point]
+    return [[polygon[i], polygon[i + 1]] for i in range(0, len(polygon) - 1, 2)]
+
+
 def _shift_polygon(polygon, offset_x, offset_y):
     shifted = []
     for x, y in polygon:
@@ -31,7 +44,6 @@ def _detections_from_obb(result, offset_x=0, offset_y=0):
 
     detections = []
     for polygon, bbox, confidence, class_id in zip(polygons, boxes, confidences, classes):
-        points = [polygon[i:i + 2] for i in range(0, 8, 2)]
         x1, y1, x2, y2 = bbox
         detections.append(
             {
@@ -43,7 +55,7 @@ def _detections_from_obb(result, offset_x=0, offset_y=0):
                     float(x2 + offset_x),
                     float(y2 + offset_y),
                 ],
-                "polygon": _shift_polygon(points, offset_x, offset_y),
+                "polygon": _shift_polygon(_polygon_points(polygon), offset_x, offset_y),
             }
         )
     return detections
