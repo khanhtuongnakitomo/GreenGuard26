@@ -3,10 +3,26 @@ import time
 import numpy as np
 
 
+DISPLAY_NAMES = {
+    "metal_can": "aluminum can",
+    "pet_bottle": "PET bottle",
+    "others": "others",
+}
+
+
 CLASS_COLORS = {
     "cap": (0, 140, 255),
     "label": (255, 180, 0),
+    "metal_can": (0, 200, 255),
+    "pet_bottle": (0, 200, 255),
+    "others": (160, 160, 160),
 }
+
+
+def _display_name(class_name):
+    if not class_name:
+        return "Item"
+    return DISPLAY_NAMES.get(class_name, class_name)
 
 
 def _box_to_px(bbox, frame_shape):
@@ -19,14 +35,32 @@ def _box_to_px(bbox, frame_shape):
     return int(x1), int(y1), int(x2), int(y2)
 
 
+def _draw_centered_lines(annotated, lines, color, first_scale=1.6, other_scale=1.1):
+    height, width = annotated.shape[:2]
+    sizes = []
+    for index, text in enumerate(lines):
+        scale = first_scale if index == 0 else other_scale
+        thickness = 3 if index == 0 else 2
+        sizes.append((text, scale, thickness, cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, scale, thickness)[0]))
+
+    total_h = sum(size[1] + 18 for *_, size in sizes)
+    y = height // 2 - total_h // 2
+    for text, scale, thickness, text_size in sizes:
+        x = (width - text_size[0]) // 2
+        y += text_size[1]
+        cv2.putText(annotated, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, scale, color, thickness)
+        y += 18
+
+
 def _draw_bbox(annotated, best, color=(0, 200, 255)):
     """Draw a Model 1 box from either normalized or pixel coordinates."""
     if best is None:
         return
     x1, y1, x2, y2 = _box_to_px(best["bbox"], annotated.shape)
     if x2 > x1 and y2 > y1:
+        color = CLASS_COLORS.get(best.get("class_name"), color)
         cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
-        label = f"{best['class_name']} {best['confidence']:.1%}"
+        label = f"{_display_name(best['class_name'])} {best['confidence']:.1%}"
         cv2.putText(annotated, label, (x1, max(y1 - 10, 15)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
@@ -45,44 +79,37 @@ def _draw_component_inspection(annotated, inspection):
             cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
 
 
-def _draw_reject_details(annotated, inspection):
-    if not inspection:
-        return
-    height, width = annotated.shape[:2]
-    lines = ["REJECT"]
-    for item in inspection.get("detections", []):
-        lines.append(f"{item['class_name']} {item['confidence']:.2f}")
-    if len(lines) == 1:
-        lines.append(inspection.get("reason", "violation"))
-
-    cv2.rectangle(annotated, (0, 0), (width, height), (0, 0, 255), 10)
-    y = height // 2 - 20 * len(lines)
-    for index, text in enumerate(lines):
-        scale = 1.5 if index == 0 else 0.9
-        thickness = 3 if index == 0 else 2
-        text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, scale, thickness)[0]
-        x = (width - text_size[0]) // 2
-        cv2.putText(annotated, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, scale, (0, 0, 255), thickness)
-        y += text_size[1] + 18
+def _draw_verdict(annotated, title, subtitle, color):
+    h, w = annotated.shape[:2]
+    cv2.rectangle(annotated, (0, 0), (w, h), color, 10)
+    _draw_centered_lines(annotated, [title, subtitle], color)
 
 
-def draw_session_ui(frame, session, fps):
+def draw_session_ui(frame, session, fps, debug_boxes=False, rl_status=None):
     annotated = frame.copy()
     h, w = annotated.shape[:2]
     now = time.time()
     
     state = session.state
     inspection = getattr(session, "last_component_inspection", None)
+    best = session.last_best_detection
     
     # Common HUD (always show FPS)
     cv2.putText(annotated, f"{int(fps)} FPS", (w - 80, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 2)
+    if rl_status and rl_status.get("enabled"):
+        rl_text = "RL ON"
+        if rl_status.get("training"):
+            rl_text = "RL TRAINING"
+        elif rl_status.get("message"):
+            rl_text = f"RL {rl_status['message']}"
+        cv2.putText(annotated, rl_text, (w - 360, 58), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 255, 255), 2)
     
     # Draw accumulated items so far
     y_offset = 30
     cv2.putText(annotated, "Collected:", (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
     y_offset += 25
     for item_type, qty in session.items.items():
-        cv2.putText(annotated, f"- {item_type}: {qty}", (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        cv2.putText(annotated, f"- {_display_name(item_type)}: {qty}", (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
         y_offset += 25
 
     if state == "idle":
@@ -97,36 +124,39 @@ def draw_session_ui(frame, session, fps):
         cv2.putText(annotated, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         
     elif state == "detecting":
-        text = "Scanning..."
-        
         if getattr(session, 'demo_mode', False):
             cv2.putText(annotated, "DETECTION: ON", (10, h - 80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-            
-        text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 1.5, 3)[0]
-        text_x = (w - text_size[0]) // 2
-        text_y = (h + text_size[1]) // 2
-        cv2.putText(annotated, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 200, 255), 3)
-        
-        best = session.last_best_detection
-        _draw_bbox(annotated, best, color=(0, 200, 255))
-        _draw_component_inspection(annotated, inspection)
+
+        if best and best.get("class_name") == "others":
+            _draw_centered_lines(annotated, ["OTHERS"], (160, 160, 160))
+        elif (
+            best
+            and best.get("class_name") == "pet_bottle"
+            and inspection
+            and inspection.get("decision") == "accept"
+        ):
+            _draw_verdict(annotated, "ACCEPT", "NO VIOLATION", (0, 255, 0))
+        else:
+            _draw_centered_lines(annotated, ["Scanning..."], (0, 200, 255))
+
+        if debug_boxes:
+            _draw_bbox(annotated, best, color=(0, 200, 255))
+            _draw_component_inspection(annotated, inspection)
             
     elif state == "accepted":
-        best = session.last_best_detection
-        cls_name = best["class_name"] if best else "Item"
-        text = f"ACCEPTED: {cls_name}!"
-        text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 1.5, 3)[0]
-        text_x = (w - text_size[0]) // 2
-        text_y = (h + text_size[1]) // 2
-        cv2.rectangle(annotated, (0, 0), (w, h), (0, 255, 0), 10)
-        cv2.putText(annotated, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
-        _draw_bbox(annotated, best, color=(0, 255, 0))
-        _draw_component_inspection(annotated, inspection)
+        cls_name = _display_name(best["class_name"]) if best else "Item"
+        is_pet = best and best.get("class_name") == "pet_bottle"
+        subtitle = "NO VIOLATION" if is_pet else cls_name
+        _draw_verdict(annotated, "ACCEPT", subtitle, (0, 255, 0))
+        if debug_boxes:
+            _draw_bbox(annotated, best, color=(0, 255, 0))
+            _draw_component_inspection(annotated, inspection)
 
     elif state == "rejected":
-        _draw_bbox(annotated, session.last_best_detection, color=(0, 0, 255))
-        _draw_component_inspection(annotated, inspection)
-        _draw_reject_details(annotated, inspection)
+        _draw_verdict(annotated, "REJECT", "VIOLATION", (0, 0, 255))
+        if debug_boxes:
+            _draw_bbox(annotated, best, color=(0, 0, 255))
+            _draw_component_inspection(annotated, inspection)
         
     elif state == "countdown":
         elapsed = now - session.state_start_time

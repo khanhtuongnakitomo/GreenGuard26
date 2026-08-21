@@ -72,3 +72,13 @@ PET with cap or label → red REJECT and the detected scores. Clean PET, cans, a
 ## Dataset
 
 Training uses `data/dataset-2` (YOLO OBB, classes `cap` and `label`). `data/dataset-1` is an unfinished classifier set and is not used.
+
+## Live learning from the kiosk
+
+When `REINFORCEMENT_LEARNING=on` in `Model1/.env`, PET accept/reject crops are written to `data/live/`. Fine-tune from them:
+
+```powershell
+python src\finetune_live.py --epochs 3 --device 0
+```
+
+That updates `models/best.pt`. See the Trash-detection root README for env flags.

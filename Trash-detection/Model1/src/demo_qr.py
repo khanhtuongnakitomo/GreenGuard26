@@ -14,7 +14,7 @@ def main():
     print(f"Backend: {api_client.BACKEND_URL}  Machine: {api_client.MACHINE_CODE}")
 
     items_list = []
-    classes = ["metal_can", "pet_bottle", "pp_cup"]
+    classes = ["metal_can", "pet_bottle"]
 
     for cls in classes:
         if random.random() < 0.8:

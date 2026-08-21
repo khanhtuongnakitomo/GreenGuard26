@@ -13,7 +13,9 @@ from ultralytics import YOLO
 from telemetry import TelemetryLogger, normalize_bbox, now_ms
 from session import RecyclingSession
 from ui import draw_session_ui
-from model2_bridge import default_model2_path, load_component_pipeline
+from model2_bridge import default_model2_path, inspect_chosen_pet, load_component_pipeline
+from point_rules import remap_detections
+from rl_learner import ReinforcementLearner
 
 
 def resolve_path(path):
@@ -87,6 +89,11 @@ def parse_args():
     parser.add_argument("--model2-conf", type=float, default=0.75, help="Cap/label confidence threshold")
     parser.add_argument("--model2-margin", type=float, default=0.15, help="Extra crop margin around the PET box")
     parser.add_argument("--no-model2", action="store_true", help="Disable PET cap/label inspection")
+    parser.add_argument(
+        "--debug-boxes",
+        action="store_true",
+        help="Draw Model 1/Model 2 boxes for debugging. Hidden in kiosk mode.",
+    )
     return parser.parse_args()
 
 
@@ -112,7 +119,6 @@ def main():
     model = YOLO(os.fspath(model_path))
 
     model2_pipeline = None
-    best_pet_detection = None
     if not args.no_model2:
         model2_path = resolve_path(args.model2)
         if not model2_path.exists():
@@ -123,7 +129,7 @@ def main():
             )
         else:
             print(f"Loading Model 2 from {model2_path} (conf={args.model2_conf})...")
-            model2_pipeline, best_pet_detection = load_component_pipeline(
+            model2_pipeline = load_component_pipeline(
                 model2_path,
                 conf_threshold=args.model2_conf,
                 crop_margin=args.model2_margin,
@@ -138,6 +144,7 @@ def main():
         return
 
     session = RecyclingSession(countdown_time=5.0, qr_display_time=30.0, demo_mode=args.demo)
+    learner = ReinforcementLearner()
 
     # Set up near-fullscreen window for 14" laptop (1920x1080)
     DISPLAY_W, DISPLAY_H = 1280, 720
@@ -178,16 +185,18 @@ def main():
             inference_ms = now_ms() - start_ms
             fps = 1000.0 / inference_ms if inference_ms > 0 else 0.0
 
-            detections = detections_from_result(results[0])
+            detections = remap_detections(detections_from_result(results[0]))
 
-            component_inspection = None
-            if model2_pipeline is not None:
-                pet = best_pet_detection(detections, args.conf)
-                if pet is not None:
-                    component_inspection = model2_pipeline.inspect_pet(frame, pet)
+            component_inspection = inspect_chosen_pet(
+                model2_pipeline, frame, detections, args.conf
+            )
             
             # Process frame through session state machine
             state = session.process_frame(detections, args.conf, component_inspection=component_inspection)
+            learning_event = session.consume_learning_event()
+            if learning_event:
+                learner.maybe_record(learning_event, frame, component_inspection or session.last_component_inspection)
+            learner.poll_reload(model2_pipeline)
             decision = "accepted" if state == "accepted" else "low_conf" # map for telemetry
             
             snapshot_path = None
@@ -206,7 +215,9 @@ def main():
                 snapshot_path=snapshot_path,
             )
 
-            annotated_frame = draw_session_ui(frame, session, fps)
+            annotated_frame = draw_session_ui(
+                frame, session, fps, debug_boxes=args.debug_boxes, rl_status=learner.status()
+            )
             cv2.imshow("Trash Detection", annotated_frame)
             
             key = cv2.waitKey(1) & 0xFF

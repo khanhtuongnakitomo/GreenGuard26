@@ -2,7 +2,7 @@ import time
 import threading
 import random
 from datetime import datetime, timedelta, timezone
-from point_rules import CLASS_NAME_MAP, calculate_points
+from point_rules import calculate_points, is_accepted_class, pick_best_detection
 import qr_generator
 import api_client
 
@@ -27,6 +27,7 @@ class RecyclingSession:
         self.points_earned = 0
         self.last_best_detection = None
         self.last_component_inspection = None
+        self.pending_learning_event = None
         
     def get_items_list(self):
         """Convert internal dict to the list format the backend expects."""
@@ -43,6 +44,7 @@ class RecyclingSession:
         self.last_accepted_class = None
         self.last_best_detection = None
         self.last_component_inspection = None
+        self.pending_learning_event = None
         self.transition("idle")
 
     def toggle_detection(self):
@@ -55,7 +57,7 @@ class RecyclingSession:
     def _generate_random_items(self):
         """Generate random items for demo QR codes."""
         items = {}
-        classes = ["metal_can", "pet_bottle", "pp_cup"]
+        classes = ["metal_can", "pet_bottle"]
         for cls in classes:
             if random.random() < 0.8:
                 items[cls] = random.randint(1, 5)
@@ -104,12 +106,7 @@ class RecyclingSession:
     def process_frame(self, detections, conf_threshold, component_inspection=None):
         now = time.time()
         
-        # Determine best detection
-        best_detection = None
-        if detections:
-            best = max(detections, key=lambda item: item["confidence"])
-            if best["confidence"] >= conf_threshold:
-                best_detection = best
+        best_detection = pick_best_detection(detections, conf_threshold)
         
         if best_detection:
             self.last_best_detection = best_detection
@@ -124,23 +121,27 @@ class RecyclingSession:
         elif self.state == "detecting":
             if best_detection:
                 raw_class = best_detection["class_name"]
-                mapped_class = CLASS_NAME_MAP.get(raw_class, raw_class)
-                is_pet = mapped_class == "pet_bottle"
+                is_pet = raw_class == "pet_bottle"
                 rejected_pet = (
                     is_pet
                     and component_inspection is not None
                     and component_inspection.get("decision") == "reject"
                 )
 
-                if rejected_pet:
+                if not is_accepted_class(raw_class):
+                    self.last_component_inspection = None
+                elif rejected_pet:
                     self.last_component_inspection = component_inspection
+                    self.pending_learning_event = "reject"
                     self.transition("rejected")
                 elif raw_class == self.last_accepted_class and (now - self.last_accepted_time) < self.duplicate_cooldown:
                     pass # ignore it, it's the same item
                 else:
                     if not is_pet:
                         self.last_component_inspection = None
-                    self.items[mapped_class] = self.items.get(mapped_class, 0) + 1
+                    else:
+                        self.pending_learning_event = "accept"
+                    self.items[raw_class] = self.items.get(raw_class, 0) + 1
                     self.last_accepted_class = raw_class
                     self.last_accepted_time = now
                     
@@ -155,7 +156,7 @@ class RecyclingSession:
             elapsed = now - self.state_start_time
             still_rejected = (
                 best_detection
-                and CLASS_NAME_MAP.get(best_detection["class_name"], best_detection["class_name"]) == "pet_bottle"
+                and best_detection["class_name"] == "pet_bottle"
                 and component_inspection is not None
                 and component_inspection.get("decision") == "reject"
             )
@@ -169,7 +170,7 @@ class RecyclingSession:
                 self.transition("countdown")
                 
         elif self.state == "countdown":
-            if best_detection:
+            if best_detection and is_accepted_class(best_detection["class_name"]):
                 raw_class = best_detection["class_name"]
                 # Only reset countdown if it's a NEW item (respect cooldown)
                 if not (raw_class == self.last_accepted_class and (now - self.last_accepted_time) < self.duplicate_cooldown):
@@ -191,3 +192,8 @@ class RecyclingSession:
                     self.reset()
                 
         return self.state
+
+    def consume_learning_event(self):
+        event = self.pending_learning_event
+        self.pending_learning_event = None
+        return event

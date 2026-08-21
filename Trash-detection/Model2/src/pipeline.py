@@ -30,3 +30,6 @@ class ComponentPipeline:
         inspection = inspect_components(detections, self.conf_threshold)
         inspection["crop_bbox"] = [x1, y1, x2, y2]
         return inspection
+
+    def reload_weights(self, model_path=None):
+        return self.detector.reload_weights(model_path)

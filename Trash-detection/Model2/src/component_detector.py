@@ -102,6 +102,14 @@ class ComponentDetector:
         self.min_conf = min_conf
         self.model = YOLO(str(self.model_path))
 
+    def reload_weights(self, model_path=None):
+        path = Path(model_path) if model_path else self.model_path
+        if not path.exists():
+            return False
+        self.model_path = path
+        self.model = YOLO(str(path))
+        return True
+
     def predict(self, image, offset_x=0, offset_y=0):
         results = self.model.predict(source=image, conf=self.min_conf, verbose=False)
         if not results:

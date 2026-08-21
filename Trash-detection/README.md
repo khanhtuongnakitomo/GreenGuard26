@@ -207,15 +207,57 @@ See [Model1/README.md](Model1/README.md) and [Model1/docs/](Model1/docs/) for th
 |---|---|---|
 | `metal_can` | skipped | Accept & count |
 | `pp_cup` | skipped | Accept & count |
-| `pet_bottle` | no cap, no label (≥ 0.75) | Accept & count |
-| `pet_bottle` | cap and/or label found | Reject, show `cap 0.xx` / `label 0.xx` |
+| `pet_bottle` | no cap, no label (≥ 0.75) | Accept & count · screen: ACCEPT / NO VIOLATION |
+| `pet_bottle` | cap and/or label found | Reject, not counted · screen: REJECT / VIOLATION |
 
-**Preparation rule:** users should **remove cap and label** before inserting PET. Model 2 enforces that visually.
+**Preparation rule:** users should **remove cap and label** before inserting PET. Model 2 inspects a **crop of the PET box only**. The kiosk UI shows the verdict, not cap/label boxes.
 
 Default thresholds:
 
 - Model 1 material: `--conf 0.65`
 - Model 2 cap/label: `--model2-conf 0.75`
+
+---
+
+## Reinforcement learning (live Model 2 improvement)
+
+This is **outcome learning from kiosk use**, not a game-style RL agent. When a user inserts a PET bottle, the kiosk already decided accept or reject. If learning is on, that crop is saved at that moment and can fine-tune Model 2.
+
+1. Copy `Model1/.env.example` to `Model1/.env` if you do not have one.
+2. Set:
+
+```text
+REINFORCEMENT_LEARNING=on
+RL_AUTO_TRAIN=off
+RL_SAVE_ACCEPTS=on
+RL_MIN_SAMPLES=5
+RL_EPOCHS=3
+RL_DEVICE=0
+```
+
+| Env value | Meaning |
+|---|---|
+| `REINFORCEMENT_LEARNING=on` | Save PET crops when the kiosk accepts or rejects |
+| `REINFORCEMENT_LEARNING=off` | Normal kiosk, no learning |
+| `RL_AUTO_TRAIN=on` | After `RL_MIN_SAMPLES` new items, fine-tune Model 2 in a **background process** and reload weights |
+| `RL_SAVE_ACCEPTS=on` | Also save prepared bottles (empty labels) so the model sees clean PET |
+
+Rejects store the Model 2 cap/label boxes as YOLO OBB labels on the crop. Accepts store the crop with no objects.
+
+Samples land in `Model2/data/live/` (gitignored). The HUD shows `RL ON`.
+
+**Collect only (safe while demoing):** `REINFORCEMENT_LEARNING=on` and `RL_AUTO_TRAIN=off`.
+
+**Train later yourself:**
+
+```powershell
+cd GreenGuard26\Trash-detection\Model2
+python src\finetune_live.py --epochs 3 --device 0
+```
+
+Then restart `test_webcam.py` (or leave it running with auto-train so it reloads `models/best.pt`).
+
+Training inside the camera loop would freeze the kiosk. Auto-train uses a separate Python process on purpose.
 
 ---
 
