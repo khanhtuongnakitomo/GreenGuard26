@@ -52,10 +52,29 @@ When it finishes, weights are copied to:
 Model2/models/best.pt
 ```
 
+## Run Model 2 only (no Model 1)
+
+Live window on the webcam. Model 2 sees the **full frame** — no PET crop, no kiosk session.
+
+```powershell
+cd GreenGuard26\Trash-detection\Model2
+.\run.ps1
+# or: python src\run_model2.py --source 0 --conf 0.5
+```
+
+`Q` quit, `S` snapshot, `SPACE` pause. Boxes below `--conf` are drawn thin and marked `(below)` so you can see near-misses.
+
+Image, folder, or video:
+
+```powershell
+python src\run_model2.py --source data\dataset-2\test\images
+python src\run_model2.py --source path\to\bottle.jpg
+```
+
 ## Check the model on dataset images
 
 ```powershell
-..\Model1\.venv\Scripts\python.exe src\predict_folder.py --conf 0.75
+..\Model1\.venv\Scripts\python.exe src\predict_folder.py --conf 0.5
 ```
 
 Overlays land in `runs/preview/`. ACCEPT means no cap and no label were found. REJECT means at least one was found.

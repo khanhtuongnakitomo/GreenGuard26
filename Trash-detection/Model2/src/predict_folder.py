@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument("--model", default="models/best.pt")
     parser.add_argument("--source", default="data/dataset-2/test/images")
     parser.add_argument("--out", default="runs/preview")
-    parser.add_argument("--conf", type=float, default=0.75)
+    parser.add_argument("--conf", type=float, default=0.5)
     parser.add_argument("--limit", type=int, default=0, help="Optional max number of images")
     return parser.parse_args()
 

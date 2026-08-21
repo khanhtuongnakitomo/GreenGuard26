@@ -14,7 +14,7 @@ def default_model2_path():
     return DEFAULT_WEIGHTS
 
 
-def load_component_pipeline(model_path, conf_threshold=0.75, crop_margin=0.15):
+def load_component_pipeline(model_path, conf_threshold=0.5, crop_margin=0.15):
     src = str(MODEL2_SRC)
     if src not in sys.path:
         sys.path.insert(0, src)

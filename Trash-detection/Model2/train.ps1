@@ -52,5 +52,5 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "`nTraining finished. Weights should be at models\best.pt" -ForegroundColor Green
-Write-Host "Preview: $python src\predict_folder.py --conf 0.75"
+Write-Host "Preview: $python src\predict_folder.py --conf 0.5"
 Write-Host "Live:    cd ..\Model1; python src\test_webcam.py"

@@ -2,7 +2,7 @@ CAP_CLASS = "cap"
 LABEL_CLASS = "label"
 
 
-def inspect_components(detections, conf_threshold=0.75):
+def inspect_components(detections, conf_threshold=0.5):
     """Decide accept/reject from cap/label detections.
 
     Presence of cap OR label at/above the threshold is a preparation violation.

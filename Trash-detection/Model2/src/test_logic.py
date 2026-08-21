@@ -28,6 +28,9 @@ def test_accept_when_neither_found():
     low_conf = inspect_components([{"class_name": "cap", "confidence": 0.20, "bbox": [0, 0, 1, 1]}])
     assert low_conf["decision"] == "accept"
 
+    at_threshold = inspect_components([{"class_name": "cap", "confidence": 0.50, "bbox": [0, 0, 1, 1]}])
+    assert at_threshold["decision"] == "reject"
+
 
 if __name__ == "__main__":
     test_reject_cap_or_label()

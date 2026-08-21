@@ -16,7 +16,7 @@ def best_pet_detection(detections, conf_threshold):
 
 
 class ComponentPipeline:
-    def __init__(self, model_path, conf_threshold=0.75, crop_margin=0.15, min_conf=0.05):
+    def __init__(self, model_path, conf_threshold=0.5, crop_margin=0.15, min_conf=0.05):
         self.conf_threshold = conf_threshold
         self.crop_margin = crop_margin
         self.detector = ComponentDetector(model_path, min_conf=min_conf)

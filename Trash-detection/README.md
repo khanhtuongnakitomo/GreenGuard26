@@ -5,7 +5,7 @@ Computer-vision module for the **GreenGuard26** recycling kiosk. It runs a **two
 1. **Model 1** — detect material type (`metal_can`, `pet_bottle`, `pp_cup`)
 2. **Model 2** — for **PET only**, detect whether a **cap** or **label** is still visible
 
-If Model 1 sees PET and Model 2 finds a cap or label (confidence ≥ 0.75), the kiosk **rejects** the item and does **not** count it. Cans and PP cups skip Model 2.
+If Model 1 sees PET and Model 2 finds a cap or label (confidence ≥ 0.5), the kiosk **rejects** the item and does **not** count it. Cans and PP cups skip Model 2.
 
 ```text
 Camera
@@ -106,7 +106,7 @@ python src\test_webcam.py
 **Useful flags:**
 
 ```powershell
-python src\test_webcam.py --conf 0.65 --model2-conf 0.75 --camera 0
+python src\test_webcam.py --conf 0.65 --model2-conf 0.5 --camera 0
 python src\test_webcam.py --no-model2    # disable cap/label check (Model 1 only)
 ```
 
@@ -164,7 +164,7 @@ python src\test_webcam.py
 
 ```powershell
 cd ..\Model2
-python src\predict_folder.py --conf 0.75
+python src\predict_folder.py --conf 0.5
 # outputs → runs/preview/
 ```
 
@@ -207,7 +207,7 @@ See [Model1/README.md](Model1/README.md) and [Model1/docs/](Model1/docs/) for th
 |---|---|---|
 | `metal_can` | skipped | Accept & count |
 | `pp_cup` | skipped | Accept & count |
-| `pet_bottle` | no cap, no label (≥ 0.75) | Accept & count · screen: ACCEPT / NO VIOLATION |
+| `pet_bottle` | no cap, no label (≥ 0.5) | Accept & count · screen: ACCEPT / NO VIOLATION |
 | `pet_bottle` | cap and/or label found | Reject, not counted · screen: REJECT / VIOLATION |
 
 **Preparation rule:** users should **remove cap and label** before inserting PET. Model 2 inspects a **crop of the PET box only**. The kiosk UI shows the verdict, not cap/label boxes.
@@ -215,7 +215,7 @@ See [Model1/README.md](Model1/README.md) and [Model1/docs/](Model1/docs/) for th
 Default thresholds:
 
 - Model 1 material: `--conf 0.65`
-- Model 2 cap/label: `--model2-conf 0.75`
+- Model 2 cap/label: `--model2-conf 0.5`
 
 ---
 
