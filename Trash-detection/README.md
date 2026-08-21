@@ -3,9 +3,9 @@
 Computer-vision module for the **GreenGuard26** recycling kiosk. It runs a **two-stage pipeline**:
 
 1. **Model 1** — detect material type (`metal_can`, `pet_bottle`, `pp_cup`)
-2. **Model 2** — for **PET only**, detect whether a **cap** or **label** is still visible
+2. **Model 2** — for **PET only**, detect whether a **cap**, **label**, or **liquid** is still visible
 
-If Model 1 sees PET and Model 2 finds a cap or label (confidence ≥ 0.5), the kiosk **rejects** the item and does **not** count it. Cans and PP cups skip Model 2.
+If Model 1 sees PET and Model 2 finds a cap, label, or liquid (confidence ≥ 0.5), the kiosk **rejects** the item and does **not** count it. Cans and PP cups skip Model 2.
 
 ```text
 Camera
@@ -13,9 +13,9 @@ Camera
        ├─ metal_can / pp_cup  → accept & count
        └─ pet_bottle
             → crop bottle region
-            → Model 2 (cap / label OBB)
-                 ├─ cap or label found  → REJECT (not counted)
-                 └─ neither found       → accept & count
+            → Model 2 (cap / label / liquid OBB)
+                 ├─ cap, label, or liquid found  → REJECT (not counted)
+                 └─ none of the three            → accept & count
 ```
 
 ---
@@ -33,7 +33,7 @@ Trash-detection/
 │   │   ├── test_webcam.py    ← PC live demo (PyTorch)
 │   │   └── inference_tflite.py
 │   └── setup.ps1
-└── Model2/                   ← PET cap/label inspection
+└── Model2/                   ← PET cap/label/liquid inspection
     ├── models/
     │   └── best.pt           ← committed (YOLO11n-OBB)
     ├── src/
@@ -45,7 +45,7 @@ Trash-detection/
 More detail:
 
 - [Model1/README.md](Model1/README.md) — material classifier, TFLite export, Raspberry Pi notes
-- [Model2/README.md](Model2/README.md) — cap/label training and preview
+- [Model2/README.md](Model2/README.md) — cap/label/liquid training and preview
 
 ---
 
@@ -54,7 +54,7 @@ More detail:
 | In the repo (after `git clone`) | Not in the repo (prepare locally) |
 |---|---|
 | All Python source code | `Model1/data/` — training images for Model 1 |
-| `Model1/models/best.pt` | `Model2/data/` — cap/label dataset from Roboflow |
+| `Model1/models/best.pt` | `Model2/data/` — PET inspection datasets from Roboflow |
 | `Model1/models/best_float16.tflite` | `runs/` — training outputs |
 | `Model2/models/best.pt` | `.venv/` — Python virtual environments |
 | Config files (`configs/data.yaml`) | `.env` — backend keys and QR secret |
@@ -99,8 +99,8 @@ python src\test_webcam.py
 
 | Item | Result |
 |---|---|
-| PET, cap off + label off | ACCEPTED, counted |
-| PET, cap or label visible | REJECT + scores on screen, not counted |
+| PET, cap/label/liquid off | ACCEPTED, counted |
+| PET, cap or label or liquid visible | REJECT, not counted |
 | Can / PP cup | ACCEPTED as before, Model 2 skipped |
 
 **Useful flags:**
@@ -114,9 +114,9 @@ python src\test_webcam.py --no-model2    # disable cap/label check (Model 1 only
 
 ---
 
-### Path B — Retrain Model 2 (cap / label)
+### Path B — Retrain Model 2 (cap / label / liquid)
 
-Use this when you want to **improve** cap/label detection or train on a new dataset. You must download the dataset yourself.
+Use this when you want to **improve** PET inspection or train on a new dataset. You must download the dataset yourself.
 
 ```powershell
 cd GreenGuard26\Trash-detection\Model2
@@ -133,24 +133,25 @@ python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
 # Expect: ...+cu128  True
 ```
 
-**Download dataset** (not in git):
-
-1. Open [bottle-cap-label-detection on Roboflow Universe](https://universe.roboflow.com/mohammed-essam-iz1ve/bottle-cap-label-detection)
-2. Export as **YOLOv8 Oriented Object Detection**
-3. Unzip into:
+**Dataset** (not in git). Unzip a YOLO OBB export into a folder under `Model2/data/`, for example `dataset-3`:
 
 ```text
-Model2/data/dataset-2/
+Model2/data/dataset-3/
+  data.yaml
   train/images  train/labels
   valid/images  valid/labels
   test/images   test/labels
 ```
 
-**Train:**
+`data.yaml` class names should include `cap`, `label`, and `liquid` (or `water`). `bottle` is optional context and is not a violation.
+
+**Train** (default folder is `data/dataset-3`):
 
 ```powershell
 .\train.ps1
-# or: python src\train.py --epochs 50 --batch 16 --device 0
+.\train.ps1 -Dataset dataset-3
+.\train.ps1 -Dataset D:\datasets\pet-v4
+# or: python src\train.py --dataset data/dataset-3 --epochs 50 --batch 16 --device 0
 ```
 
 Weights are copied to `Model2/models/best.pt`. Then run live test from Model1:
@@ -207,15 +208,15 @@ See [Model1/README.md](Model1/README.md) and [Model1/docs/](Model1/docs/) for th
 |---|---|---|
 | `metal_can` | skipped | Accept & count |
 | `pp_cup` | skipped | Accept & count |
-| `pet_bottle` | no cap, no label (≥ 0.5) | Accept & count · screen: ACCEPT / NO VIOLATION |
-| `pet_bottle` | cap and/or label found | Reject, not counted · screen: REJECT / VIOLATION |
+| `pet_bottle` | no cap, no label, no liquid (≥ 0.5) | Accept & count · screen: ACCEPT / NO VIOLATION |
+| `pet_bottle` | cap, label, and/or liquid found | Reject, not counted · screen: REJECT / VIOLATION |
 
-**Preparation rule:** users should **remove cap and label** before inserting PET. Model 2 inspects a **crop of the PET box only**. The kiosk UI shows the verdict, not cap/label boxes.
+**Preparation rule:** users should **remove cap and label and empty the bottle** before inserting PET. Model 2 inspects a **crop of the PET box only**. The kiosk UI shows the verdict, not cap/label/liquid boxes.
 
 Default thresholds:
 
 - Model 1 material: `--conf 0.65`
-- Model 2 cap/label: `--model2-conf 0.5`
+- Model 2 cap/label/liquid: `--model2-conf 0.5`
 
 ---
 

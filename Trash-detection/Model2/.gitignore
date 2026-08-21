@@ -12,3 +12,4 @@ venv/
 # Ignore training artifacts except the exported inference weights
 *.pt
 !models/best.pt
+yolo26*.pt

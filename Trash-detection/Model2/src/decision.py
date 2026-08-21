@@ -1,46 +1,59 @@
-CAP_CLASS = "cap"
-LABEL_CLASS = "label"
+"""Accept/reject PET from Model 2 detections.
+
+A bottle is accepted only when cap, label, and liquid/water are all absent.
+The `bottle` class is ignored for the verdict.
+"""
+
+VIOLATION_ORDER = ("cap", "label", "liquid")
+VIOLATION_ALIASES = {
+    "cap": "cap",
+    "label": "label",
+    "liquid": "liquid",
+    "water": "liquid",
+}
+
+
+def canonical_violation(class_name):
+    if not class_name:
+        return None
+    return VIOLATION_ALIASES.get(str(class_name).strip().lower())
 
 
 def inspect_components(detections, conf_threshold=0.5):
-    """Decide accept/reject from cap/label detections.
+    """Decide accept/reject from cap / label / liquid detections."""
+    hits = {name: [] for name in VIOLATION_ORDER}
+    visible = []
 
-    Presence of cap OR label at/above the threshold is a preparation violation.
-    PET is acceptable only when neither class is found.
-    """
-    cap_hits = [
-        item for item in detections
-        if item["class_name"] == CAP_CLASS and item["confidence"] >= conf_threshold
-    ]
-    label_hits = [
-        item for item in detections
-        if item["class_name"] == LABEL_CLASS and item["confidence"] >= conf_threshold
-    ]
+    for item in detections:
+        if item.get("confidence", 0.0) < conf_threshold:
+            continue
+        visible.append(item)
+        violation = canonical_violation(item.get("class_name"))
+        if violation:
+            hits[violation].append(item)
 
-    has_cap = bool(cap_hits)
-    has_label = bool(label_hits)
-    visible = [item for item in detections if item["confidence"] >= conf_threshold]
-
-    if has_cap and has_label:
-        reason = "has_cap_and_label"
+    present = [name for name in VIOLATION_ORDER if hits[name]]
+    if present:
         decision = "reject"
-    elif has_cap:
-        reason = "has_cap"
-        decision = "reject"
-    elif has_label:
-        reason = "has_label"
-        decision = "reject"
+        reason = "has_" + "_and_".join(present)
     else:
-        reason = "no_violation"
         decision = "accept"
+        reason = "no_violation"
+
+    scores = {
+        name: max((item["confidence"] for item in hits[name]), default=0.0)
+        for name in VIOLATION_ORDER
+    }
 
     return {
         "decision": decision,
         "reason": reason,
-        "has_cap": has_cap,
-        "has_label": has_label,
-        "cap_confidence": max((item["confidence"] for item in cap_hits), default=0.0),
-        "label_confidence": max((item["confidence"] for item in label_hits), default=0.0),
+        "has_cap": bool(hits["cap"]),
+        "has_label": bool(hits["label"]),
+        "has_liquid": bool(hits["liquid"]),
+        "cap_confidence": scores["cap"],
+        "label_confidence": scores["label"],
+        "liquid_confidence": scores["liquid"],
         "detections": visible,
         "conf_threshold": conf_threshold,
     }

@@ -13,6 +13,9 @@ DISPLAY_NAMES = {
 CLASS_COLORS = {
     "cap": (0, 140, 255),
     "label": (255, 180, 0),
+    "liquid": (255, 80, 80),
+    "water": (255, 80, 80),
+    "bottle": (0, 200, 0),
     "metal_can": (0, 200, 255),
     "pet_bottle": (0, 200, 255),
     "others": (160, 160, 160),

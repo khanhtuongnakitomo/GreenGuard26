@@ -1,11 +1,10 @@
-# YOLO11 OBB dataset for cap / label detection.
-# Paths are relative to Model2/ (train.py sets that as the working directory).
-path: data/dataset-2
+path: D:/Code/Project/bki/GreenGuard26/Trash-detection/Model2/data/dataset-3
 train: train/images
 val: valid/images
 test: test/images
-
-nc: 2
+nc: 4
 names:
-  0: cap
-  1: label
+  0: bottle
+  1: cap
+  2: label
+  3: liquid

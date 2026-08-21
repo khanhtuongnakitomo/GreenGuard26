@@ -84,9 +84,9 @@ def parse_args():
     parser.add_argument(
         "--model2",
         default=str(default_model2_path()),
-        help="Path to Model 2 cap/label weights (YOLO OBB .pt)",
+        help="Path to Model 2 cap/label/liquid weights (YOLO OBB .pt)",
     )
-    parser.add_argument("--model2-conf", type=float, default=0.5, help="Cap/label confidence threshold")
+    parser.add_argument("--model2-conf", type=float, default=0.5, help="Cap/label/liquid confidence threshold")
     parser.add_argument("--model2-margin", type=float, default=0.15, help="Extra crop margin around the PET box")
     parser.add_argument("--no-model2", action="store_true", help="Disable PET cap/label inspection")
     parser.add_argument(

@@ -1,13 +1,13 @@
 """Run current Model 2 by itself — no Model 1, no crop gate.
 
-Use this to see what the cap/label YOLO actually detects on a webcam,
+Use this to see what the PET inspection YOLO actually detects on a webcam,
 video, image, or folder. The kiosk pipeline is not involved.
 
 From Model2/:
 
     python src/run_model2.py
     python src/run_model2.py --source 0 --conf 0.5
-    python src/run_model2.py --source data/dataset-2/test/images
+    python src/run_model2.py --source data/dataset-3/test/images
     python src/run_model2.py --source path/to/bottle.jpg
 
 Keys: Q quit, S save a snapshot, SPACE pause (camera/video).
@@ -40,6 +40,9 @@ from decision import inspect_components
 CLASS_COLORS = {
     "cap": (0, 140, 255),
     "label": (255, 180, 0),
+    "liquid": (255, 80, 80),
+    "water": (255, 80, 80),
+    "bottle": (0, 200, 0),
 }
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 VIDEO_SUFFIXES = {".mp4", ".avi", ".mov", ".mkv", ".wmv"}
@@ -47,7 +50,7 @@ VIDEO_SUFFIXES = {".mp4", ".avi", ".mov", ".mkv", ".wmv"}
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run current Model 2 (cap/label) without Model 1."
+        description="Run current Model 2 (cap/label/liquid) without Model 1."
     )
     parser.add_argument(
         "--model",
@@ -63,7 +66,7 @@ def parse_args():
         "--conf",
         type=float,
         default=0.5,
-        help="Decision threshold: cap or label at/above this → REJECT",
+        help="Decision threshold: cap, label, or liquid at/above this → REJECT",
     )
     parser.add_argument(
         "--min-conf",
@@ -156,6 +159,7 @@ def annotate(frame, detections, inspection, fps=None):
     hud = (
         f"Model 2 only  cap>={inspection['cap_confidence']:.2f}  "
         f"label>={inspection['label_confidence']:.2f}  "
+        f"liquid>={inspection['liquid_confidence']:.2f}  "
         f"thresh={decision_conf:.2f}"
     )
     if fps is not None:
@@ -249,7 +253,8 @@ def run_images(detector, images, args, save_dir, title):
             print(
                 f"{image_path.name}: {inspection['decision']} "
                 f"({inspection['reason']}) cap={inspection['cap_confidence']:.2f} "
-                f"label={inspection['label_confidence']:.2f}"
+                f"label={inspection['label_confidence']:.2f} "
+                f"liquid={inspection['liquid_confidence']:.2f}"
             )
             cv2.imshow(title, overlay)
             key = cv2.waitKey(0) & 0xFF
@@ -270,12 +275,12 @@ def main():
     save_dir = resolve_path(args.save_dir)
     kind = source_kind(args.source)
     detector = ComponentDetector(model_path, min_conf=args.min_conf)
-    title = "Model 2 only — cap / label"
+    title = "Model 2 only — cap / label / liquid"
 
     print(f"Weights: {model_path}")
     print(f"Source:  {args.source} ({kind})")
     print(f"Decision threshold: {args.conf}  draw from: {args.min_conf}")
-    print("cap OR label at threshold → REJECT; neither → ACCEPT")
+    print("cap OR label OR liquid at threshold → REJECT; none of the three → ACCEPT")
 
     if kind == "camera":
         run_camera_or_video(

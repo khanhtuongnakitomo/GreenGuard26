@@ -1,4 +1,4 @@
-"""Run the trained cap/label model on a folder of images and save overlays."""
+"""Run the trained PET inspection model on a folder of images and save overlays."""
 
 from __future__ import annotations
 
@@ -21,13 +21,16 @@ from decision import inspect_components
 CLASS_COLORS = {
     "cap": (0, 140, 255),
     "label": (255, 180, 0),
+    "liquid": (255, 80, 80),
+    "water": (255, 80, 80),
+    "bottle": (0, 200, 0),
 }
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Preview Model 2 detections on a folder of images.")
     parser.add_argument("--model", default="models/best.pt")
-    parser.add_argument("--source", default="data/dataset-2/test/images")
+    parser.add_argument("--source", default="data/dataset-3/test/images")
     parser.add_argument("--out", default="runs/preview")
     parser.add_argument("--conf", type=float, default=0.5)
     parser.add_argument("--limit", type=int, default=0, help="Optional max number of images")
@@ -96,6 +99,7 @@ def main():
                 "reason": inspection["reason"],
                 "cap_confidence": inspection["cap_confidence"],
                 "label_confidence": inspection["label_confidence"],
+                "liquid_confidence": inspection["liquid_confidence"],
             }
         )
         print(f"{image_path.name}: {inspection['decision']} ({inspection['reason']})")

@@ -1,7 +1,7 @@
 """Capture live PET crops and optionally fine-tune Model 2 in a subprocess.
 
 This is outcome-driven learning from kiosk decisions, not classic RL
-(Q-learning). Rejected PET crops keep Model 2's cap/label boxes as labels.
+(Q-learning). Rejected PET crops keep Model 2's cap/label/liquid boxes as labels.
 Accepted PET crops are stored with empty labels so the model sees prepared bottles.
 """
 
@@ -27,7 +27,7 @@ from rl_config import (
     rl_save_accepts,
 )
 
-CLASS_TO_ID = {"cap": 0, "label": 1}
+CLASS_TO_ID = {"bottle": 0, "cap": 1, "label": 2, "liquid": 3, "water": 3}
 RELOAD_FLAG = MODEL2_ROOT / "models" / "reload.flag"
 
 

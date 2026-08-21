@@ -2,7 +2,7 @@
 # Usage from Model2/:
 #   .\run.ps1
 #   .\run.ps1 -Source 0 -Conf 0.5
-#   .\run.ps1 -Source data\dataset-2\test\images
+#   .\run.ps1 -Source data\dataset-3\test\images
 
 param(
     [string]$Source = "0",
