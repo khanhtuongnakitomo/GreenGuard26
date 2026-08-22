@@ -17,8 +17,8 @@ IMG_DIR = ROOT / "dataset" / "normalized" / "images"
 LBL_DIR = ROOT / "dataset" / "normalized" / "labels"
 OUT_DIR = ROOT / "dataset" / "audits" / "qa_render_20"
 
-NAMES = {0: "bottle", 1: "cap", 2: "wrapper", 3: "aluminum"}
-COLORS = {0: (255, 0, 0), 1: (0, 0, 255), 2: (0, 255, 255), 3: (0, 255, 0)}
+NAMES = {0: "bottle", 1: "aluminum"}
+COLORS = {0: (255, 80, 0), 1: (0, 255, 0)}
 
 
 def main() -> int:

@@ -1,13 +1,17 @@
-r"""Live demo — GreenGuard Model 1 rebuild (YOLOv8n-OBB, 4 classes).
+r"""Live demo — GreenGuard Model 1 rebuild v2 (YOLOv8n-OBB, 2 classes).
 
-Runs the exported ONNX model on a webcam (or video/image) and draws rotated
-detection boxes, throttled to a fixed FPS (default 5).
+CPU-ONLY by design (owner directive 2026-08-22): the GPU is reserved for
+training; the application must run on CPU everywhere. Inference uses the ONNX
+artifact via onnxruntime CPU when available, else best.pt on CPU.
+
+UI: rotated boxes drawn without inline labels; the TOP-LEFT CORNER lists each
+detection as "<class> <confidence%>", plus the target/actual FPS at the bottom.
 
 Usage (PowerShell, from model1-rebuild/):
   .\.venv\Scripts\python.exe scripts\demo_live.py                 # webcam, onnx_416, 5 fps
   .\.venv\Scripts\python.exe scripts\demo_live.py --fps 10
   .\.venv\Scripts\python.exe scripts\demo_live.py --source path\to\video.mp4
-  .\.venv\Scripts\python.exe scripts\demo_live.py --model runs\seed7_n640\weights\best.pt --device 0
+  .\.venv\Scripts\python.exe scripts\demo_live.py --model runs\seed42_n640\weights\best.pt
   .\.venv\Scripts\python.exe scripts\demo_live.py --save logs\demo_out --max-frames 20   # headless test
 
 Keys in the window: q = quit, s = save current frame to logs\demo_snap.jpg
@@ -23,91 +27,66 @@ import numpy as np
 from ultralytics import YOLO
 
 ROOT = Path(__file__).resolve().parents[1]
-NAMES = {0: "bottle", 1: "cap", 2: "wrapper", 3: "aluminum"}
-COLORS = {0: (255, 80, 0), 1: (0, 0, 255), 2: (0, 255, 255), 3: (0, 255, 0)}
+NAMES = {0: "bottle", 1: "aluminum"}
+COLORS = {0: (255, 80, 0), 1: (0, 255, 0)}
+DEVICE = "cpu"  # application is CPU-only; GPU is for training only
 
 
-def draw(frame: np.ndarray, polys: np.ndarray, clss, confs) -> list[str]:
-    lines = []
-    for poly, c, cf in zip(polys, clss, confs):
-        c = int(c)
-        pts = poly.astype(np.int32)
-        color = COLORS.get(c, (255, 255, 255))
-        cv2.polylines(frame, [pts], True, color, 2)
-        x, y = int(pts[0][0]), max(18, int(pts[0][1]) - 6)
-        label = f"{NAMES.get(c, c)} {float(cf):.2f}"
-        cv2.putText(frame, label, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
-        lines.append(label)
-    return lines
-
-
-def resolve_model(arg: str) -> tuple[str, str]:
-    """Return (model_path, device) — auto-picks the best available artifact."""
+def resolve_model(arg: str) -> str:
+    """Auto-pick the best available artifact (onnx_416 -> onnx_320 -> best.pt)."""
     if arg and arg != "auto":
-        return arg, "auto"
+        return arg
     candidates = [
-        ROOT / "export" / "onnx_416" / "model.onnx",      # deploy candidate
+        ROOT / "export" / "onnx_416" / "model.onnx",
         ROOT / "export" / "onnx_320" / "model.onnx",
-        ROOT / "runs" / "seed7_n640" / "weights" / "best.pt",
         ROOT / "runs" / "seed42_n640" / "weights" / "best.pt",
+        ROOT / "runs" / "seed7_n640" / "weights" / "best.pt",
     ]
     for c in candidates:
         if c.is_file():
-            print(f"[demo] using model: {c}")
-            return str(c), "auto"
+            print(f"[demo] using model: {c} (device: {DEVICE})")
+            return str(c)
     print("ERROR: no model found. Looked for:\n  " + "\n  ".join(str(c) for c in candidates))
     raise SystemExit(1)
 
 
-def cuda_usable() -> bool:
-    """Probe CUDA with a real kernel launch — is_available() alone returns True
-    even when the installed torch build has no kernels for the GPU's compute
-    capability (e.g. RTX 50 series sm_120 on a cu126 build)."""
-    import torch  # noqa: PLC0415
-
-    if not torch.cuda.is_available():
-        return False
-    try:
-        (torch.zeros(2, device="cuda") + 1).cpu()
-        return True
-    except Exception as exc:  # noqa: BLE001
-        try:
-            name = torch.cuda.get_device_name(0)
-            cap = ".".join(map(str, torch.cuda.get_device_capability(0)))
-        except Exception:  # noqa: BLE001
-            name, cap = "unknown GPU", "?"
-        print(f"[demo] GPU {name} (CC {cap}) not supported by this torch build "
-              f"({type(exc).__name__}) — falling back to CPU.")
-        print("[demo] for GPU support install a matching CUDA build, see the notes "
-              "in requirements.txt (RTX 50 series -> cu129).")
-        return False
+def draw(frame: np.ndarray, polys, clss, confs) -> list[tuple[str, tuple]]:
+    """Draw plain rotated boxes + a top-left legend 'class confidence%'."""
+    entries = sorted(zip(polys, clss, confs), key=lambda t: -float(t[2]))
+    legend: list[tuple[str, tuple]] = []
+    for poly, c, cf in entries:
+        c = int(c)
+        color = COLORS.get(c, (255, 255, 255))
+        cv2.polylines(frame, [poly.astype(np.int32)], True, color, 2)
+        legend.append((f"{NAMES.get(c, str(c))} {float(cf) * 100:.0f}%", color))
+    return legend
 
 
-def resolve_device(model_path: str, arg: str) -> str:
-    if arg and arg != "auto":
-        return arg
-    if model_path.endswith(".onnx"):
-        return "cpu"  # onnxruntime CPU build
-    return "0" if cuda_usable() else "cpu"
+def draw_legend(frame: np.ndarray, legend: list[tuple[str, tuple]]) -> None:
+    x, y, line_h = 10, 12, 30
+    overlay = frame.copy()
+    w = max((cv2.getTextSize(t, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0][0] for t, _ in legend), default=0) + 20
+    cv2.rectangle(overlay, (x - 4, y), (x + w, y + line_h * len(legend) + 4), (0, 0, 0), -1)
+    cv2.addWeighted(overlay, 0.45, frame, 0.55, 0, frame)
+    for i, (text, color) in enumerate(legend):
+        cv2.putText(frame, text, (x + 4, y + 22 + i * line_h),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", default="0", help="webcam index or file path")
     ap.add_argument("--model", default="auto",
-                    help="'auto' = first of onnx_416/onnx_320/best.pt(seed7/42)")
+                    help="'auto' = first of onnx_416/onnx_320/best.pt")
     ap.add_argument("--fps", type=float, default=5.0)
     ap.add_argument("--conf", type=float, default=0.25)
     ap.add_argument("--imgsz", type=int, default=416)
-    ap.add_argument("--device", default="auto", help="'auto', 'cpu', or '0' for GPU")
     ap.add_argument("--save", default=None, help="save annotated frames to this dir (headless)")
     ap.add_argument("--max-frames", type=int, default=0, help="stop after N frames (0 = unlimited)")
     args = ap.parse_args()
 
-    model_path, _ = resolve_model(args.model)
-    device = resolve_device(model_path, args.device)
-    is_onnx = model_path.endswith(".onnx")
-    model = YOLO(model_path, task="obb" if is_onnx else None)
+    model_path = resolve_model(args.model)
+    model = YOLO(model_path, task="obb" if model_path.endswith(".onnx") else None)
 
     src = int(args.source) if args.source.isdigit() else args.source
     single_image = isinstance(src, str) and Path(src).suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
@@ -136,19 +115,20 @@ def main() -> int:
             break
 
         results = model.predict(frame, imgsz=args.imgsz, conf=args.conf,
-                                device=device, verbose=False)
+                                device=DEVICE, verbose=False)
         r = results[0]
-        labels: list[str] = []
+        legend: list[tuple[str, tuple]] = []
         if getattr(r, "obb", None) is not None and r.obb is not None and len(r.obb):
-            labels = draw(frame, r.obb.xyxyxyxy.cpu().numpy(),
+            legend = draw(frame, r.obb.xyxyxyxy.cpu().numpy(),
                           r.obb.cls.cpu().numpy(), r.obb.conf.cpu().numpy())
+        draw_legend(frame, legend or [("no detection", (160, 160, 160))])
 
         n += 1
         actual = 1.0 / max(time.perf_counter() - t0, 1e-6)
-        status = f"frame {n} | target {args.fps:.0f} fps | actual {actual:.1f} fps | det: {len(labels)}"
+        status = f"frame {n} | target {args.fps:.0f} fps | actual {actual:.1f} fps | det: {len(legend)}"
         cv2.putText(frame, status, (10, frame.shape[0] - 12),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2)
-        print(status, "|", ", ".join(labels) if labels else "-")
+        print(status, "|", ", ".join(t for t, _ in legend) if legend else "-")
 
         if save_dir:
             cv2.imwrite(str(save_dir / f"demo_{n:04d}.jpg"), frame)

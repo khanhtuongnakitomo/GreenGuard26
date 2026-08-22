@@ -1,32 +1,24 @@
 """Phase C — normalize incoming datasets to canonical OBB classes.
 
-Canonical (fixed by owner 2026-08-22):
-    0=bottle  1=cap  2=wrapper  3=aluminum
+Canonical (fixed by owner 2026-08-22, refactor v2):
+    0=bottle  1=aluminum          (cap / wrapper classes REMOVED)
 Format: YOLOv8 OBB — `class x1 y1 x2 y2 x3 y3 x4 y4`, coords normalized [0,1].
 
-Per-source class maps (verified against label data + rendered samples):
-  dataset-1 (workspace101 aluminum-cans; numeric class names are export artifacts,
-            all verified to be aluminum cans — crushed or intact):
-      0 '0'  -> 3 aluminum     (2,118 inst, verified: crushed blue can)
-      1 '1'  -> 3 aluminum     (  742 inst, verified: crushed can)
-      2 '2'  -> 3 aluminum     (1,901 inst, verified: intact can)
-      3 can  -> 3 aluminum
-      4 cans -> 3 aluminum
-  dataset-2 (bottle-cap-label-detection):
-      0 cap                        -> 1 cap
-      1 label                      -> 2 wrapper
-  dataset-3 (plastic-bottle-detection v5):
-      0 bottle                     -> 0 bottle
-      1 cap                        -> 1 cap
-      2 label                      -> 2 wrapper
-      3 liquid                     -> DROP (out of scope)
+Per-source class maps:
+  dataset-1 (workspace101 aluminum-cans; numeric class names verified = cans):
+      0 '0', 1 '1', 2 '2', 3 can, 4 cans  -> 1 aluminum
+  dataset-3 (patriks plastic-bottle-detection v5):
+      0 bottle -> 0 bottle
+      1 cap, 2 label, 3 liquid            -> DROP (classes removed / out of scope)
   dataset-4 (roboflow plastic-bottle-and-can v3, Public Domain):
-      0 bottle                     -> 0 bottle
-      1 can                        -> 3 aluminum
-  dataset-5 (water-bottle-pyqmv, complete re-download; bottle *state* classes):
-      0..4 bottle-* states         -> 0 bottle (whole-bottle box, incl. cap)
-      5 bottlecap                  -> 1 cap
-      6 bottlewrapper              -> 2 wrapper
+      0 bottle -> 0 bottle, 1 can -> 1 aluminum
+  dataset-5 (water-bottle-pyqmv, whole-bottle state boxes):
+      0..4 bottle-* states                -> 0 bottle
+      5 bottlecap, 6 bottlewrapper        -> DROP (classes removed)
+
+  dataset-2 is EXCLUDED ENTIRELY: it annotates only cap/label and has NO bottle
+  boxes on 1.5k bottle photos — keeping it would teach the model "bottle =
+  background" (the partial-annotation failure mode that hurt the v1 model).
 
 Rules applied:
   - drop annotation rows not in scope (liquid)
@@ -54,14 +46,14 @@ LBL_OUT = NORM / "labels"
 SOURCES_CSV = ROOT / "dataset" / "sources.csv"
 REPORT_JSON = ROOT / "logs" / "normalize_report.json"
 
-CANONICAL = {0: "bottle", 1: "cap", 2: "wrapper", 3: "aluminum"}
+CANONICAL = {0: "bottle", 1: "aluminum"}
 
+# dataset-2 deliberately absent — see module docstring.
 CLASS_MAPS: dict[str, dict[int, int | None]] = {
-    "dataset-1": {0: 3, 1: 3, 2: 3, 3: 3, 4: 3},
-    "dataset-2": {0: 1, 1: 2},
-    "dataset-3": {0: 0, 1: 1, 2: 2, 3: None},  # None = drop row
-    "dataset-4": {0: 0, 1: 3},
-    "dataset-5": {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 1, 6: 2},
+    "dataset-1": {0: 1, 1: 1, 2: 1, 3: 1, 4: 1},
+    "dataset-3": {0: 0, 1: None, 2: None, 3: None},  # None = drop row
+    "dataset-4": {0: 0, 1: 1},
+    "dataset-5": {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: None, 6: None},
 }
 
 IMG_EXT = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}

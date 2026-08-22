@@ -1,67 +1,40 @@
-# Annotation Guideline (v3 — 2026-08-22)
+# Annotation Guideline (v4 — 2026-08-22, refactor v2)
 
-Rebuild Model 1 — 4 classes, **YOLOv8 OBB format**, tamper-ring handling deferred
-(out of scope this round). Every annotator reads this before their first image.
+Model 1 detects exactly **2 classes**, YOLOv8 OBB format.
 
-> v3 changes (owner decision 2026-08-22): canonical classes renamed/reordered to
-> `0=bottle, 1=cap, 2=wrapper, 3=aluminum`; format switched to YOLOv8-OBB;
-> `bottle` is now the **whole visible bottle INCLUDING the cap** — this matches
-> the convention of all three provided datasets (verified geometrically: 82.5%
-> of cap boxes sit in the top 25% of their bottle box).
+> v4 changes (owner directive 2026-08-22 "refactor toàn bộ"): class set reduced
+> from {bottle, cap, wrapper, aluminum} to **{bottle, aluminum}**; retrain from
+> scratch on a re-standardized dataset; application is CPU-only (GPU reserved
+> for training). v1/v3 history: 4-class OBB set (2026-08-22 earlier same day).
 
 ## 1. Canonical class definitions
 
 | ID | Class | Definition |
 |---|---|---|
-| 0 | `bottle` | the whole visible PET bottle — body, neck, **and cap** when present. One box per bottle, any state (intact, crushed). |
-| 1 | `cap` | the bottle cap only — tight box around the visible cap (drawn additionally when the cap is on; also for loose caps lying in the frame). |
-| 2 | `wrapper` | the printed label wrap **actually visible** on the bottle — the printed sleeve, not the whole bottle. Peeled/torn: box only the still-attached printed portion. No printed wrap discernible → no instance. |
-| 3 | `aluminum` | the whole aluminum can, one box, any state (intact, crushed, dented). |
+| 0 | `bottle` | the whole visible PET bottle — body, neck, and cap when present. One box per bottle, any state (intact, crushed). |
+| 1 | `aluminum` | the whole aluminum can, one box, any state (intact, crushed, dented). |
 
 ## 2. Box mechanics
 
-- Axis-aligned rectangles, tight to the visible extent, no padding margin.
-- One box per instance; never fragment one object into multiple boxes.
-- Overlapping boxes between classes (cap over bottle, label over bottle) are expected
-  and correct.
-- Anything < 50% visible (occluded by flap/hand): omit that instance. At ~50%: box it.
+- Oriented (rotated) rectangles, tight to the visible extent, 4 corner points,
+  normalized [0,1]: `class x1 y1 x2 y2 x3 y3 x4 y4`. Axis-aligned boxes are
+  corner quads at 0° — legal.
+- One box per instance; overlapping/occluded instances still get their own boxes.
+- Anything < 50% visible: omit; at ~50%: box it.
 
-## 3. Edge cases (binding interpretations)
+## 3. Explicitly NOT detected (background)
 
-| Situation | Ruling |
-|---|---|
-| Cap on the bottle | `bottle` box covers the whole bottle incl. cap; `cap` box drawn additionally over the cap |
-| Cap off | no cap box; `bottle` box normally |
-| Loose cap on the bin floor | box it (`cap`) |
-| Cap half unscrewed (tilted, still threaded) | box the cap as-is |
-| Label covers ~entire bottle | `label` box ≈ printed wrap extent — fine, both boxes exist |
-| Transparent/clear printed label | if discernible, box it; if invisible, no instance |
-| Crushed bottle, cap buried | box `cap` only if ≥ 50% discernible; else omit |
-| Multiple bottles/cans in frame | box every instance independently |
-| Can behind a bottle, 30% visible | omit the can |
-| Specular highlight on can | still one `can` box; do not split around it |
-| Bottle partially out of frame | box the visible portion |
+Cap, wrapper/label, tamper ring (never in scope this round), glass, cups, bags,
+paper, hands. `cap`/`wrapper` annotation rows from v1 sources are dropped at
+normalization (scripts/normalize_labels.py), and **dataset-2 is excluded
+entirely** — it never annotated the bottle itself, which taught the v1 model
+"bottle = background" (partial-annotation failure, see reports/GATE-3.md).
 
-## 4. Format & tools
+## 4. Data hygiene (enforced by the pipeline)
 
-- **YOLOv8 OBB txt**: one file per image, lines
-  `class_id x1 y1 x2 y2 x3 y3 x4 y4` (4 corner points, clockwise), all coordinates
-  normalized to [0,1]. Class IDs fixed: 0=bottle, 1=cap, 2=wrapper, 3=aluminum.
-- Axis-aligned boxes are represented as corner quads with 0° rotation — legal OBB.
-- Approved tools: Roboflow (web, polygon tool → YOLOv8-OBB export) or Label Studio.
-
-## 5. QA (lightweight — dataset is expected pre-annotated)
-
-1. Automated validation: every label file 5 fields, values in [0,1], class ∈ {0..3};
-   malformed files quarantined with a report.
-2. Render 20 random images with boxes for visual sign-off (gate check).
-3. Auto-flags for human confirmation: cap boxes with unusual aspect/height outliers
-   vs image-scale median; `label` boxes whose area > 90% of the paired `bottle` box.
-
-## 6. Deferred (explicitly out of scope this round)
-
-- **Tamper/sealant ring**: no ring rule, no ring-specific boxes, no ring-only test
-  category, no ring false-positive metric. Cap boxes simply cover the cap only
-  (tight box, §1) — whatever sits below the cap's bottom edge is not part of the
-  cap box. Ring-focused evaluation may be added in a future round; this deferral
-  will be stated in `reports/model-card.md` as a known limitation.
+- pHash dedupe at hamming ≤ 8, keep-priority dataset-3 > dataset-5 > dataset-4
+  > dataset-1 (part-annotated curated sources first).
+- Grouped 70/20/10 split keyed by (source, original-stem-before-".rf.") so
+  Roboflow-augmented siblings never span train/val/test.
+- Test split locked with sha256 MANIFEST (dataset/test_locked/) — opened once
+  at final evaluation.

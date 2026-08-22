@@ -18,6 +18,10 @@ runs/*/train_batch*.jpg
 runs/*/val_batch*.jpg
 runs/*/labels.jpg
 
+# --- v1 (4-class) archived models: local only, not in the repo ---
+runs/v1_4class/
+export/v1_4class/
+
 # --- dataset bulk: regenerable via scripts/ (inspect -> normalize -> dedupe ->
 #     split); licenses & provenance live in dataset/CREDITS.md ---
 dataset/incoming/

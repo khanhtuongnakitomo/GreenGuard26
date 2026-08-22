@@ -1,13 +1,14 @@
-"""Phase G — train YOLOv8n-OBB (GreenGuard Model 1 rebuild).
+r"""Phase G (refactor v2) — train YOLOv8n-OBB, 2 classes: bottle + aluminum.
 
-Kit config (04-BUILD-PIPELINE Phase G), adapted to OBB:
-  model yolov8n-obb.pt (pretrained) · epochs 150 · patience 30 · imgsz 640
-  batch 16 · AdamW · deterministic · flipud 0.0 (caps are always up)
-  mosaic on · closeMosaic 10 · two seeds: 42 and 7
+Fast + anti-overfit config (owner directive 2026-08-22): the v1 model overfit
+with 150 epochs on partially-annotated data. v2 changes:
+  - clean 2-class data (dataset-2 excluded; every appearance annotated)
+  - fewer epochs (80), patience 20, cosine LR — stop when val stops improving
+  - single seed (42); the 2-seed stability check is not worth 2x time here
+  - kept: imgsz 640 train, AdamW, deterministic, flipud 0.0, mosaic + closeMosaic
 
 Usage:
   python scripts/train.py --seed 42
-  python scripts/train.py --seed 7
   (smoke: --epochs 1 --imgsz 320 --fraction 0.03 --name smoke_test)
 """
 from __future__ import annotations
@@ -23,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--epochs", type=int, default=150)
+    ap.add_argument("--epochs", type=int, default=80)
     ap.add_argument("--imgsz", type=int, default=640)
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--workers", type=int, default=4)
@@ -37,15 +38,16 @@ def main() -> int:
     model.train(
         data=args.data,
         epochs=args.epochs,
-        patience=30,
+        patience=20,
         imgsz=args.imgsz,
         batch=args.batch,
         workers=args.workers,
         fraction=args.fraction,
         optimizer="AdamW",
+        cos_lr=True,
         seed=args.seed,
         deterministic=True,
-        flipud=0.0,          # caps are always up
+        flipud=0.0,          # bottles/cans stay upright in the bin
         mosaic=1.0,
         close_mosaic=10,
         project=str(ROOT / "runs"),

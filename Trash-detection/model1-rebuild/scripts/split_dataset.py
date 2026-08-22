@@ -28,7 +28,7 @@ SOURCES_CSV = ROOT / "dataset" / "sources.csv"
 REPORT = ROOT / "logs" / "split_report.json"
 
 RATIOS = {"test": 0.10, "val": 0.20, "train": 0.70}
-NAMES = ["bottle", "cap", "wrapper", "aluminum"]
+NAMES = ["bottle", "aluminum"]
 
 
 def group_key(image_name: str) -> tuple[str, str]:
@@ -99,7 +99,7 @@ def main() -> int:
              if len({assign[i] for i in imgs if i in assign}) > 1]
 
     # integrity check 2: every class present in every split
-    presence = {s: {NAMES[c]: inst[s].get(c, 0) for c in range(4)} for s in counts}
+    presence = {s: {NAMES[c]: inst[s].get(c, 0) for c in range(len(NAMES))} for s in counts}
 
     DATASET_YAML.write_text(
         f"# GreenGuard Model 1 rebuild — OBB, canonical classes\n"

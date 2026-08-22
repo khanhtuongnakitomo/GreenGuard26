@@ -6,6 +6,4 @@ val: splits/val/images
 test: splits/test/images
 names:
   0: bottle
-  1: cap
-  2: wrapper
-  3: aluminum
+  1: aluminum

@@ -16,8 +16,8 @@ from ultralytics import YOLO
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "dataset" / "dataset.yaml"
-NAMES = ["bottle", "cap", "wrapper", "aluminum"]
-TARGETS = {"bottle": 0.90, "cap": 0.80, "wrapper": 0.80, "aluminum": 0.90}
+NAMES = ["bottle", "aluminum"]
+TARGETS = {"bottle": 0.90, "aluminum": 0.90}
 
 
 def evaluate(run: str) -> dict[str, tuple[float, float]] | None:
@@ -45,7 +45,7 @@ def evaluate(run: str) -> dict[str, tuple[float, float]] | None:
 
 
 def main() -> int:
-    runs = sys.argv[1:] or ["seed42_n640", "seed7_n640"]
+    runs = sys.argv[1:] or ["seed42_n640"]
     results = {run: evaluate(run) for run in runs}
     trained = {k: v for k, v in results.items() if v}
     if len(trained) == 2:
