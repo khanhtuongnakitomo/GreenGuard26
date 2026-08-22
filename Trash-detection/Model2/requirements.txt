@@ -1,6 +1,0 @@
-ultralytics
-opencv-python>=4.6.0,<5.0.0
-# Do not install torch from this file on Windows.
-# PyPI's default torch wheel is CPU-only (2.x+cpu), so training will not see the GPU.
-# After this file, install a CUDA build:
-#   uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128

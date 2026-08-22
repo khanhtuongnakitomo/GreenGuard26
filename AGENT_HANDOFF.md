@@ -44,7 +44,7 @@ Related apps in the same `bki` folder (not all required for CV work):
 
 - Model 1 detects material.
 - Model 2 is a **cap + label detector** (YOLO OBB), not a binary classifier.
-- PET with **cap OR label** still visible → **REJECT / VIOLATION**, do not count.
+- PET with **cap OR label OR liquid** still visible → **REJECT / VIOLATION**, do not count.
 - PET with **neither** cap nor label → **ACCEPT / NO VIOLATION**, count.
 - Cans skip Model 2.
 - Deadline strategy originally said “don’t train”; the owner later chose **local YOLO11n-OBB training** on the Roboflow dataset. Weights are in git: `Trash-detection/Model2/models/best.pt`.
@@ -64,7 +64,7 @@ webcam frame
   → if chosen class is pet_bottle:
         crop that bounding box (+15% margin)
         Model 2 runs ONLY on the crop (never the full frame)
-        cap or label ≥ 0.5 → reject
+        cap or label or liquid ≥ 0.5 → reject
         else → accept
   → else skip Model 2
   → session state machine → OpenCV UI
@@ -137,7 +137,7 @@ GreenGuard26/Trash-detection/
 - Dataset used to train: Roboflow `mohammed-essam-iz1ve/bottle-cap-label-detection` v3, YOLO OBB export, ~1558 images, in `Model2/data/dataset-2/` locally (not in git).
 - Base: `yolo11n-obb.pt`. Must use OBB, not plain `yolo11n.pt`. Labels are 8 corner numbers per object.
 - Inference: `ComponentPipeline.inspect_pet(frame, pet_detection)` crops then predicts on the crop.
-- Decision (`decision.py`): if **cap OR label** confidence ≥ **0.5** → `reject`. Else `accept` / `no_violation`.
+- Decision (`decision.py`): if **cap OR label OR liquid** confidence ≥ **0.5** → `reject`. Else `accept` / `no_violation`.
 - Model 2 is only called when the **on-screen best class** is `pet_bottle` (`inspect_chosen_pet` in `model2_bridge.py`).
 
 **Do not** add a third COCO YOLO11n “bottle” model. Bottle presence comes from Model 1 `pet_bottle`.

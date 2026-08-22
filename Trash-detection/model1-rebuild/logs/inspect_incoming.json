@@ -1,0 +1,353 @@
+{
+  "dataset-1": {
+    "yaml_classes": {
+      "0": "0",
+      "1": "1",
+      "2": "2",
+      "3": "can",
+      "4": "cans"
+    },
+    "splits": {
+      "train": {
+        "images": 2892,
+        "missing_label": 0,
+        "empty_label": 6,
+        "instances": {
+          "0": 1862,
+          "1": 656,
+          "2": 1647,
+          "can": 61,
+          "cans": 15
+        },
+        "malformed": [],
+        "malformed_count": 0
+      },
+      "valid": {
+        "images": 276,
+        "missing_label": 0,
+        "empty_label": 2,
+        "instances": {
+          "0": 177,
+          "1": 61,
+          "2": 163,
+          "can": 10,
+          "cans": 4
+        },
+        "malformed": [],
+        "malformed_count": 0
+      },
+      "test": {
+        "images": 138,
+        "missing_label": 0,
+        "empty_label": 0,
+        "instances": {
+          "0": 79,
+          "1": 25,
+          "2": 91,
+          "can": 2
+        },
+        "malformed": [],
+        "malformed_count": 0
+      }
+    }
+  },
+  "dataset-2": {
+    "yaml_classes": {
+      "0": "cap",
+      "1": "label"
+    },
+    "splits": {
+      "train": {
+        "images": 1438,
+        "missing_label": 0,
+        "empty_label": 222,
+        "instances": {
+          "cap": 899,
+          "label": 992
+        },
+        "malformed": [],
+        "malformed_count": 0
+      },
+      "valid": {
+        "images": 60,
+        "missing_label": 0,
+        "empty_label": 4,
+        "instances": {
+          "cap": 41,
+          "label": 55
+        },
+        "malformed": [],
+        "malformed_count": 0
+      },
+      "test": {
+        "images": 60,
+        "missing_label": 0,
+        "empty_label": 12,
+        "instances": {
+          "cap": 30,
+          "label": 40
+        },
+        "malformed": [],
+        "malformed_count": 0
+      }
+    }
+  },
+  "dataset-3": {
+    "yaml_classes": {
+      "0": "bottle",
+      "1": "cap",
+      "2": "label",
+      "3": "liquid"
+    },
+    "splits": {
+      "train": {
+        "images": 1428,
+        "missing_label": 0,
+        "empty_label": 12,
+        "instances": {
+          "bottle": 5580,
+          "cap": 4722,
+          "label": 4302,
+          "liquid": 3951
+        },
+        "malformed": [
+          "IMG_0295_jpeg.rf.084fe75d2c08ef34f783954c78baaa87.txt: coords out of [0,1]",
+          "IMG_0295_jpeg.rf.084fe75d2c08ef34f783954c78baaa87.txt: coords out of [0,1]",
+          "IMG_0295_jpeg.rf.2deaedffd9a9a3db4ba8fe66c47c9b69.txt: coords out of [0,1]",
+          "IMG_0295_jpeg.rf.2deaedffd9a9a3db4ba8fe66c47c9b69.txt: coords out of [0,1]",
+          "IMG_0295_jpeg.rf.44fb576610445c79e94f81dd3cadf1ea.txt: coords out of [0,1]",
+          "IMG_0295_jpeg.rf.44fb576610445c79e94f81dd3cadf1ea.txt: coords out of [0,1]",
+          "IMG_6314-2_jpeg.rf.6d1b1b86b7afa9d4aa1ec9f6ac749bfa.txt: coords out of [0,1]",
+          "IMG_6314-2_jpeg.rf.6d1b1b86b7afa9d4aa1ec9f6ac749bfa.txt: coords out of [0,1]",
+          "IMG_6314-2_jpeg.rf.75914b8f78d0a52903069610d810486c.txt: coords out of [0,1]",
+          "IMG_6314-2_jpeg.rf.75914b8f78d0a52903069610d810486c.txt: coords out of [0,1]",
+          "IMG_6314-2_jpeg.rf.d04e8d451e66a3594d3260c4dd910b57.txt: coords out of [0,1]",
+          "IMG_6314-2_jpeg.rf.d04e8d451e66a3594d3260c4dd910b57.txt: coords out of [0,1]",
+          "IMG_6606-2_jpeg.rf.23f75c1ab60b22c7d4c44b91fa4557a6.txt: coords out of [0,1]",
+          "IMG_6606-2_jpeg.rf.23f75c1ab60b22c7d4c44b91fa4557a6.txt: coords out of [0,1]",
+          "IMG_6606-2_jpeg.rf.23f75c1ab60b22c7d4c44b91fa4557a6.txt: coords out of [0,1]",
+          "IMG_6606-2_jpeg.rf.23f75c1ab60b22c7d4c44b91fa4557a6.txt: coords out of [0,1]",
+          "IMG_6606-2_jpeg.rf.23f75c1ab60b22c7d4c44b91fa4557a6.txt: coords out of [0,1]",
+          "IMG_6606-2_jpeg.rf.23f75c1ab60b22c7d4c44b91fa4557a6.txt: coords out of [0,1]",
+          "IMG_6606-2_jpeg.rf.23f75c1ab60b22c7d4c44b91fa4557a6.txt: coords out of [0,1]",
+          "IMG_6606-2_jpeg.rf.23f75c1ab60b22c7d4c44b91fa4557a6.txt: coords out of [0,1]"
+        ],
+        "malformed_count": 1401
+      },
+      "valid": {
+        "images": 136,
+        "missing_label": 0,
+        "empty_label": 1,
+        "instances": {
+          "bottle": 518,
+          "cap": 389,
+          "label": 322,
+          "liquid": 358
+        },
+        "malformed": [
+          "IMG_6608-2_jpeg.rf.d2927ebe60a40a5afad8fe95a03d619a.txt: coords out of [0,1]",
+          "IMG_6608-2_jpeg.rf.d2927ebe60a40a5afad8fe95a03d619a.txt: coords out of [0,1]",
+          "IMG_6608-2_jpeg.rf.d2927ebe60a40a5afad8fe95a03d619a.txt: coords out of [0,1]",
+          "IMG_6608-2_jpeg.rf.d2927ebe60a40a5afad8fe95a03d619a.txt: coords out of [0,1]",
+          "IMG_6608-2_jpeg.rf.d2927ebe60a40a5afad8fe95a03d619a.txt: coords out of [0,1]",
+          "IMG_6608-2_jpeg.rf.d2927ebe60a40a5afad8fe95a03d619a.txt: coords out of [0,1]",
+          "IMG_6608-2_jpeg.rf.d2927ebe60a40a5afad8fe95a03d619a.txt: coords out of [0,1]",
+          "IMG_6608-2_jpeg.rf.d2927ebe60a40a5afad8fe95a03d619a.txt: coords out of [0,1]",
+          "IMG_6608-2_jpeg.rf.d2927ebe60a40a5afad8fe95a03d619a.txt: coords out of [0,1]",
+          "IMG_6608-2_jpeg.rf.d2927ebe60a40a5afad8fe95a03d619a.txt: coords out of [0,1]",
+          "IMG_6632-3_jpeg.rf.049365504db3c5dc9b63483f015ab0a3.txt: coords out of [0,1]",
+          "IMG_6632-3_jpeg.rf.049365504db3c5dc9b63483f015ab0a3.txt: coords out of [0,1]",
+          "IMG_6632-3_jpeg.rf.049365504db3c5dc9b63483f015ab0a3.txt: coords out of [0,1]",
+          "IMG_6632-3_jpeg.rf.049365504db3c5dc9b63483f015ab0a3.txt: coords out of [0,1]",
+          "IMG_6632-3_jpeg.rf.049365504db3c5dc9b63483f015ab0a3.txt: coords out of [0,1]",
+          "IMG_6632-3_jpeg.rf.049365504db3c5dc9b63483f015ab0a3.txt: coords out of [0,1]",
+          "IMG_6632-3_jpeg.rf.049365504db3c5dc9b63483f015ab0a3.txt: coords out of [0,1]",
+          "IMG_6632-3_jpeg.rf.049365504db3c5dc9b63483f015ab0a3.txt: coords out of [0,1]",
+          "IMG_6633-3_jpeg.rf.61b591008a661a17c319401d21ad3c17.txt: coords out of [0,1]",
+          "IMG_6633-3_jpeg.rf.61b591008a661a17c319401d21ad3c17.txt: coords out of [0,1]"
+        ],
+        "malformed_count": 151
+      },
+      "test": {
+        "images": 68,
+        "missing_label": 0,
+        "empty_label": 1,
+        "instances": {
+          "bottle": 150,
+          "cap": 131,
+          "label": 126,
+          "liquid": 121
+        },
+        "malformed": [
+          "IMG_6631-3_jpeg.rf.9c0272a018a44fc99b26998824546a00.txt: coords out of [0,1]",
+          "IMG_6631-3_jpeg.rf.9c0272a018a44fc99b26998824546a00.txt: coords out of [0,1]",
+          "IMG_6631-3_jpeg.rf.9c0272a018a44fc99b26998824546a00.txt: coords out of [0,1]",
+          "IMG_6631-3_jpeg.rf.9c0272a018a44fc99b26998824546a00.txt: coords out of [0,1]",
+          "IMG_6631-3_jpeg.rf.9c0272a018a44fc99b26998824546a00.txt: coords out of [0,1]",
+          "IMG_6631-3_jpeg.rf.9c0272a018a44fc99b26998824546a00.txt: coords out of [0,1]",
+          "IMG_6631-3_jpeg.rf.9c0272a018a44fc99b26998824546a00.txt: coords out of [0,1]",
+          "IMG_6771-2_jpeg.rf.b1117794ad0a2f5358862d588ae4cb84.txt: coords out of [0,1]",
+          "IMG_6771-3_jpeg.rf.259d2d53fbd9db09f7cc01e76b7c02e8.txt: coords out of [0,1]",
+          "IMG_6780-2_jpeg.rf.49388ffcd07e577bc8e6f97eefcb0aae.txt: coords out of [0,1]",
+          "IMG_6781-3_jpeg.rf.3e097a70b444904f6e818a968e9c8809.txt: coords out of [0,1]",
+          "IMG_6790-2_jpeg.rf.b031c5d9849f59d8ee105343bf169ba7.txt: coords out of [0,1]",
+          "IMG_6791-2_jpeg.rf.df5ba6074f81b5f9e99b7d870ca33015.txt: coords out of [0,1]",
+          "IMG_6791-2_jpeg.rf.df5ba6074f81b5f9e99b7d870ca33015.txt: coords out of [0,1]",
+          "IMG_6791-3_jpeg.rf.874492275ecbc505394aa369c2bd25e6.txt: coords out of [0,1]",
+          "IMG_6791-3_jpeg.rf.874492275ecbc505394aa369c2bd25e6.txt: coords out of [0,1]",
+          "IMG_6797-2_jpeg.rf.f6e1fd6cd127b47dcede5313fdbc212c.txt: coords out of [0,1]",
+          "IMG_6797-3_jpeg.rf.c6575812eadc2dfa904747bc26b039a7.txt: coords out of [0,1]",
+          "IMG_6799-2_jpeg.rf.a99518813ebf47e4580b1a72f87cade7.txt: coords out of [0,1]",
+          "IMG_6799-3_jpeg.rf.17622fd4f013074046dfc233fcea8767.txt: coords out of [0,1]"
+        ],
+        "malformed_count": 62
+      }
+    }
+  },
+  "dataset-4": {
+    "yaml_classes": {
+      "0": "bottle",
+      "1": "can"
+    },
+    "splits": {
+      "train": {
+        "images": 4244,
+        "missing_label": 0,
+        "empty_label": 259,
+        "instances": {
+          "bottle": 3072,
+          "can": 2720
+        },
+        "malformed": [
+          "100028_jpg.rf.14505bdf3931582a69da7c68d67663e4.txt: coords out of [0,1]",
+          "200281_jpg.rf.f2808329cabc3230ebd5e07c7fb801ef.txt: coords out of [0,1]",
+          "4-233x320_png_jpg.rf.6b076b27714380c0af034379cdea5510.txt: coords out of [0,1]",
+          "400144_jpg.rf.8920ebd17b2136e82b051c76c14866ac.txt: coords out of [0,1]",
+          "500227_jpg.rf.0e986477f630b9c3332d67d1f3bf907a.txt: coords out of [0,1]",
+          "500341_jpg.rf.c49ce2cddce8b52c4fe54fe1b8ed3a24.txt: coords out of [0,1]",
+          "plastic29_jpg.rf.b67e9ed995ef18c038a492d36b741648.txt: coords out of [0,1]",
+          "plastic32_jpg.rf.1d0dd641d0a7329346396b2f9ab2eb0a.txt: coords out of [0,1]",
+          "plastic36_jpg.rf.5b613457bc47d509e34806c4a8c2a6a6.txt: coords out of [0,1]",
+          "plastic57_jpg.rf.6ab74800ce6a4612f034ed4925c8e554.txt: coords out of [0,1]",
+          "plastic62_jpg.rf.35dc252a2056bee49e1c8c7f21be1cca.txt: coords out of [0,1]",
+          "plastic_bottle-291_jpg.rf.24791324cfd4f8696cb4aa752aaaa5dc.txt: coords out of [0,1]",
+          "plastic_bottle-440_jpg.rf.5ce52e1fa8d66c650ef113f11948567f.txt: coords out of [0,1]",
+          "waterbottle242_jpg.rf.059dcf3902c1fcbbb88dd7de74ef0b33.txt: coords out of [0,1]"
+        ],
+        "malformed_count": 14
+      },
+      "valid": {
+        "images": 907,
+        "missing_label": 0,
+        "empty_label": 103,
+        "instances": {
+          "bottle": 1104,
+          "can": 66
+        },
+        "malformed": [],
+        "malformed_count": 0
+      },
+      "test": {
+        "images": 908,
+        "missing_label": 0,
+        "empty_label": 24,
+        "instances": {
+          "bottle": 754,
+          "can": 447
+        },
+        "malformed": [],
+        "malformed_count": 0
+      }
+    }
+  },
+  "dataset-5": {
+    "yaml_classes": {
+      "0": "bottle-cap-no-wrapper",
+      "1": "bottle-no-wrapper",
+      "2": "bottle-no-wrapper-cap",
+      "3": "bottle-wrapper-cap-plastic",
+      "4": "bottle-wrapper-no-cap",
+      "5": "bottlecap",
+      "6": "bottlewrapper"
+    },
+    "splits": {
+      "train": {
+        "images": 505,
+        "missing_label": 0,
+        "empty_label": 8,
+        "instances": {
+          "bottle-cap-no-wrapper": 271,
+          "bottle-no-wrapper": 4,
+          "bottle-no-wrapper-cap": 42,
+          "bottle-wrapper-cap-plastic": 963,
+          "bottle-wrapper-no-cap": 4,
+          "bottlewrapper": 1
+        },
+        "malformed": [
+          "images-114-_jpg.rf.1466daacad789d0e0c2cecd7f49505e3.txt: coords out of [0,1]",
+          "images-117-_jpg.rf.920e0e590249c68a759b9d31e0642767.txt: coords out of [0,1]",
+          "images-117-_jpg.rf.920e0e590249c68a759b9d31e0642767.txt: coords out of [0,1]",
+          "images-117-_jpg.rf.920e0e590249c68a759b9d31e0642767.txt: coords out of [0,1]",
+          "images-117-_jpg.rf.920e0e590249c68a759b9d31e0642767.txt: coords out of [0,1]",
+          "images-117-_jpg.rf.920e0e590249c68a759b9d31e0642767.txt: coords out of [0,1]",
+          "images-16-_jpg.rf.b0713e6d6f3e0da437bf017e53c32b2f.txt: coords out of [0,1]",
+          "images-188-_jpg.rf.ecba20cbb1284a17369365d6a5bae64c.txt: coords out of [0,1]",
+          "images-198-_jpg.rf.1ff7c26b19cf71b1be089cfbf68b4293.txt: coords out of [0,1]",
+          "images-198-_jpg.rf.1ff7c26b19cf71b1be089cfbf68b4293.txt: coords out of [0,1]",
+          "images-21-_jpg.rf.99060a7573677460bf856aaf5ad0cd6d.txt: coords out of [0,1]",
+          "images-21-_jpg.rf.99060a7573677460bf856aaf5ad0cd6d.txt: coords out of [0,1]",
+          "images-224-_jpg.rf.ebda48228a23d896cb0a2a4c382828aa.txt: coords out of [0,1]",
+          "images-224-_jpg.rf.ebda48228a23d896cb0a2a4c382828aa.txt: coords out of [0,1]",
+          "images-232-_jpg.rf.79376bdb67da4d818ee49b579151e162.txt: coords out of [0,1]",
+          "images-232-_jpg.rf.79376bdb67da4d818ee49b579151e162.txt: coords out of [0,1]",
+          "images-284-_jpg.rf.7b25848ac136ff11dbb2981918ac664f.txt: coords out of [0,1]",
+          "images-284-_jpg.rf.7b25848ac136ff11dbb2981918ac664f.txt: coords out of [0,1]",
+          "images-284-_jpg.rf.7b25848ac136ff11dbb2981918ac664f.txt: coords out of [0,1]",
+          "images-302-_jpg.rf.4b2f5fff76ba67e3eb0c8bd72d67f090.txt: coords out of [0,1]"
+        ],
+        "malformed_count": 38
+      },
+      "valid": {
+        "images": 145,
+        "missing_label": 0,
+        "empty_label": 0,
+        "instances": {
+          "bottle-cap-no-wrapper": 67,
+          "bottle-no-wrapper-cap": 11,
+          "bottle-wrapper-cap-plastic": 286,
+          "bottle-wrapper-no-cap": 1,
+          "bottlewrapper": 3
+        },
+        "malformed": [
+          "images-130-_jpg.rf.5284b84de01c040e15c17dc8c0108da2.txt: coords out of [0,1]",
+          "images-130-_jpg.rf.5284b84de01c040e15c17dc8c0108da2.txt: coords out of [0,1]",
+          "images-265-_jpg.rf.c3ae70803407fff005730cb13aa9c00e.txt: coords out of [0,1]",
+          "images-295-_jpg.rf.4df1b35d6554ba13d57ccbdd3f305350.txt: coords out of [0,1]",
+          "images-336-_jpg.rf.4f8081fba155c8f698ea09f7a41a5d9f.txt: coords out of [0,1]",
+          "images-386-_jpg.rf.1aadbcaf1731c70cc7b4ca5fb9bee114.txt: coords out of [0,1]",
+          "images-434-_jpg.rf.ba177a4b3dd4b669e23c1b613cf499a7.txt: coords out of [0,1]"
+        ],
+        "malformed_count": 7
+      },
+      "test": {
+        "images": 72,
+        "missing_label": 0,
+        "empty_label": 0,
+        "instances": {
+          "bottle-cap-no-wrapper": 29,
+          "bottle-no-wrapper-cap": 8,
+          "bottle-wrapper-cap-plastic": 127,
+          "bottlecap": 2
+        },
+        "malformed": [
+          "images-211-_jpg.rf.19a09505f6ef1440b344bad937c233ba.txt: coords out of [0,1]",
+          "images-211-_jpg.rf.19a09505f6ef1440b344bad937c233ba.txt: coords out of [0,1]",
+          "images-211-_jpg.rf.19a09505f6ef1440b344bad937c233ba.txt: coords out of [0,1]",
+          "images-211-_jpg.rf.19a09505f6ef1440b344bad937c233ba.txt: coords out of [0,1]",
+          "images-224-_jpg.rf.7d5a6442d057ed775a19b579c78aee61.txt: coords out of [0,1]"
+        ],
+        "malformed_count": 5
+      }
+    }
+  }
+}

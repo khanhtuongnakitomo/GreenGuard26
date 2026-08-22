@@ -1,0 +1,23 @@
+hashing 12623 images ...
+  2000/12623
+  4000/12623
+  6000/12623
+  8000/12623
+  10000/12623
+  12000/12623
+pairwise hamming (blocked) ...
+{
+  "threshold": 8,
+  "images_before": 12623,
+  "duplicate_pairs": 14240,
+  "clusters_ge2": 2062,
+  "images_moved_to_duplicates": 5137,
+  "images_after": 7486,
+  "unreadable": [],
+  "instances_after": {
+    "0": 8111,
+    "1": 2045,
+    "2": 1910,
+    "3": 5304
+  }
+}

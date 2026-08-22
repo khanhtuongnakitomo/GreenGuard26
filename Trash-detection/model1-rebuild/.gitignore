@@ -1,0 +1,42 @@
+# GreenGuard Model 1 rebuild — .gitignore
+# Repo-friendly: keeps deliverables (weights/exports/reports/scripts),
+# drops regenerable bulk (venv, datasets, training stdout).
+
+# --- Python ---
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# --- pretrained base weights (auto re-download on first run) ---
+*.pt
+!runs/*/weights/best.pt
+
+# --- training runs: keep best.pt, results.csv, args.yaml, curves; drop bulk ---
+runs/*/weights/last.pt
+runs/*/train_batch*.jpg
+runs/*/val_batch*.jpg
+runs/*/labels.jpg
+
+# --- dataset bulk: regenerable via scripts/ (inspect -> normalize -> dedupe ->
+#     split); licenses & provenance live in dataset/CREDITS.md ---
+dataset/incoming/
+dataset/normalized/
+dataset/splits/
+dataset/test_locked/
+dataset/audits/duplicates/
+dataset/audits/flagged_caps/
+export/colab_kit/calib200/
+export/colab_kit/calib200.zip
+
+# --- logs: keep small evidence (env.txt, json reports, eval_val.log),
+#     drop 20 MB training stdout dumps and demo/render images ---
+logs/train_seed*.log
+logs/render/
+logs/demo_out/
+logs/*.jpg
+logs/*.png
+
+# --- OS junk ---
+Thumbs.db
+Desktop.ini
