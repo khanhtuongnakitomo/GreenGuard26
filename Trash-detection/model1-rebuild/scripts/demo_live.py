@@ -41,20 +41,55 @@ def draw(frame: np.ndarray, polys: np.ndarray, clss, confs) -> list[str]:
     return lines
 
 
+def resolve_model(arg: str) -> tuple[str, str]:
+    """Return (model_path, device) — auto-picks the best available artifact."""
+    if arg and arg != "auto":
+        return arg, "auto"
+    candidates = [
+        ROOT / "export" / "onnx_416" / "model.onnx",      # deploy candidate
+        ROOT / "export" / "onnx_320" / "model.onnx",
+        ROOT / "runs" / "seed7_n640" / "weights" / "best.pt",
+        ROOT / "runs" / "seed42_n640" / "weights" / "best.pt",
+    ]
+    for c in candidates:
+        if c.is_file():
+            print(f"[demo] using model: {c}")
+            return str(c), "auto"
+    print("ERROR: no model found. Looked for:\n  " + "\n  ".join(str(c) for c in candidates))
+    raise SystemExit(1)
+
+
+def resolve_device(model_path: str, arg: str) -> str:
+    if arg and arg != "auto":
+        return arg
+    if model_path.endswith(".onnx"):
+        return "cpu"  # onnxruntime CPU build
+    import torch  # noqa: PLC0415
+
+    if torch.cuda.is_available():
+        return "0"
+    print("[demo] CUDA not available for torch — using CPU (install a CUDA-matching "
+          "torch build for GPU, see requirements.txt notes)")
+    return "cpu"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", default="0", help="webcam index or file path")
-    ap.add_argument("--model", default=str(ROOT / "export" / "onnx_416" / "model.onnx"))
+    ap.add_argument("--model", default="auto",
+                    help="'auto' = first of onnx_416/onnx_320/best.pt(seed7/42)")
     ap.add_argument("--fps", type=float, default=5.0)
     ap.add_argument("--conf", type=float, default=0.25)
     ap.add_argument("--imgsz", type=int, default=416)
-    ap.add_argument("--device", default="cpu", help="'cpu' for onnx, '0' for gpu with .pt")
+    ap.add_argument("--device", default="auto", help="'auto', 'cpu', or '0' for GPU")
     ap.add_argument("--save", default=None, help="save annotated frames to this dir (headless)")
     ap.add_argument("--max-frames", type=int, default=0, help="stop after N frames (0 = unlimited)")
     args = ap.parse_args()
 
-    is_onnx = args.model.endswith(".onnx")
-    model = YOLO(args.model, task="obb" if is_onnx else None)
+    model_path, _ = resolve_model(args.model)
+    device = resolve_device(model_path, args.device)
+    is_onnx = model_path.endswith(".onnx")
+    model = YOLO(model_path, task="obb" if is_onnx else None)
 
     src = int(args.source) if args.source.isdigit() else args.source
     single_image = isinstance(src, str) and Path(src).suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
@@ -83,7 +118,7 @@ def main() -> int:
             break
 
         results = model.predict(frame, imgsz=args.imgsz, conf=args.conf,
-                                device=args.device, verbose=False)
+                                device=device, verbose=False)
         r = results[0]
         labels: list[str] = []
         if getattr(r, "obb", None) is not None and r.obb is not None and len(r.obb):

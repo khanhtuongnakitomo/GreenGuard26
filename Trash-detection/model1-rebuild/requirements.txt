@@ -1,6 +1,18 @@
-# Pinned from the actual Phase A environment (2026-08-22)
-# Reinstall torch/torchvision with the CUDA build:
-#   pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu126
+# GreenGuard Model 1 rebuild — portable requirements (any device).
+#   py -3.11 -m venv .venv && .venv\Scripts\pip install -r requirements.txt
+# CPU inference/demo works out of the box with the torch below.
+#
+# GPU (optional) — pick the build matching your NVIDIA GPU, AFTER the base install:
+#   RTX 50 series (sm_120, e.g. 5060):  pip install torch==2.13.0+cu129 torchvision==0.28.0+cu129 --index-url https://download.pytorch.org/whl/cu129
+#   RTX 30/40 series (sm_86-sm_90):     pip install torch==2.13.0+cu126 torchvision==0.28.0+cu126 --index-url https://download.pytorch.org/whl/cu126
+torch==2.13.0
+torchvision==0.28.0
+ImageHash==4.3.2
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+PyWavelets==1.9.0
+PyYAML==6.0.3
+Pygments==2.21.0
 anyio==4.14.2
 av==18.1.0
 certifi==2026.7.22
@@ -16,42 +28,35 @@ h11==0.16.0
 httpcore==1.0.9
 httpx==0.28.1
 idna==3.19
-ImageHash==4.3.2
 iniconfig==2.3.0
-Jinja2==3.1.6
 kiwisolver==1.5.0
-MarkupSafe==3.0.3
 matplotlib==3.11.1
 mpmath==1.3.0
 networkx==3.6.1
 numpy==2.4.6
 nvidia-ml-py==13.610.43
+onnxruntime==1.29.0
 opencv-python==5.0.0.93
 packaging==26.3
 pandas==3.0.5
 pillow==12.3.0
 pluggy==1.6.0
-polars==1.43.2
 polars-runtime-32==1.43.2
+polars==1.43.2
 psutil==7.2.2
 pyDeprecate==0.11.0
-Pygments==2.21.0
 pyparsing==3.3.2
 pytest==9.1.1
 python-dateutil==2.9.0.post0
-PyWavelets==1.9.0
-PyYAML==6.0.3
 requests==2.34.2
 scipy==1.17.1
 six==1.17.0
 supervision==0.30.0
 sympy==1.14.0
-torch==2.13.0+cu126
-torchvision==0.28.0+cu126
 tqdm==4.70.0
 typing_extensions==4.16.0
 tzdata==2026.3
-ultralytics==8.4.126
 ultralytics-platform==0.1.8
 ultralytics-thop==2.1.6
+ultralytics==8.4.126
 urllib3==2.7.0
