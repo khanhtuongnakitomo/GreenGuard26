@@ -1,4 +1,4 @@
-"""Live demo — GreenGuard Model 1 rebuild (YOLOv8n-OBB, 4 classes).
+r"""Live demo — GreenGuard Model 1 rebuild (YOLOv8n-OBB, 4 classes).
 
 Runs the exported ONNX model on a webcam (or video/image) and draws rotated
 detection boxes, throttled to a fixed FPS (default 5).
@@ -59,18 +59,36 @@ def resolve_model(arg: str) -> tuple[str, str]:
     raise SystemExit(1)
 
 
+def cuda_usable() -> bool:
+    """Probe CUDA with a real kernel launch — is_available() alone returns True
+    even when the installed torch build has no kernels for the GPU's compute
+    capability (e.g. RTX 50 series sm_120 on a cu126 build)."""
+    import torch  # noqa: PLC0415
+
+    if not torch.cuda.is_available():
+        return False
+    try:
+        (torch.zeros(2, device="cuda") + 1).cpu()
+        return True
+    except Exception as exc:  # noqa: BLE001
+        try:
+            name = torch.cuda.get_device_name(0)
+            cap = ".".join(map(str, torch.cuda.get_device_capability(0)))
+        except Exception:  # noqa: BLE001
+            name, cap = "unknown GPU", "?"
+        print(f"[demo] GPU {name} (CC {cap}) not supported by this torch build "
+              f"({type(exc).__name__}) — falling back to CPU.")
+        print("[demo] for GPU support install a matching CUDA build, see the notes "
+              "in requirements.txt (RTX 50 series -> cu129).")
+        return False
+
+
 def resolve_device(model_path: str, arg: str) -> str:
     if arg and arg != "auto":
         return arg
     if model_path.endswith(".onnx"):
         return "cpu"  # onnxruntime CPU build
-    import torch  # noqa: PLC0415
-
-    if torch.cuda.is_available():
-        return "0"
-    print("[demo] CUDA not available for torch — using CPU (install a CUDA-matching "
-          "torch build for GPU, see requirements.txt notes)")
-    return "cpu"
+    return "0" if cuda_usable() else "cpu"
 
 
 def main() -> int:
