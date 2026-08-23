@@ -76,10 +76,3 @@ Copy `export\onnx_416\` to the Nano. See [`jetson/README.md`](jetson/README.md).
 
 Gate demo with Model 1 remains available via `run_gate_demo.bat` (M1+M2); Nano
 phase is **M2-only**.
-
-## Snapshot demo (no live inference)
-
-`run_m2_demo.bat` runs `scripts/demo_live.py` as a **snapshot compare** tool:
-clean camera preview (no model calls), **H** freezes + detects once and shows
-ORIGINAL | DETECTED side-by-side (pairs saved to `logs/m2_captures/`),
-**H** again = new capture, **Q** quits. `--source photo.jpg` skips preview.
