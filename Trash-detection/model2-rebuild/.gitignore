@@ -1,0 +1,34 @@
+# GreenGuard Model 2 — .gitignore
+# Keeps deliverables (weights/onnx/scripts/reports), drops data bulk & logs.
+
+# --- Python (venv shared with model1-rebuild, never stored here) ---
+.venv/
+__pycache__/
+*.pyc
+
+# --- pretrained base weights (auto re-download) ---
+*.pt
+!runs/*/weights/best.pt
+
+# --- training run bulk ---
+runs/*/weights/last.pt
+runs/*/train_batch*.jpg
+runs/*/val_batch*.jpg
+runs/*/labels.jpg
+
+# --- dataset bulk: regenerable via scripts (normalize -> dedupe -> split) ---
+dataset/incoming/
+dataset/normalized/
+dataset/splits/
+dataset/audits/
+
+# --- logs: keep small evidence, drop the 20 MB training stdout + renders ---
+logs/m2_train.log
+logs/render/
+logs/gate_test/
+logs/*.png
+logs/*.jpg
+
+# --- OS junk ---
+Thumbs.db
+Desktop.ini

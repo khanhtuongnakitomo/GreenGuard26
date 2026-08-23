@@ -18,9 +18,14 @@ runs/*/train_batch*.jpg
 runs/*/val_batch*.jpg
 runs/*/labels.jpg
 
-# --- v1 (4-class) archived models: local only, not in the repo ---
+# --- v1 (4-class) archived models: keep the gating demo's Model-1 ONNX @416,
+#     drop the rest of the archive ---
 runs/v1_4class/
-export/v1_4class/
+export/v1_4class/*
+!export/v1_4class/onnx_416/
+export/v1_4class/onnx_416/*
+!export/v1_4class/onnx_416/model.onnx
+!export/v1_4class/onnx_416/labels.txt
 
 # --- dataset bulk: regenerable via scripts/ (inspect -> normalize -> dedupe ->
 #     split); licenses & provenance live in dataset/CREDITS.md ---
@@ -35,7 +40,7 @@ export/colab_kit/calib200.zip
 
 # --- logs: keep small evidence (env.txt, json reports, eval_val.log),
 #     drop 20 MB training stdout dumps and demo/render images ---
-logs/train_seed*.log
+logs/train_*seed*.log
 logs/render/
 logs/demo_out/
 logs/*.jpg

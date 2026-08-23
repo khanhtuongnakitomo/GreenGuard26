@@ -1,0 +1,33 @@
+{
+  "dataset-2": {
+    "images_kept": 1320,
+    "images_dropped_empty": 238,
+    "lines_dropped": 0,
+    "lines_clamped": 0,
+    "lines_quarantined": 0,
+    "instances": {
+      "cap": 970,
+      "label": 1087
+    },
+    "kept_per_origin_split": {
+      "train": 1216,
+      "valid": 56,
+      "test": 48
+    }
+  },
+  "ring-dataset": {
+    "images_kept": 1498,
+    "images_dropped_empty": 32,
+    "lines_dropped": 0,
+    "lines_clamped": 0,
+    "lines_quarantined": 0,
+    "instances": {
+      "ring": 1503
+    },
+    "kept_per_origin_split": {
+      "train": 1311,
+      "valid": 125,
+      "test": 62
+    }
+  }
+}
