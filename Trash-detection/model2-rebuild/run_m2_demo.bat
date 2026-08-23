@@ -1,5 +1,5 @@
 @echo off
-rem Model 2 ONLY demo (cap / label / ring) - CPU only
+rem Model 2 snapshot demo (cap / label / ring) - CPU only, H capture / Q quit
 setlocal
 cd /d "%~dp0"
 if exist "..\model1-rebuild\.venv\Scripts\python.exe" (

@@ -1,7 +1,8 @@
-r"""Live demo — Model 2 ONLY (cap / label / ring detector, OBB).
+r"""Snapshot demo — Model 2 ONLY (cap / label / ring detector, OBB).
 
-Single-model app: no Model 1, no gating — draws OBB polygons and a top-left
-legend with class + confidence. CPU-only (GPU is for training), 5 FPS default.
+NO live inference: the camera preview runs clean (no model calls). Press **H**
+to freeze the frame, run OBB detection ONCE, and show a side-by-side review
+(original | annotated). **Q** quits from either mode.
 
 Model auto-pick (first found):
   1. export/onnx_640/model.onnx           — train size (PC)
@@ -12,15 +13,16 @@ Static ONNX graphs only accept their exported imgsz (read from the graph).
 
 Usage (from model2-rebuild/, via model1 venv):
   ..\model1-rebuild\.venv\Scripts\python.exe scripts\demo_live.py
-  ..\model1-rebuild\.venv\Scripts\python.exe scripts\demo_live.py --source video.mp4 --conf 0.4
-  ..\model1-rebuild\.venv\Scripts\python.exe scripts\demo_live.py --save logs\m2_demo --max-frames 10
+  ..\model1-rebuild\.venv\Scripts\python.exe scripts\demo_live.py --conf 0.4
+  ..\model1-rebuild\.venv\Scripts\python.exe scripts\demo_live.py --source photo.jpg
 
-Keys: q = quit, s = snapshot to logs\m2_demo_snap.jpg
+Keys: H = capture + detect (in review: new capture), Q = quit.
+Each capture pair is saved to logs\m2_captures\*_orig.jpg / *_det.jpg.
 """
 from __future__ import annotations
 
 import argparse
-import time
+from datetime import datetime
 from pathlib import Path
 
 import cv2
@@ -75,6 +77,9 @@ def draw_detections(frame: np.ndarray, polys, clss, confs) -> list[tuple[str, tu
         name = NAMES.get(ci, str(ci))
         color = COLORS.get(ci, (255, 255, 255))
         cv2.polylines(frame, [poly.astype(np.int32)], True, color, 2)
+        x, y = poly.astype(np.int32)[0]
+        cv2.putText(frame, f"{name} {float(cf) * 100:.0f}%", (x, max(y - 6, 14)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2)
         legend.append((f"{name} {float(cf) * 100:.0f}%", color))
     return legend
 
@@ -91,16 +96,59 @@ def draw_legend(frame: np.ndarray, legend: list[tuple[str, tuple]]) -> None:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.65, color, 2)
 
 
+def annotate(frame: np.ndarray, result) -> np.ndarray:
+    out = frame.copy()
+    legend: list[tuple[str, tuple]] = []
+    if result.obb is not None and len(result.obb):
+        legend = draw_detections(
+            out,
+            result.obb.xyxyxyxy.cpu().numpy(),
+            result.obb.cls.cpu().numpy(),
+            result.obb.conf.cpu().numpy(),
+        )
+    draw_legend(out, legend or [("no cap / label / ring detected", (160, 160, 160))])
+    return out
+
+
+def hstack_review(original: np.ndarray, annotated: np.ndarray,
+                  max_w: int = 1600) -> np.ndarray:
+    h = min(original.shape[0], annotated.shape[0])
+    panels = []
+    for img, title in ((original, "ORIGINAL"), (annotated, "DETECTED")):
+        p = img[:h]
+        cv2.putText(p, title, (12, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9,
+                    (255, 255, 255), 2)
+        panels.append(p)
+    pair = np.hstack(panels)
+    if pair.shape[1] > max_w:
+        s = max_w / pair.shape[1]
+        pair = cv2.resize(pair, (max_w, int(pair.shape[0] * s)))
+    cv2.putText(pair, "H new capture  |  Q quit", (12, pair.shape[0] - 12),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+    return pair
+
+
+def detect_once(model: YOLO, frame: np.ndarray, imgsz: int, conf: float):
+    r = model.predict(frame, imgsz=imgsz, conf=conf, device=DEVICE, verbose=False)[0]
+    return annotate(frame, r), r
+
+
+def save_pair(original: np.ndarray, annotated: np.ndarray) -> None:
+    d = ROOT / "logs" / "m2_captures"
+    d.mkdir(parents=True, exist_ok=True)
+    stem = datetime.now().strftime("%Y%m%d_%H%M%S")
+    cv2.imwrite(str(d / f"{stem}_orig.jpg"), original)
+    cv2.imwrite(str(d / f"{stem}_det.jpg"), annotated)
+    print(f"saved {d}\\{stem}_orig.jpg / _det.jpg")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--source", default="0", help="webcam index or image/video path")
+    ap.add_argument("--source", default="0", help="webcam index or image path")
     ap.add_argument("--model", default="auto")
-    ap.add_argument("--fps", type=float, default=5.0)
     ap.add_argument("--conf", type=float, default=0.25)
     ap.add_argument("--imgsz", type=int, default=640,
                     help="inference size (.pt only; ONNX uses exported size)")
-    ap.add_argument("--save", default=None, help="save annotated frames to folder")
-    ap.add_argument("--max-frames", type=int, default=0)
     args = ap.parse_args()
 
     model_path, onnx_sz = resolve_model(args.model)
@@ -109,69 +157,47 @@ def main() -> int:
         print(f"[m2 demo] ONNX static imgsz={imgsz}")
     model = YOLO(model_path, task="obb" if model_path.endswith(".onnx") else None)
 
-    src = int(args.source) if args.source.isdigit() else args.source
-    single = isinstance(src, str) and Path(src).suffix.lower() in {
-        ".jpg", ".jpeg", ".png", ".bmp", ".webp",
-    }
-    cap = None if single else cv2.VideoCapture(src)
+    single = Path(args.source).suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+    cap = None if single else cv2.VideoCapture(int(args.source)
+                                               if args.source.isdigit() else args.source)
     if cap is not None and not cap.isOpened():
-        print(f"ERROR: cannot open source {src!r}")
+        print(f"ERROR: cannot open source {args.source!r}")
         return 1
-    save_dir = Path(args.save) if args.save else None
-    if save_dir:
-        save_dir.mkdir(parents=True, exist_ok=True)
 
-    interval = 1.0 / max(args.fps, 0.1)
-    n = 0
+    review: np.ndarray | None = None
+    mode = "review" if single else "preview"   # image source: skip preview
+
     while True:
-        t0 = time.perf_counter()
-        if single:
-            frame = cv2.imread(src)
-        else:
+        if mode == "preview":
             ok, frame = cap.read()
             if not ok:
                 print("source ended")
                 break
-        if frame is None:
-            print("ERROR: empty frame")
-            break
-
-        r = model.predict(frame, imgsz=imgsz, conf=args.conf,
-                          device=DEVICE, verbose=False)[0]
-        legend: list[tuple[str, tuple]] = []
-        if r.obb is not None and len(r.obb):
-            legend = draw_detections(
-                frame,
-                r.obb.xyxyxyxy.cpu().numpy(),
-                r.obb.cls.cpu().numpy(),
-                r.obb.conf.cpu().numpy(),
-            )
-        draw_legend(frame, legend or [("no cap / label / ring detected", (160, 160, 160))])
-
-        n += 1
-        actual = 1.0 / max(time.perf_counter() - t0, 1e-6)
-        status = f"frame {n} | {args.fps:.0f} fps target | {actual:.1f} actual | det: {len(legend)}"
-        cv2.putText(frame, status, (10, frame.shape[0] - 12),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2)
-        print(status, "|", ", ".join(t for t, _ in legend) if legend else "-")
-
-        if save_dir:
-            cv2.imwrite(str(save_dir / f"m2_demo_{n:04d}.jpg"), frame)
-        if not save_dir or single:
-            cv2.imshow("Model 2 demo — cap / label / ring (q=quit, s=snapshot)", frame)
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord("q"):
+            cv2.putText(frame, "H capture  |  Q quit", (12, frame.shape[0] - 12),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            cv2.imshow("Model 2 snapshot demo — preview (no inference)", frame)
+            key = chr(cv2.waitKey(1) & 0xFF).lower()
+            if key == "q":
                 break
-            if key == ord("s"):
-                snap = ROOT / "logs" / "m2_demo_snap.jpg"
-                snap.parent.mkdir(exist_ok=True)
-                cv2.imwrite(str(snap), frame)
-                print(f"saved {snap}")
-        if single or (args.max_frames and n >= args.max_frames):
-            break
-        remaining = interval - (time.perf_counter() - t0)
-        if remaining > 0:
-            time.sleep(remaining)
+            if key == "h":
+                annotated, _ = detect_once(model, frame, imgsz, args.conf)
+                save_pair(frame, annotated)
+                review = hstack_review(frame, annotated)
+                mode = "review"
+        else:
+            if single:  # image source: (re)detect on the file
+                frame = cv2.imread(args.source)
+                if frame is None:
+                    print(f"ERROR: cannot read {args.source!r}")
+                    break
+                annotated, _ = detect_once(model, frame, imgsz, args.conf)
+                review = hstack_review(frame, annotated)
+            cv2.imshow("Model 2 snapshot demo — review (H new capture, Q quit)", review)
+            key = chr(cv2.waitKey(1) & 0xFF).lower()
+            if key == "q":
+                break
+            if key == "h" and not single:
+                mode = "preview"
 
     if cap is not None:
         cap.release()
