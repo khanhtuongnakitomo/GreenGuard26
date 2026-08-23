@@ -49,6 +49,18 @@ M2_CANDIDATES = [
     ROOT / "runs" / "m2v3_seed42_n640" / "weights" / "best.pt",
 ]
 M2_NAMES = {0: "cap", 1: "label", 2: "ring"}
+M2_REF = ROOT / "runs" / "m2v3_seed42_n640" / "weights" / "best.pt"
+
+
+def onnx_date(path):
+    try:
+        import onnx
+        for prop in onnx.load(str(path), load_external_data=False).metadata_props:
+            if prop.key == "date":
+                return prop.value
+    except Exception:
+        pass
+    return None
 M2_COLORS = {0: (0, 0, 255), 1: (0, 255, 255), 2: (255, 0, 255)}
 DEVICE = "cpu"
 
@@ -92,7 +104,15 @@ def main() -> int:
     args = ap.parse_args()
 
     m1_c = pick(M1_CANDIDATES, "Model 1 (PET/aluminum)")
-    m2_path = pick(M2_CANDIDATES, "Model 2 (cap/label/ring)")
+    m2_cands = [c for c in M2_CANDIDATES
+                if not (c.suffix == ".onnx" and M2_REF.is_file()
+                        and c.stat().st_mtime < M2_REF.stat().st_mtime)]
+    for c in M2_CANDIDATES:
+        if c not in m2_cands:
+            print(f"STALE EXPORT - skipping {c} (older than {M2_REF})")
+    m2_path = pick(m2_cands, "Model 2 (cap/label/ring)")
+    if str(m2_path).endswith(".onnx"):
+        print(f"[gate] Model 2 onnx date: {onnx_date(Path(m2_path))}")
     m1_path, m1_bottle, m1_aluminum = m1_c
     m1 = YOLO(str(m1_path), task="obb" if m1_path.suffix == ".onnx" else None)
     m2 = YOLO(str(m2_path), task="obb" if m2_path.suffix == ".onnx" else None)

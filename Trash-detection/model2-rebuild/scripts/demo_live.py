@@ -39,6 +39,24 @@ CANDIDATES = [
     ROOT / "runs" / "m2v3_seed42_n640" / "weights" / "best.pt",
 ]
 
+REF_WEIGHTS = ROOT / "runs" / "m2v3_seed42_n640" / "weights" / "best.pt"
+
+
+def onnx_date(path: Path) -> str | None:
+    try:
+        import onnx
+        for prop in onnx.load(str(path), load_external_data=False).metadata_props:
+            if prop.key == "date":
+                return prop.value
+    except Exception:
+        pass
+    return None
+
+
+def stale_onnx(path: Path) -> bool:
+    return (path.suffix == ".onnx" and REF_WEIGHTS.is_file()
+            and path.stat().st_mtime < REF_WEIGHTS.stat().st_mtime)
+
 
 def onnx_imgsz(path: Path) -> int | None:
     try:
@@ -60,9 +78,15 @@ def resolve_model(arg: str) -> tuple[str, int | None]:
         print(f"[m2 demo] using model: {p}")
         return str(p), onnx_imgsz(p) if p.suffix == ".onnx" else None
     for path in CANDIDATES:
-        if path.is_file():
-            print(f"[m2 demo] using model: {path}")
-            return str(path), onnx_imgsz(path) if path.suffix == ".onnx" else None
+        if not path.is_file():
+            continue
+        if stale_onnx(path):
+            print(f"STALE EXPORT - skipping {path} (older than {REF_WEIGHTS})")
+            continue
+        print(f"[m2 demo] using model: {path}")
+        if path.suffix == ".onnx":
+            print(f"[m2 demo] onnx date: {onnx_date(path)}")
+        return str(path), onnx_imgsz(path) if path.suffix == ".onnx" else None
     print("ERROR: no Model 2 found. Looked for:\n  " + "\n  ".join(str(p) for p in CANDIDATES))
     raise SystemExit(1)
 

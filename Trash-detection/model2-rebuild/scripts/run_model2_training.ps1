@@ -81,6 +81,12 @@ Write-Host "== [5/5] Eval val @640 + deploy-size @416 ==" -ForegroundColor Cyan
 & $py scripts\eval_val.py m2v3_seed42_n640 2>&1 | Tee-Object -FilePath logs\m2_eval.log
 & $py scripts\eval_deploy_size.py m2v3_seed42_n640 2>&1 | Tee-Object -FilePath logs\m2_eval_416.log
 
+Write-Host "== [6/6] Export ONNX 640 + 416 from fresh weights (staleness guard) ==" -ForegroundColor Cyan
+& $py scripts\export_onnx.py --imgsz 640 2>&1 | Tee-Object -FilePath logs\m2_export_640.log
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+& $py scripts\export_onnx.py --imgsz 416 2>&1 | Tee-Object -FilePath logs\m2_export_416.log
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host ""
-Write-Host "DONE -> runs\m2v3_seed42_n640\weights\best.pt" -ForegroundColor Green
-Write-Host "Next: python scripts\export_onnx.py   then copy export\onnx_416\ to Jetson." -ForegroundColor Yellow
+Write-Host "DONE -> runs\m2v3_seed42_n640\weights\best.pt + fresh ONNX exports" -ForegroundColor Green
+Write-Host "Next: copy export\onnx_416\ to Jetson." -ForegroundColor Yellow

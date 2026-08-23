@@ -39,6 +39,8 @@ def main() -> int:
     dest = out_dir / "model.onnx"
     shutil.copy2(exported, dest)
     (out_dir / "labels.txt").write_text("\n".join(LABELS) + "\n", encoding="utf-8")
+    if dest.stat().st_mtime <= weights.stat().st_mtime:
+        raise SystemExit(f"ERROR: {dest} is not newer than {weights} - stale export artifact")
     print(f"exported -> {dest}")
     print(f"labels   -> {out_dir / 'labels.txt'}")
     return 0
