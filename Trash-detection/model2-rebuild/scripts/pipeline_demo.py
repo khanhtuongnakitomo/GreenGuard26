@@ -1,18 +1,23 @@
 r"""GreenGuard gating demo — Model 1 (PET) triggers Model 2 (cap/label/ring).
 
-Logic (owner, 2026-08-23):
+Logic (owner, 2026-08-23 — direction C, full-frame Model 2):
   Model 1 detects objects; when a PET BOTTLE is the best detection above
-  --m1-conf, crop its region (+15% margin) and run Model 2 on the crop.
-  Model 2 looks for cap / label / sealant-ring:
-    any of the three >= --m2-conf  ->  big red  "PET REJECT" (+ which parts)
-    none of them                   ->  big green "PET ACCEPT"
+  --m1-conf, Model 2 runs on the SAME FULL FRAME (its training distribution —
+  crops made confidences collapse) and only detections whose box center lies
+  INSIDE the bottle polygon count. Any of cap/label/ring >= --m2-conf
+  -> big red "PET REJECT" (+ which parts); none -> big green "PET ACCEPT".
+  Verdict is held to a 3-of-last-5-frames vote so a borderline ring (~0.5)
+  cannot flicker the banner frame to frame.
 
 CPU-ONLY (app rule; GPU is for training only). 5 FPS governor. Top-left legend
 lists detections; verdict banner sits top-center.
 
-Model 1 default = the ALREADY-TRAINED v1 4-class OBB model (ONNX @416 export,
-falls back to seed7 best.pt). Class order of that model: 0=bottle 1=cap
-2=wrapper 3=aluminum — only 'bottle' gates the pipeline.
+Inference imgsz is read from the model file itself for static ONNX graphs
+(calling a 416 graph at 640 crashes onnxruntime), falling back to the CLI
+value for .pt weights.
+
+Model 1 default = v2 2-class ONNX @416 (0=bottle 1=aluminum), falling back to
+the archived v1 4-class model (cap/wrapper classes are masked, gate stays off).
 
 Usage (from model2-rebuild/, via model1 venv):
   ..\model1-rebuild\.venv\Scripts\python.exe scripts\pipeline_demo.py
@@ -21,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import time
+from collections import deque
 from pathlib import Path
 
 import cv2
@@ -31,14 +37,15 @@ ROOT = Path(__file__).resolve().parents[1]
 M1_ROOT = ROOT.parent / "model1-rebuild"
 
 M1_CANDIDATES = [  # (path, bottle_id, aluminum_id) — first existing wins
-    (M1_ROOT / "export" / "onnx_416" / "model.onnx", 0, 1),                 # v2 2-class (future)
-    (M1_ROOT / "runs" / "seed42_n640" / "weights" / "best.pt", 0, 1),       # v2 2-class (future)
-    (M1_ROOT / "export" / "v1_4class" / "onnx_416" / "model.onnx", 0, 3),   # v1 4-class (in use)
+    (M1_ROOT / "export" / "onnx_416" / "model.onnx", 0, 1),                 # v2 2-class (in use)
+    (M1_ROOT / "runs" / "seed42_n640" / "weights" / "best.pt", 0, 1),       # v2 2-class
+    (M1_ROOT / "export" / "v1_4class" / "onnx_416" / "model.onnx", 0, 3),   # v1 4-class (legacy)
     (M1_ROOT / "runs" / "v1_4class" / "seed7_n640" / "weights" / "best.pt", 0, 3),
     (M1_ROOT / "runs" / "v1_4class" / "seed42_n640" / "weights" / "best.pt", 0, 3),
 ]
 M2_CANDIDATES = [
-    ROOT / "export" / "onnx_416" / "model.onnx",
+    ROOT / "export" / "onnx_640" / "model.onnx",   # 640 = train size (deploy format)
+    ROOT / "export" / "onnx_416" / "model.onnx",   # legacy 416 variant
     ROOT / "runs" / "m2_seed42_n640" / "weights" / "best.pt",
 ]
 M2_NAMES = {0: "cap", 1: "label", 2: "ring"}
@@ -60,13 +67,15 @@ def pick(candidates, label: str):
     raise SystemExit(1)
 
 
-def poly_aabb(poly: np.ndarray, shape, margin: float = 0.15):
-    h, w = shape[:2]
-    x1, y1 = poly.min(axis=0)
-    x2, y2 = poly.max(axis=0)
-    dx, dy = (x2 - x1) * margin, (y2 - y1) * margin
-    return (int(max(0, x1 - dx)), int(max(0, y1 - dy)),
-            int(min(w, x2 + dx)), int(min(h, y2 + dy)))
+def onnx_imgsz(path: Path) -> int | None:
+    """Static ONNX graphs accept only their exported size — read it from the graph."""
+    try:
+        import onnxruntime as ort
+        session = ort.InferenceSession(str(path), providers=["CPUExecutionProvider"])
+        n = session.get_inputs()[0].shape[2]
+        return int(n) if isinstance(n, int) else None
+    except Exception:
+        return None
 
 
 def main() -> int:
@@ -76,7 +85,8 @@ def main() -> int:
     ap.add_argument("--m1-conf", type=float, default=0.5)
     ap.add_argument("--m2-conf", type=float, default=0.5)
     ap.add_argument("--m2-imgsz", type=int, default=640,
-                    help="Model 2 input size on the crop (640 = train size)")
+                    help="Model 2 input size (used for .pt weights; ONNX graphs"
+                         " always run at their exported size)")
     ap.add_argument("--save", default=None)
     ap.add_argument("--max-frames", type=int, default=0)
     args = ap.parse_args()
@@ -86,6 +96,9 @@ def main() -> int:
     m1_path, m1_bottle, m1_aluminum = m1_c
     m1 = YOLO(str(m1_path), task="obb" if m1_path.suffix == ".onnx" else None)
     m2 = YOLO(str(m2_path), task="obb" if m2_path.suffix == ".onnx" else None)
+    m1_imgsz = onnx_imgsz(m1_path) or 416
+    m2_imgsz = onnx_imgsz(m2_path) or args.m2_imgsz
+    print(f"[gate] inference sizes: M1={m1_imgsz}, M2={m2_imgsz}")
 
     src = int(args.source) if args.source.isdigit() else args.source
     cap = cv2.VideoCapture(src)
@@ -97,6 +110,7 @@ def main() -> int:
         save_dir.mkdir(parents=True, exist_ok=True)
 
     interval = 1.0 / max(args.fps, 0.1)
+    vote: deque[str] = deque(maxlen=5)
     n = 0
     while True:
         t0 = time.perf_counter()
@@ -107,8 +121,9 @@ def main() -> int:
         n += 1
         legend: list[tuple[str, tuple]] = []
         verdict, vcolor = "", (160, 160, 160)
+        gate_active = False
 
-        r1 = m1.predict(frame, imgsz=416, conf=args.m1_conf, device=DEVICE, verbose=False)[0]
+        r1 = m1.predict(frame, imgsz=m1_imgsz, conf=args.m1_conf, device=DEVICE, verbose=False)[0]
         if r1.obb is not None and len(r1.obb):
             polys = r1.obb.xyxyxyxy.cpu().numpy()
             clss = r1.obb.cls.cpu().numpy().astype(int)
@@ -133,31 +148,40 @@ def main() -> int:
                            "Aluminum can" if len(alu_idx) else "other (gate off)", color))
 
             if is_pet:
-                x1, y1, x2, y2 = poly_aabb(polys[best], frame.shape)
-                crop = frame[y1:y2, x1:x2]
-                if crop.size:
-                    r2 = m2.predict(crop, imgsz=args.m2_imgsz, conf=0.1,
-                                    device=DEVICE, verbose=False)[0]
-                    hits: list[tuple[str, float]] = []
-                    if r2.obb is not None and len(r2.obb):
-                        p2 = r2.obb.xyxyxyxy.cpu().numpy()
-                        c2 = r2.obb.cls.cpu().numpy().astype(int)
-                        f2 = r2.obb.conf.cpu().numpy()
-                        for poly, ci, cf in zip(p2, c2, f2):
-                            drawn = (poly + [x1, y1]).astype(np.int32)
-                            cv2.polylines(frame, [drawn], True, M2_COLORS.get(ci, (255, 255, 255)), 2)
-                            legend.append((f"{M2_NAMES.get(ci, ci)} {cf*100:.0f}%",
-                                           M2_COLORS.get(ci, (255, 255, 255))))
-                            if cf >= args.m2_conf:
-                                hits.append((M2_NAMES.get(ci, str(ci)), float(cf)))
-                    if hits:
-                        verdict = "PET REJECT — " + ", ".join(f"{k} {v*100:.0f}%" for k, v in hits)
-                        vcolor = (0, 0, 255)
-                    else:
-                        verdict = "PET ACCEPT (no cap/label/ring)"
-                        vcolor = (0, 200, 0)
+                gate_active = True
+                # Direction C: Model 2 sees the FULL frame (like training);
+                # only detections inside the bottle polygon belong to it.
+                r2 = m2.predict(frame, imgsz=m2_imgsz, conf=0.1,
+                                device=DEVICE, verbose=False)[0]
+                hits: list[tuple[str, float]] = []
+                if r2.obb is not None and len(r2.obb):
+                    p2 = r2.obb.xyxyxyxy.cpu().numpy()
+                    c2 = r2.obb.cls.cpu().numpy().astype(int)
+                    f2 = r2.obb.conf.cpu().numpy()
+                    contour = polys[best].astype(np.float32)
+                    for poly, ci, cf in zip(p2, c2, f2):
+                        cx, cy = poly.mean(axis=0)
+                        if cv2.pointPolygonTest(contour, (float(cx), float(cy)), False) < 0:
+                            continue  # belongs to another object / background
+                        cv2.polylines(frame, [poly.astype(np.int32)], True,
+                                      M2_COLORS.get(ci, (255, 255, 255)), 2)
+                        legend.append((f"{M2_NAMES.get(ci, ci)} {cf*100:.0f}%",
+                                       M2_COLORS.get(ci, (255, 255, 255))))
+                        if cf >= args.m2_conf:
+                            hits.append((M2_NAMES.get(ci, str(ci)), float(cf)))
+                vote.append("REJECT" if hits else "ACCEPT")
+                if vote.count("REJECT") >= 3:
+                    parts = ", ".join(f"{k} {v*100:.0f}%" for k, v in hits) or "residual"
+                    verdict, vcolor = f"PET REJECT — {parts}", (0, 0, 255)
+                elif vote.count("ACCEPT") >= 3:
+                    verdict, vcolor = "PET ACCEPT (no cap/label/ring)", (0, 200, 0)
+                else:
+                    verdict = (f"judging... {vote.count('REJECT')}R/"
+                               f"{vote.count('ACCEPT')}A of {len(vote)}")
         else:
             legend.append(("no PET bottle / aluminum can in frame", (160, 160, 160)))
+        if not gate_active:
+            vote.clear()
 
         # verdict banner (top center) + left legend + bottom status
         if verdict:
