@@ -1,12 +1,12 @@
 """Phase D — perceptual-hash deduplication of normalized images.
 
-- pHash (imagehash, 64-bit) every image in dataset/normalized/images
+- pHash (imagehash, 64-bit) every image in ../dataset/model2/normalized/images
 - duplicates: hamming distance <= THRESHOLD (default 8, kit spec)
 - cluster duplicates (union-find), keep ONE per cluster by source priority:
-      dataset-3 > dataset-2 > dataset-5 > dataset-4 > dataset-1
-  (most-curated part-level sources first; documented in stats.md)
-- losers are MOVED to dataset/audits/duplicates/ (nothing deleted) and dropped
-  from dataset/sources.csv
+      owner-live > PET-bottle-with-cap-and-label > PET-bottle
+  (owner live / curated part-level first; PET-cap-ring no longer ingested)
+- losers are MOVED to ../dataset/model2/audits/duplicates/ (nothing deleted) and dropped
+  from ../dataset/model2/sources.csv
 - reports pairs/clusters to logs/dedupe_report.json + prints summary
 
 Usage: python scripts/dedupe.py [threshold]
@@ -24,18 +24,34 @@ import numpy as np
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
-IMG_DIR = ROOT / "dataset" / "normalized" / "images"
-LBL_DIR = ROOT / "dataset" / "normalized" / "labels"
-DUP_DIR = ROOT / "dataset" / "audits" / "duplicates"
-SOURCES_CSV = ROOT / "dataset" / "sources.csv"
+DATA_ROOT = ROOT.parent / "dataset"
+IMG_DIR = DATA_ROOT / "model2" / "normalized" / "images"
+LBL_DIR = DATA_ROOT / "model2" / "normalized" / "labels"
+DUP_DIR = DATA_ROOT / "model2" / "audits" / "duplicates"
+SOURCES_CSV = DATA_ROOT / "model2" / "sources.csv"
 REPORT = ROOT / "logs" / "dedupe_report.json"
 
-PRIORITY = ["dataset-2", "ring-dataset"]  # cap/label data is scarce: never drop it for ring
+PRIORITY = [
+    "owner-live",
+    "PET-bottle-with-cap-and-label",
+    "PET-bottle",
+]
+
+
+# legacy prefixes (pre-2026-08-23 layout) -> canonical source names
+ALIAS = {
+    "dataset-1": "aluminum-cans",
+    "dataset-2": "PET-bottle-with-cap-and-label",
+    "dataset-3": "PET-bottle",
+    "dataset-4": "PET-bottle-and-can",
+    "dataset-5": "water-bottle-with-cap-and-wrapper",
+    "ring-dataset": "PET-cap-ring",
+}
 
 
 def source_of(stem: str) -> str:
-    # stems look like 'dataset-3_8F769742-....rf.0d0f41a7...' -> 'dataset-3'
-    return stem.split("_", 1)[0]
+    src = stem.split("_", 1)[0]
+    return ALIAS.get(src, src)
 
 
 class UF:
@@ -78,13 +94,14 @@ def main() -> int:
     uf = UF(n)
     n_pairs = 0
     pair_samples: list[tuple[str, str, int]] = []
-    # Model 2 rules: ring-dataset = video frames -> aggressive (<= threshold);
-    # dataset-2's x3 export augmentations are legitimate training data whose
-    # leakage is prevented by the grouped split -> exact duplicates (d==0) only.
+    # Roboflow x3 augmentations stay (leakage blocked by grouped split) ->
+    # exact duplicates (d==0) only for studio sources. owner-live video-like
+    # shots may use pHash <= threshold within the same source.
     src_of_all = [source_of(images[i].stem) for i in range(n)]
+
     def allowed(i: int, j: int, d: int) -> bool:
         a, b = src_of_all[i], src_of_all[j]
-        if a == "ring-dataset" and b == "ring-dataset":
+        if a == "owner-live" and b == "owner-live":
             return d <= threshold
         return d == 0
     B = 512

@@ -44,9 +44,9 @@ M1_CANDIDATES = [  # (path, bottle_id, aluminum_id) — first existing wins
     (M1_ROOT / "runs" / "v1_4class" / "seed42_n640" / "weights" / "best.pt", 0, 3),
 ]
 M2_CANDIDATES = [
-    ROOT / "export" / "onnx_640" / "model.onnx",   # 640 = train size (deploy format)
-    ROOT / "export" / "onnx_416" / "model.onnx",   # legacy 416 variant
-    ROOT / "runs" / "m2_seed42_n640" / "weights" / "best.pt",
+    ROOT / "export" / "onnx_640" / "model.onnx",   # train size (PC)
+    ROOT / "export" / "onnx_416" / "model.onnx",   # Jetson deploy size
+    ROOT / "runs" / "m2v3_seed42_n640" / "weights" / "best.pt",
 ]
 M2_NAMES = {0: "cap", 1: "label", 2: "ring"}
 M2_COLORS = {0: (0, 0, 255), 1: (0, 255, 255), 2: (255, 0, 255)}

@@ -12,7 +12,7 @@ from pathlib import Path
 import cv2
 
 ROOT = Path(__file__).resolve().parents[1]
-INCOMING = ROOT / "dataset" / "incoming"
+INCOMING = ROOT.parent / "dataset" / "sources"
 OUT = ROOT / "logs" / "render"
 
 COLORS = [

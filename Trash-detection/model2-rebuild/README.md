@@ -1,57 +1,78 @@
-# Model 2 — cap / label / sealant-ring detector (YOLOv8n-OBB, 3 classes)
+# Model 2 v3 — cap / label / sealant-ring (YOLOv8n-OBB → Jetson Nano B01)
 
-GreenGuard gating stage: Model 1 (already trained, detects PET bottle) triggers
-Model 2 on the bottle crop; Model 2 decides **PET ACCEPT** (none of the three
-found) or **PET REJECT** (cap, label, or sealant ring found).
+Standalone part detector for GreenGuard. Classes: `0=cap  1=label  2=ring`.
+Trains on PC (RTX 3060); deploys as **ONNX FP32 @416** on Jetson Nano B01.
 
-Classes (canonical): `0=cap  1=label  2=ring` — YOLOv8 OBB format.
+## Dataset verdict (v3 rebuild)
 
-## Data
+| Source | Used? | Why |
+|---|---|---|
+| `PET-bottle-with-cap-and-label` | yes | Real cap + label OBB |
+| `PET-bottle` | yes | Harvest `1=cap`, `2=label` (drop bottle/liquid) — audit confirmed part boxes |
+| `PET-cap-ring` | **no** | Instant auto-label mixes cap and ring → teaches “cap = ring” |
+| `water-bottle-with-cap-and-wrapper` | **no** | Audit: bottlecap≈2, wrapper≈5 mostly whole-body |
+| `owner-live/` | **required before full train** | Your true ring + webcam/Jetson photos |
 
-- `dataset/incoming/cap-label/dataset-2` — mohammed-essam bottle-cap-label-detection
-  v3 (1,558 imgs, CC BY 4.0), OBB: cap + label. **Already in place.**
-- `dataset/incoming/ring-dataset/` — owner-downloads from Roboflow
-  (**export format: YOLOv8 Oriented Bounding Boxes**, with train/valid/test).
-  Mixed box/polygon annotations on Roboflow are normalized to OBB by the export.
+**DATA_GAP until you add data:** put a YOLOv8-OBB export under
+`..\dataset\sources\owner-live\` with `data.yaml` names `cap/label/ring`, plus
+`train/images` + `train/labels` (and ideally `valid/`). Targets from the plan:
+≥400 unique true-ring (uncapped, ring on neck) and ≥300 live-camera photos
+including bare-bottle negatives (empty label files OK).
 
-## One-command build (after ring data is in place)
+## One-command train
+
+**Cap/label-first** (ring data later — class `2=ring` stays in schema, not learned yet):
 
 ```powershell
 cd D:\Code\Project\bki\Detection-rebuild\model2-rebuild
+powershell -ExecutionPolicy Bypass -File scripts\run_model2_training.ps1 -AllowNoRing
+```
+
+**Full 3-class** (after true-ring is in `owner-live/`):
+
+```powershell
 powershell -ExecutionPolicy Bypass -File scripts\run_model2_training.ps1
 ```
 
-Chains: normalize → dedupe (pHash ≤8) → grouped split 70/20/10 → train
-(50 epochs, patience 15, cosine LR, batch 24, seed 42 — ~40–60 min on RTX 3060)
-→ val eval (targets: cap/label/ring ≥ 0.80 each).
+Pipeline: normalize → dedupe → grouped split → train (**200 ep**, patience 50,
+imgsz **640**, batch 24, seed 42, ~3–3.5 h on 3060) → eval @640 + @416.
 
-## Validation results (2026-08-23)
-
-Model 2 val (442 imgs): **cap mAP50 0.919 · label 0.951 · ring 0.892** (targets
-0.80 — all PASS; overall 0.920). End-to-end gate verified on a held-out ring
-frame: M1 bottle 0.91 → GATE ON → M2 ring 0.85 → **PET REJECT**. Close-ups with
-no bottle box keep the gate OFF (by design — M1 must confirm PET first).
-
-## Validation workflow for the team
-
-### 1. Automated re-checks (optional, from model2-rebuild/)
+Smoke only (proves launcher; does **not** replace the 4h train):
 
 ```powershell
-# per-class metrics on val
-..\model1-rebuild\.venv\Scripts\python.exe scripts\eval_val.py
-# end-to-end gate on a held-out image (prints verdict, saves annotated frame)
-..\model1-rebuild\.venv\Scripts\python.exe scripts\pipeline_demo.py --source dataset\splits\test\images\ring-dataset_23_X002_C172_0929_0_jpg.rf.5f04f6c85e5530fcbe4e32f3a9b4186c.jpg --save logs\gate_test --max-frames 1
+powershell -ExecutionPolicy Bypass -File scripts\run_model2_training.ps1 -Smoke
 ```
 
-### 2. Live test matrix (webcam, run_gate_demo.bat)
+Weights land at `runs\m2v3_seed42_n640\weights\best.pt` (old `m2_seed42_n640`
+kept as archive).
 
-| # | Item in front of camera | Expected on screen |
+## Test on laptop (Model 2 only)
+
+```powershell
+cd D:\Code\Project\bki\Detection-rebuild\model2-rebuild
+.\run_m2_demo.bat
+# options: --fps 10 --conf 0.4 --source video.mp4 --save logs\m2_demo
+```
+
+Two-model gate (Model 1 + Model 2): `.\run_gate_demo.bat`
+
+## After training — export for Nano
+
+```powershell
+..\model1-rebuild\.venv\Scripts\python.exe scripts\export_onnx.py
+```
+
+Copy `export\onnx_416\` to the Nano. See [`jetson/README.md`](jetson/README.md).
+
+## Live 5-case check (PC, after train)
+
+| # | Item | Expected |
 |---|---|---|
-| 1 | PET bottle WITH cap (and label) | blue bottle box + banner đỏ `PET REJECT — cap ..%, label ..%` |
-| 2 | PET bottle, cap removed, RING still on neck | `PET REJECT — ring ..%` |
-| 3 | PET bottle completely bare (no cap/label/ring) | `PET ACCEPT` |
-| 4 | Aluminum can | green `non-PET` legend, NO banner |
-| 5 | Empty frame / hand only | `no bottle in frame` |
+| 1 | PET with cap (+ label) | detect cap / label |
+| 2 | Cap off, ring on neck | detect ring |
+| 3 | Bare bottle | no part detections |
+| 4 | Empty / hand | no false fire |
+| 5 | Odd lighting / distance | still usable |
 
-Tuning: `--m1-conf` (default 0.5, gate trigger), `--m2-conf` (default 0.5,
-REJECT sensitivity), `--fps` (default 5). CPU-only by design.
+Gate demo with Model 1 remains available via `run_gate_demo.bat` (M1+M2); Nano
+phase is **M2-only**.

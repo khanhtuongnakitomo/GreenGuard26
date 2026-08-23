@@ -1,5 +1,9 @@
 {
-  "dataset-2": {
+  "skipped_sources": [
+    "PET-cap-ring (mixed Instant auto-label \u2014 not true ring)",
+    "water-bottle-with-cap-and-wrapper (audit: n\u22480 usable part boxes)"
+  ],
+  "PET-bottle-with-cap-and-label": {
     "images_kept": 1320,
     "images_dropped_empty": 238,
     "lines_dropped": 0,
@@ -11,23 +15,39 @@
     },
     "kept_per_origin_split": {
       "train": 1216,
-      "valid": 56,
+      "val": 56,
       "test": 48
     }
   },
-  "ring-dataset": {
-    "images_kept": 1498,
-    "images_dropped_empty": 32,
-    "lines_dropped": 0,
-    "lines_clamped": 0,
+  "PET-bottle": {
+    "images_kept": 1528,
+    "images_dropped_empty": 104,
+    "lines_dropped": 11834,
+    "lines_clamped": 458,
     "lines_quarantined": 0,
     "instances": {
-      "ring": 1503
+      "cap": 5339,
+      "label": 5111
     },
     "kept_per_origin_split": {
-      "train": 1311,
-      "valid": 125,
-      "test": 62
+      "train": 1332,
+      "val": 131,
+      "test": 65
+    }
+  },
+  "owner-live": {
+    "images_kept": 393,
+    "images_dropped_empty": 0,
+    "lines_dropped": 0,
+    "lines_clamped": 8,
+    "lines_quarantined": 0,
+    "instances": {
+      "cap": 412,
+      "label": 310
+    },
+    "kept_per_origin_split": {
+      "train": 317,
+      "val": 76
     }
   }
 }

@@ -1,10 +1,10 @@
 task: obb
 mode: train
 model: yolov8n-obb.pt
-data: D:\Code\Project\bki\Detection-rebuild\model2-rebuild\dataset\dataset.yaml
-epochs: 50
+data: D:\Code\Project\bki\Detection-rebuild\dataset\model2\dataset.yaml
+epochs: 200
 time: null
-patience: 15
+patience: 50
 batch: 24
 imgsz: 640
 save: true
@@ -13,7 +13,7 @@ cache: false
 device: ''
 workers: 4
 project: D:\Code\Project\bki\Detection-rebuild\model2-rebuild\runs
-name: m2_seed42_n640
+name: m2v3_seed42_n640
 exist_ok: true
 pretrained: true
 cls_remap: true
@@ -24,7 +24,7 @@ deterministic: true
 single_cls: false
 rect: false
 cos_lr: true
-close_mosaic: 10
+close_mosaic: 20
 resume: false
 amp: true
 fraction: 1.0
@@ -113,4 +113,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: tracktrack.yaml
-save_dir: D:\Code\Project\bki\Detection-rebuild\model2-rebuild\runs\m2_seed42_n640
+save_dir: D:\Code\Project\bki\Detection-rebuild\model2-rebuild\runs\m2v3_seed42_n640

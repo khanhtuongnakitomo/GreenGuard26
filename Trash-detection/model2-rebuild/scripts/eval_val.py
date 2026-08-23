@@ -15,7 +15,7 @@ from pathlib import Path
 from ultralytics import YOLO
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "dataset" / "dataset.yaml"
+DATA = ROOT.parent / "dataset" / "model2" / "dataset.yaml"
 NAMES = ["cap", "label", "ring"]
 TARGETS = {"cap": 0.80, "label": 0.80, "ring": 0.80}
 
@@ -45,7 +45,7 @@ def evaluate(run: str) -> dict[str, tuple[float, float]] | None:
 
 
 def main() -> int:
-    runs = sys.argv[1:] or ["m2_seed42_n640"]
+    runs = sys.argv[1:] or ["m2v3_seed42_n640"]
     results = {run: evaluate(run) for run in runs}
     trained = {k: v for k, v in results.items() if v}
     if len(trained) == 2:

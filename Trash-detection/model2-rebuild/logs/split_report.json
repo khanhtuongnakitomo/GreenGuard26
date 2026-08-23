@@ -1,45 +1,42 @@
 {
-  "images_total": 2198,
+  "images_total": 2279,
   "images_per_split": {
-    "train": 1534,
-    "val": 442,
-    "test": 222
+    "train": 1594,
+    "val": 457,
+    "test": 228
   },
-  "groups": 1049,
+  "groups": 1135,
   "groups_spanning_splits": 0,
   "instances_per_split": {
     "train": {
-      "cap": 476,
-      "label": 531,
-      "ring": 888
+      "cap": 3626,
+      "label": 3558
     },
     "val": {
-      "cap": 95,
-      "label": 130,
-      "ring": 295
+      "cap": 1027,
+      "label": 946
     },
     "test": {
-      "cap": 75,
-      "label": 77,
-      "ring": 123
+      "cap": 741,
+      "label": 625
     }
   },
   "class_presence": {
     "train": {
-      "cap": 476,
-      "label": 531,
-      "ring": 888
+      "cap": 3626,
+      "label": 3558,
+      "ring": 0
     },
     "val": {
-      "cap": 95,
-      "label": 130,
-      "ring": 295
+      "cap": 1027,
+      "label": 946,
+      "ring": 0
     },
     "test": {
-      "cap": 75,
-      "label": 77,
-      "ring": 123
+      "cap": 741,
+      "label": 625,
+      "ring": 0
     }
   },
-  "dataset_yaml": "D:\\Code\\Project\\bki\\Detection-rebuild\\model2-rebuild\\dataset\\dataset.yaml"
+  "dataset_yaml": "D:\\Code\\Project\\bki\\Detection-rebuild\\dataset\\model2\\dataset.yaml"
 }
