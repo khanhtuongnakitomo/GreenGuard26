@@ -27,6 +27,11 @@ export/v1_4class/onnx_416/*
 !export/v1_4class/onnx_416/model.onnx
 !export/v1_4class/onnx_416/labels.txt
 
+# --- Fix B classifier export (PET vs can @224) ---
+export/cls_onnx_224/*
+!export/cls_onnx_224/model.onnx
+!export/cls_onnx_224/labels.txt
+
 # --- dataset bulk: regenerable via scripts/ (inspect -> normalize -> dedupe ->
 #     split); licenses & provenance live in dataset/CREDITS.md ---
 dataset/incoming/

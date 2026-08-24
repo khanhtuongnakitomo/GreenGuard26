@@ -25,6 +25,7 @@ Usage (from model2-rebuild/, via model1 venv):
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 from collections import deque
 from pathlib import Path
@@ -35,6 +36,8 @@ from ultralytics import YOLO
 
 ROOT = Path(__file__).resolve().parents[1]
 M1_ROOT = ROOT.parent / "model1-rebuild"
+sys.path.insert(0, str(M1_ROOT / "scripts"))
+from m1_two_stage import PetCanDecider  # noqa: E402
 
 M1_CANDIDATES = [  # (path, bottle_id, aluminum_id) — first existing wins
     (M1_ROOT / "export" / "onnx_416" / "model.onnx", 0, 1),                 # v2 2-class (in use)
@@ -94,7 +97,10 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", default="0")
     ap.add_argument("--fps", type=float, default=5.0)
-    ap.add_argument("--m1-conf", type=float, default=0.5)
+    ap.add_argument("--m1-conf", type=float, default=0.05,
+                    help="Model 1 detector conf for localization (two-stage)")
+    ap.add_argument("--no-m1-cls", action="store_true",
+                    help="use legacy detector class ids instead of crop classifier")
     ap.add_argument("--m2-conf", type=float, default=0.5)
     ap.add_argument("--m2-imgsz", type=int, default=640,
                     help="Model 2 input size (used for .pt weights; ONNX graphs"
@@ -114,11 +120,26 @@ def main() -> int:
     if str(m2_path).endswith(".onnx"):
         print(f"[gate] Model 2 onnx date: {onnx_date(Path(m2_path))}")
     m1_path, m1_bottle, m1_aluminum = m1_c
-    m1 = YOLO(str(m1_path), task="obb" if m1_path.suffix == ".onnx" else None)
-    m2 = YOLO(str(m2_path), task="obb" if m2_path.suffix == ".onnx" else None)
     m1_imgsz = onnx_imgsz(m1_path) or 416
     m2_imgsz = onnx_imgsz(m2_path) or args.m2_imgsz
-    print(f"[gate] inference sizes: M1={m1_imgsz}, M2={m2_imgsz}")
+    print(f"[gate] inference sizes: M1 det={m1_imgsz}, M2={m2_imgsz}")
+
+    m1_decider = None
+    m1 = None
+    if not args.no_m1_cls:
+        try:
+            m1_decider = PetCanDecider(
+                det_path=str(m1_path),
+                det_imgsz=m1_imgsz,
+                det_conf=args.m1_conf,
+            )
+            print("[gate] Model 1 mode: two-stage (detect + classify)")
+        except FileNotFoundError as e:
+            print(f"[gate] classifier missing ({e}); legacy detector classes")
+    if m1_decider is None:
+        m1 = YOLO(str(m1_path), task="obb" if m1_path.suffix == ".onnx" else None)
+        print("[gate] Model 1 mode: detector-only")
+    m2 = YOLO(str(m2_path), task="obb" if m2_path.suffix == ".onnx" else None)
 
     src = int(args.source) if args.source.isdigit() else args.source
     cap = cv2.VideoCapture(src)
@@ -143,34 +164,45 @@ def main() -> int:
         verdict, vcolor = "", (160, 160, 160)
         gate_active = False
 
-        r1 = m1.predict(frame, imgsz=m1_imgsz, conf=args.m1_conf, device=DEVICE, verbose=False)[0]
-        if r1.obb is not None and len(r1.obb):
-            polys = r1.obb.xyxyxyxy.cpu().numpy()
-            clss = r1.obb.cls.cpu().numpy().astype(int)
-            confs = r1.obb.conf.cpu().numpy()
-            # Model 1 presents exactly two outcomes: PET bottle (gate ON) or
-            # Aluminum can (gate OFF). Other v1 classes (cap/wrapper) are
-            # Model 2's job and stay masked.
-            bottle_idx = np.where(clss == m1_bottle)[0]
-            alu_idx = np.where(clss == m1_aluminum)[0]
-            if len(bottle_idx):
-                best = bottle_idx[int(np.argmax(confs[bottle_idx]))]
-                is_pet, color = True, (255, 80, 0)
-            elif len(alu_idx):
-                best = alu_idx[int(np.argmax(confs[alu_idx]))]
-                is_pet, color = False, (0, 255, 0)
-            else:
-                best = int(np.argmax(confs))  # masked class: draw faint, gate OFF
-                is_pet, color = False, (120, 120, 120)
-            box = polys[best].astype(np.int32)
+        r1 = m1_decider.run(frame) if m1_decider else None
+        if m1_decider and r1.get("label"):
+            box = r1["poly"]
+            is_pet = r1["voted"] == "pet"
+            color = r1["color"]
             cv2.polylines(frame, [box], True, color, 2)
-            legend.append(("PET bottle" if is_pet else
-                           "Aluminum can" if len(alu_idx) else "other (gate off)", color))
+            legend.append((r1["legend_text"], color))
+        elif m1 is not None:
+            r1_legacy = m1.predict(frame, imgsz=m1_imgsz, conf=max(args.m1_conf, 0.25),
+                                   device=DEVICE, verbose=False)[0]
+            if r1_legacy.obb is not None and len(r1_legacy.obb):
+                polys = r1_legacy.obb.xyxyxyxy.cpu().numpy()
+                clss = r1_legacy.obb.cls.cpu().numpy().astype(int)
+                confs = r1_legacy.obb.conf.cpu().numpy()
+                bottle_idx = np.where(clss == m1_bottle)[0]
+                alu_idx = np.where(clss == m1_aluminum)[0]
+                if len(bottle_idx):
+                    best = bottle_idx[int(np.argmax(confs[bottle_idx]))]
+                    is_pet, color = True, (255, 80, 0)
+                elif len(alu_idx):
+                    best = alu_idx[int(np.argmax(confs[alu_idx]))]
+                    is_pet, color = False, (0, 255, 0)
+                else:
+                    best = int(np.argmax(confs))
+                    is_pet, color = False, (120, 120, 120)
+                box = polys[best].astype(np.int32)
+                cv2.polylines(frame, [box], True, color, 2)
+                legend.append(("PET bottle" if is_pet else
+                               "Aluminum can" if len(alu_idx) else "other (gate off)", color))
+            else:
+                is_pet = False
+                box = None
+        else:
+            is_pet = False
+            box = None
 
+        if box is not None:
             if is_pet:
                 gate_active = True
-                # Direction C: Model 2 sees the FULL frame (like training);
-                # only detections inside the bottle polygon belong to it.
                 r2 = m2.predict(frame, imgsz=m2_imgsz, conf=0.1,
                                 device=DEVICE, verbose=False)[0]
                 hits: list[tuple[str, float]] = []
@@ -178,11 +210,11 @@ def main() -> int:
                     p2 = r2.obb.xyxyxyxy.cpu().numpy()
                     c2 = r2.obb.cls.cpu().numpy().astype(int)
                     f2 = r2.obb.conf.cpu().numpy()
-                    contour = polys[best].astype(np.float32)
+                    contour = box.astype(np.float32)
                     for poly, ci, cf in zip(p2, c2, f2):
                         cx, cy = poly.mean(axis=0)
                         if cv2.pointPolygonTest(contour, (float(cx), float(cy)), False) < 0:
-                            continue  # belongs to another object / background
+                            continue
                         cv2.polylines(frame, [poly.astype(np.int32)], True,
                                       M2_COLORS.get(ci, (255, 255, 255)), 2)
                         legend.append((f"{M2_NAMES.get(ci, ci)} {cf*100:.0f}%",
