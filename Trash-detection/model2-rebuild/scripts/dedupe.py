@@ -34,6 +34,8 @@ REPORT = ROOT / "logs" / "dedupe_report.json"
 PRIORITY = [
     "owner-live",
     "PET-bottle-with-cap-and-label",
+    "Bottle-label",
+    "Bottle-lying",
     "PET-bottle",
 ]
 

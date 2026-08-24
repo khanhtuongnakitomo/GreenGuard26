@@ -186,3 +186,23 @@ Target: ONNX FP32 @416, `onnxruntime` CPU on Nano.
 | Low FPS | CPU demo is slow by design; reduce `--fps` or use GPU machine for dev only |
 | No ring detections | Expected if trained with `-AllowNoRing`; add ring data and retrain |
 | Gate never shows REJECT | Lower `--m2-conf 0.4` or check M1 is calling PET (not aluminum) |
+
+## Training (which script to use)
+
+**Current training entry point:**
+```powershell
+powershell -ExecutionPolicy Bypass -File scriptsun_model2_rebuild_training.ps1
+```
+Fine-tune from `runs/m2v3_seed42_n640/weights/best.pt` (100 epochs, deg 90,
+lr0 0.001) -> `runs/m2_orient_seed42_n640/`. Pipeline: preflight (GPU required)
+-> normalize/dedupe/appearance-sim/split -> audits + **ring gate** (hard-stops
+if class 2 ring is missing from any split) -> eval sets -> smoke -> fine-tune
+-> gate compare -> export ONNX only on PASS. Flags: `-Smoke` (validate only),
+`-EvalOnly` (re-eval existing weights).
+
+`run_model2_training.ps1` is the OLD full-train script (200 epochs from
+`yolov8n-obb.pt`, with `-AllowNoRing`). Keep for reference / full retrains only.
+
+Data comes from `..\dataset\sources\` (shared folder at Trash-detection
+level). Verified ring data (owner-live) is mandatory before the rebuild passes
+stage 3.

@@ -36,6 +36,8 @@ def group_key(image_name: str) -> tuple[str, str]:
     stem = Path(image_name).stem
     source, rest = stem.split("_", 1)
     original = rest.split(".rf.")[0] if ".rf." in rest else rest
+    if original.endswith("_asim"):   # appearance-sim copies stay with their original
+        original = original[:-5]
     # Video / burst frames: keep an entire shot in one split
     if source in {"PET-cap-ring", "ring-dataset", "owner-live"}:
         original = re.sub(r"_\d+$", "", original)

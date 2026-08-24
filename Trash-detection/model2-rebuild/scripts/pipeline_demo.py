@@ -207,14 +207,18 @@ def main() -> int:
                                 device=DEVICE, verbose=False)[0]
                 hits: list[tuple[str, float]] = []
                 if r2.obb is not None and len(r2.obb):
+                    from single_instance import pick_top1_per_class, center_in_poly
                     p2 = r2.obb.xyxyxyxy.cpu().numpy()
                     c2 = r2.obb.cls.cpu().numpy().astype(int)
                     f2 = r2.obb.conf.cpu().numpy()
                     contour = box.astype(np.float32)
-                    for poly, ci, cf in zip(p2, c2, f2):
-                        cx, cy = poly.mean(axis=0)
-                        if cv2.pointPolygonTest(contour, (float(cx), float(cy)), False) < 0:
-                            continue
+                    # spatial filter, then at most ONE box per class
+                    inside = [i for i in range(len(p2))
+                              if center_in_poly((float(p2[i].mean(axis=0)[0]),
+                                                 float(p2[i].mean(axis=0)[1])), contour)]
+                    top = pick_top1_per_class(p2[inside], c2[inside], f2[inside], (0, 1, 2))                         if inside else {}
+                    for ci, ii in top.items():
+                        poly, cf = p2[inside][ii], f2[inside][ii]
                         cv2.polylines(frame, [poly.astype(np.int32)], True,
                                       M2_COLORS.get(ci, (255, 255, 255)), 2)
                         legend.append((f"{M2_NAMES.get(ci, ci)} {cf*100:.0f}%",

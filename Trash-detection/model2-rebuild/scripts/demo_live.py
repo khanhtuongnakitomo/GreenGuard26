@@ -164,12 +164,12 @@ def main() -> int:
                           device=DEVICE, verbose=False)[0]
         legend: list[tuple[str, tuple]] = []
         if r.obb is not None and len(r.obb):
-            legend = draw_detections(
-                frame,
-                r.obb.xyxyxyxy.cpu().numpy(),
-                r.obb.cls.cpu().numpy(),
-                r.obb.conf.cpu().numpy(),
-            )
+            from single_instance import pick_top1_per_class
+            polys = r.obb.xyxyxyxy.cpu().numpy()
+            clss = r.obb.cls.cpu().numpy().astype(int)
+            confs = r.obb.conf.cpu().numpy()
+            keep = sorted(pick_top1_per_class(polys, clss, confs, (0, 1, 2)).values())
+            legend = draw_detections(frame, polys[keep], clss[keep], confs[keep])
         draw_legend(frame, legend or [("no cap / label / ring detected", (160, 160, 160))])
 
         n += 1

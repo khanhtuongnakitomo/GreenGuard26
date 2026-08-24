@@ -42,6 +42,11 @@ CANONICAL = {0: "cap", 1: "label", 2: "ring"}
 CLASS_MAPS: dict[str, dict[int, int | None]] = {
     "PET-bottle-with-cap-and-label": {0: 0, 1: 1},
     "PET-bottle": {0: None, 1: 0, 2: 1, 3: None},  # drop bottle + liquid
+    # Bottle-label: label_standard->1=label; label_defect + liquid dropped
+    # (owner instruction 2026-08-23: extra classes like liquid are dropped)
+    "Bottle-label": {0: None, 1: 1, 2: None},
+    # Bottle-lying: lid->0=cap (horizontal bottles); bottle body dropped
+    "Bottle-lying": {0: None, 1: 0},
 }
 
 # Optional owner drop — only if folder + data.yaml exist
