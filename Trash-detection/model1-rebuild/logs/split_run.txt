@@ -1,0 +1,53 @@
+7486 images in 5068 groups
+{
+  "images_total": 7486,
+  "images_per_split": {
+    "train": 5238,
+    "val": 1498,
+    "test": 750
+  },
+  "groups": 5068,
+  "groups_spanning_splits": 0,
+  "instances_per_split": {
+    "train": {
+      "bottle": 5565,
+      "cap": 1343,
+      "wrapper": 1194,
+      "aluminum": 3564
+    },
+    "val": {
+      "bottle": 1694,
+      "cap": 472,
+      "wrapper": 458,
+      "aluminum": 1062
+    },
+    "test": {
+      "bottle": 852,
+      "cap": 230,
+      "wrapper": 258,
+      "aluminum": 678
+    }
+  },
+  "class_presence": {
+    "train": {
+      "bottle": 5565,
+      "cap": 1343,
+      "wrapper": 1194,
+      "aluminum": 3564
+    },
+    "val": {
+      "bottle": 1694,
+      "cap": 472,
+      "wrapper": 458,
+      "aluminum": 1062
+    },
+    "test": {
+      "bottle": 852,
+      "cap": 230,
+      "wrapper": 258,
+      "aluminum": 678
+    }
+  },
+  "dataset_yaml": "D:\\Code\\Project\\bki\\Detection-rebuild\\model1-rebuild\\dataset\\dataset.yaml"
+}
+INTEGRITY: PASS

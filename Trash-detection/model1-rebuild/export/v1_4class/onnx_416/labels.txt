@@ -1,0 +1,4 @@
+bottle
+cap
+wrapper
+aluminum

@@ -1,0 +1,92 @@
+
+=== dataset-1 ===
+  yaml classes: {0: '0', 1: '1', 2: '2', 3: 'can', 4: 'cans'}
+  train : images=2892  missing_lbl=0   empty_lbl=6   malformed=0
+          0                                1862
+          1                                656
+          2                                1647
+          can                              61
+          cans                             15
+  valid : images=276   missing_lbl=0   empty_lbl=2   malformed=0
+          0                                177
+          1                                61
+          2                                163
+          can                              10
+          cans                             4
+  test  : images=138   missing_lbl=0   empty_lbl=0   malformed=0
+          0                                79
+          1                                25
+          2                                91
+          can                              2
+  TOTAL instances: {'0': 2118, '1': 742, '2': 1901, 'can': 73, 'cans': 19}
+
+=== dataset-2 ===
+  yaml classes: {0: 'cap', 1: 'label'}
+  train : images=1438  missing_lbl=0   empty_lbl=222 malformed=0
+          cap                              899
+          label                            992
+  valid : images=60    missing_lbl=0   empty_lbl=4   malformed=0
+          cap                              41
+          label                            55
+  test  : images=60    missing_lbl=0   empty_lbl=12  malformed=0
+          cap                              30
+          label                            40
+  TOTAL instances: {'cap': 970, 'label': 1087}
+
+=== dataset-3 ===
+  yaml classes: {0: 'bottle', 1: 'cap', 2: 'label', 3: 'liquid'}
+  train : images=1428  missing_lbl=0   empty_lbl=12  malformed=1401
+          bottle                           5580
+          cap                              4722
+          label                            4302
+          liquid                           3951
+  valid : images=136   missing_lbl=0   empty_lbl=1   malformed=151
+          bottle                           518
+          cap                              389
+          label                            322
+          liquid                           358
+  test  : images=68    missing_lbl=0   empty_lbl=1   malformed=62
+          bottle                           150
+          cap                              131
+          label                            126
+          liquid                           121
+  TOTAL instances: {'bottle': 6248, 'cap': 5242, 'label': 4750, 'liquid': 4430}
+
+=== dataset-4 ===
+  yaml classes: {0: 'bottle', 1: 'can'}
+  train : images=4244  missing_lbl=0   empty_lbl=259 malformed=14
+          bottle                           3072
+          can                              2720
+  valid : images=907   missing_lbl=0   empty_lbl=103 malformed=0
+          bottle                           1104
+          can                              66
+  test  : images=908   missing_lbl=0   empty_lbl=24  malformed=0
+          bottle                           754
+          can                              447
+  TOTAL instances: {'bottle': 4930, 'can': 3233}
+
+=== dataset-5 ===
+  yaml classes: {0: 'bottle-cap-no-wrapper', 1: 'bottle-no-wrapper', 2: 'bottle-no-wrapper-cap', 3: 'bottle-wrapper-cap-plastic', 4: 'bottle-wrapper-no-cap', 5: 'bottlecap', 6: 'bottlewrapper'}
+  train : images=505   missing_lbl=0   empty_lbl=8   malformed=38
+          bottle-cap-no-wrapper            271
+          bottle-no-wrapper                4
+          bottle-no-wrapper-cap            42
+          bottle-wrapper-cap-plastic       963
+          bottle-wrapper-no-cap            4
+          bottlewrapper                    1
+  valid : images=145   missing_lbl=0   empty_lbl=0   malformed=7
+          bottle-cap-no-wrapper            67
+          bottle-no-wrapper-cap            11
+          bottle-wrapper-cap-plastic       286
+          bottle-wrapper-no-cap            1
+          bottlewrapper                    3
+  test  : images=72    missing_lbl=0   empty_lbl=0   malformed=5
+          bottle-cap-no-wrapper            29
+          bottle-no-wrapper-cap            8
+          bottle-wrapper-cap-plastic       127
+          bottlecap                        2
+  TOTAL instances: {'bottle-cap-no-wrapper': 367, 'bottle-no-wrapper': 4, 'bottle-no-wrapper-cap': 61, 'bottle-wrapper-cap-plastic': 1376, 'bottle-wrapper-no-cap': 5, 'bottlewrapper': 4, 'bottlecap': 2}
+
+TOTAL images across datasets: 13277
+
+JSON -> D:\Code\Project\bki\Detection-rebuild\model1-rebuild\logs\inspect_incoming.json

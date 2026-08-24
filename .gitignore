@@ -3,13 +3,21 @@ Trash-detection/Model1/data/
 Trash-detection/Model2/data/
 
 # Training outputs and logs
-runs/
+/runs/
 Trash-detection/Model1/runs/
 Trash-detection/Model2/runs/
 Trash-detection/Model1/logs/
 Trash-detection/Model2/logs/
 Trash-detection/Model1/failed/
 Trash-detection/Model2/failed/
+
+# Model1 rebuild dataset bulk (also covered by Trash-detection/model1-rebuild/.gitignore)
+Trash-detection/model1-rebuild/dataset/incoming/
+Trash-detection/model1-rebuild/dataset/normalized/
+Trash-detection/model1-rebuild/dataset/splits/
+Trash-detection/model1-rebuild/dataset/test_locked/
+Trash-detection/model1-rebuild/dataset/audits/duplicates/
+Trash-detection/model1-rebuild/dataset/audits/flagged_caps/
 
 # Python environments and secrets
 .venv/

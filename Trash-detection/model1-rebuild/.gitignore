@@ -1,0 +1,56 @@
+# GreenGuard Model 1 rebuild — .gitignore
+# Repo-friendly: keeps deliverables (weights/exports/reports/scripts),
+# drops regenerable bulk (venv, datasets, training stdout).
+
+# --- Python ---
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# --- pretrained base weights (auto re-download on first run) ---
+*.pt
+!runs/*/weights/best.pt
+
+# --- training runs: keep best.pt, results.csv, args.yaml, curves; drop bulk ---
+runs/*/weights/last.pt
+runs/*/train_batch*.jpg
+runs/*/val_batch*.jpg
+runs/*/labels.jpg
+
+# --- v1 (4-class) archived models: keep the gating demo's Model-1 ONNX @416,
+#     drop the rest of the archive ---
+runs/v1_4class/
+export/v1_4class/*
+!export/v1_4class/onnx_416/
+export/v1_4class/onnx_416/*
+!export/v1_4class/onnx_416/model.onnx
+!export/v1_4class/onnx_416/labels.txt
+
+# --- Fix B classifier export (PET vs can @224) ---
+export/cls_onnx_224/*
+!export/cls_onnx_224/model.onnx
+!export/cls_onnx_224/labels.txt
+
+# --- dataset bulk: regenerable via scripts/ (inspect -> normalize -> dedupe ->
+#     split); licenses & provenance live in dataset/CREDITS.md ---
+dataset/incoming/
+dataset/normalized/
+dataset/splits/
+dataset/test_locked/
+dataset/audits/duplicates/
+dataset/audits/flagged_caps/
+export/colab_kit/calib200/
+export/colab_kit/calib200.zip
+
+# --- logs: keep small evidence (env.txt, json reports, eval_val.log),
+#     drop 20 MB training stdout dumps and demo/render images ---
+logs/train_*seed*.log
+logs/render/
+logs/demo_out/
+logs/*.jpg
+logs/*.png
+
+# --- OS junk ---
+Thumbs.db
+Desktop.ini

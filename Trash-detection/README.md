@@ -1,309 +1,316 @@
-# GreenGuard Trash Detection
+# GreenGuard Trash Detection (rebuild)
 
-Computer-vision module for the **GreenGuard26** recycling kiosk. It runs a **two-stage pipeline**:
-
-1. **Model 1** — detect material type (`metal_can`, `pet_bottle`, `pp_cup`)
-2. **Model 2** — for **PET only**, detect whether a **cap**, **label**, or **liquid** is still visible
-
-If Model 1 sees PET and Model 2 finds a cap, label, or liquid (confidence ≥ 0.5), the kiosk **rejects** the item and does **not** count it. Cans and PP cups skip Model 2.
+Computer-vision stack for the **GreenGuard26** recycling kiosk. The **current**
+production path uses the rebuilt YOLOv8-OBB models under `model1-rebuild/` and
+`model2-rebuild/` (not the older `Model1/` / `Model2/` folders).
 
 ```text
-Camera
-  → Model 1 (material)
-       ├─ metal_can / pp_cup  → accept & count
-       └─ pet_bottle
-            → crop bottle region
-            → Model 2 (cap / label / liquid OBB)
-                 ├─ cap, label, or liquid found  → REJECT (not counted)
-                 └─ none of the three            → accept & count
+Camera (one object in frame)
+  → Model 1 — PET bottle vs aluminum can
+       ├─ aluminum can  → show result, stop (no Model 2)
+       └─ PET bottle
+            → Model 2 — cap / label / sealant-ring (OBB)
+                 ├─ any part ≥ threshold  → PET REJECT (red banner)
+                 └─ none                  → PET ACCEPT (green banner)
 ```
 
----
-
-## Repository layout
-
-```text
-Trash-detection/
-├── README.md                 ← you are here
-├── Model1/                   ← material detection + kiosk UI/session
-│   ├── models/
-│   │   ├── best.pt           ← committed (YOLO material model)
-│   │   └── best_float16.tflite
-│   ├── src/
-│   │   ├── test_webcam.py    ← PC live demo (PyTorch)
-│   │   └── inference_tflite.py
-│   └── setup.ps1
-└── Model2/                   ← PET cap/label/liquid inspection
-    ├── models/
-    │   └── best.pt           ← committed (YOLO11n-OBB)
-    ├── src/
-    │   ├── train.py
-    │   └── predict_folder.py
-    └── train.ps1
-```
-
-More detail:
-
-- [Model1/README.md](Model1/README.md) — material classifier, TFLite export, Raspberry Pi notes
-- [Model2/README.md](Model2/README.md) — cap/label/liquid training and preview
+**Branch with latest weights and demos:** `refactor/new-model-migrate`
 
 ---
 
-## What is in Git vs what is not
+## What you need
 
-| In the repo (after `git clone`) | Not in the repo (prepare locally) |
-|---|---|
-| All Python source code | `Model1/data/` — training images for Model 1 |
-| `Model1/models/best.pt` | `Model2/data/` — PET inspection datasets from Roboflow |
-| `Model1/models/best_float16.tflite` | `runs/` — training outputs |
-| `Model2/models/best.pt` | `.venv/` — Python virtual environments |
-| Config files (`configs/data.yaml`) | `.env` — backend keys and QR secret |
+| Item | Demo (inference) | Training |
+|---|---|---|
+| OS | Windows 10/11 (laptop or workstation) | Same |
+| Python | **3.11** recommended | 3.11 |
+| Webcam | USB or built-in (`--source 0`) | — |
+| GPU | Not required for demo (CPU @ ~5 FPS) | NVIDIA GPU recommended (e.g. RTX 3060) |
+| Disk | ~2 GB for venv + committed weights | +dataset size if retraining |
 
-Datasets are **intentionally gitignored** (large, downloadable from Roboflow). Pretrained weights for **inference** are committed so you can test on another laptop without retraining.
+Demos run on **CPU only** by design. GPU is for training.
 
 ---
 
-## Choose your path after `git clone`
-
-### Path A — Detection only (recommended for laptop / demo)
-
-Use this when you only want to **run the kiosk webcam** and test accept/reject behavior. **No training, no dataset download.**
-
-**You get:** Model 1 + Model 2 weights already in the repo.
+## 1. Clone the repo
 
 ```powershell
 git clone https://github.com/khanhtuongnakitomo/GreenGuard26.git
-cd GreenGuard26\Trash-detection\Model1
-
-# One-time setup (Python 3.12 + dependencies)
-.\setup.ps1
-
-# Optional: copy env template if you need QR/backend integration
-copy .env.example .env
-# Edit .env — see Model1 README
-
-# Live webcam test
-.\.venv\Scripts\activate
-python src\test_webcam.py
+cd GreenGuard26
+git checkout refactor/new-model-migrate
+git pull
 ```
 
-**Controls (demo mode, default):**
+All commands below assume you are in:
+
+```text
+GreenGuard26\Trash-detection\
+```
+
+---
+
+## 2. One-time install (shared environment)
+
+Both Model 1 and Model 2 demos use **one** virtual environment in
+`model1-rebuild/.venv`.
+
+```powershell
+cd Trash-detection\model1-rebuild
+
+# Create venv (Python 3.11)
+py -3.11 -m venv .venv
+
+# Activate
+.\.venv\Scripts\Activate.ps1
+
+# Install dependencies (CPU torch is fine for demo)
+pip install -r requirements.txt
+```
+
+**Optional — GPU for training only** (RTX 30/40 series example):
+
+```powershell
+pip uninstall -y torch torchvision
+pip install torch==2.13.0+cu126 torchvision==0.28.0+cu126 `
+  --index-url https://download.pytorch.org/whl/cu126
+python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+```
+
+Verify imports:
+
+```powershell
+python scripts\env_check.py
+```
+
+### What is already in Git (no download needed for demo)
+
+| Artifact | Path |
+|---|---|
+| Model 1 detector ONNX @416 | `model1-rebuild/export/onnx_416/model.onnx` |
+| Model 1 PET/can classifier ONNX @224 | `model1-rebuild/export/cls_onnx_224/model.onnx` |
+| Model 1 detector weights | `model1-rebuild/runs/seed42_n640/weights/best.pt` |
+| Model 1 classifier weights | `model1-rebuild/runs/cls_pet_can_seed42_n224/weights/best.pt` |
+| Model 2 ONNX @640 (PC) | `model2-rebuild/export/onnx_640/model.onnx` |
+| Model 2 ONNX @416 (Jetson) | `model2-rebuild/export/onnx_416/model.onnx` |
+| Model 2 weights | `model2-rebuild/runs/m2v3_seed42_n640/weights/best.pt` |
+
+Training datasets are **not** in Git. You only need them if you retrain.
+
+---
+
+## 3. Demo — Model 1 only (PET vs aluminum)
+
+Detects whether the object in frame is a **PET bottle** or an **aluminum can**.
+
+Uses **two-stage** inference when the classifier is present (default after pull):
+
+1. OBB detector finds the object (low confidence, localization only).
+2. Crop classifier (`yolov8n-cls @224`) decides PET vs can.
+
+```powershell
+cd Trash-detection\model1-rebuild
+.\run_m1_demo.bat
+```
 
 | Key | Action |
 |---|---|
 | `Q` | Quit |
-| `F` | Toggle detection on/off |
-| `G` | Generate / clear demo QR |
+| `S` | Save snapshot to `logs\demo_snap.jpg` |
 
-**What to expect:**
-
-| Item | Result |
-|---|---|
-| PET, cap/label/liquid off | ACCEPTED, counted |
-| PET, cap or label or liquid visible | REJECT, not counted |
-| Can / PP cup | ACCEPTED as before, Model 2 skipped |
-
-**Useful flags:**
+**Useful options** (append to the batch file or call Python directly):
 
 ```powershell
-python src\test_webcam.py --conf 0.65 --model2-conf 0.5 --camera 0
-python src\test_webcam.py --no-model2    # disable cap/label check (Model 1 only)
+.\.venv\Scripts\python.exe scripts\demo_live.py --fps 5 --det-conf 0.05
+.\.venv\Scripts\python.exe scripts\demo_live.py --source path\to\image.jpg
+.\.venv\Scripts\python.exe scripts\demo_live.py --save logs\m1_diag --max-frames 20
+.\.venv\Scripts\python.exe scripts\demo_live.py --no-cls
 ```
 
-**Requirements:** Windows PC with webcam, Python 3.12, `uv` (used by `setup.ps1`). GPU is **not** required for detection-only.
-
----
-
-### Path B — Retrain Model 2 (cap / label / liquid)
-
-Use this when you want to **improve** PET inspection or train on a new dataset. You must download the dataset yourself.
-
-```powershell
-cd GreenGuard26\Trash-detection\Model2
-
-python -m venv .venv
-.\.venv\Scripts\activate
-
-uv pip install -r requirements.txt
-
-# IMPORTANT: default PyPI torch is CPU-only — install CUDA build for GPU training
-uv pip uninstall torch torchvision
-uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
-python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
-# Expect: ...+cu128  True
-```
-
-**Dataset** (not in git). Unzip a YOLO OBB export into a folder under `Model2/data/`, for example `dataset-3`:
-
-```text
-Model2/data/dataset-3/
-  data.yaml
-  train/images  train/labels
-  valid/images  valid/labels
-  test/images   test/labels
-```
-
-`data.yaml` class names should include `cap`, `label`, and `liquid` (or `water`). `bottle` is optional context and is not a violation.
-
-**Train** (default folder is `data/dataset-3`):
-
-```powershell
-.\train.ps1
-.\train.ps1 -Dataset dataset-3
-.\train.ps1 -Dataset D:\datasets\pet-v4
-# or: python src\train.py --dataset data/dataset-3 --epochs 50 --batch 16 --device 0
-```
-
-Weights are copied to `Model2/models/best.pt`. Then run live test from Model1:
-
-```powershell
-cd ..\Model1
-python src\test_webcam.py
-```
-
-**Preview on test images (no webcam):**
-
-```powershell
-cd ..\Model2
-python src\predict_folder.py --conf 0.5
-# outputs → runs/preview/
-```
-
-**If GPU is not available:** `.\train.ps1 -Device cpu` works but is very slow.
-
-**If VRAM is low:** `.\train.ps1 -Batch 8`
-
-**Resume interrupted training:** `.\train.ps1 -Resume`
-
-See [Model2/README.md](Model2/README.md) for full training notes.
-
----
-
-### Path C — Retrain Model 1 (material types)
-
-Only needed if you are changing material classes or retraining the **can / PET / PP** detector. Most kiosk testing does **not** need this.
-
-1. Prepare a YOLO dataset under `Model1/data/` (not committed)
-2. Train from `Model1/`:
-
-```powershell
-cd Model1
-.\.venv\Scripts\activate
-python src\train.py
-```
-
-3. Export TFLite if deploying to Pi:
-
-```powershell
-python src\export.py
-```
-
-See [Model1/README.md](Model1/README.md) and [Model1/docs/](Model1/docs/) for the full Model 1 workflow.
-
----
-
-## Decision rules (current prototype)
-
-| Model 1 class | Model 2 result | Kiosk action |
+| Flag | Default | Meaning |
 |---|---|---|
-| `metal_can` | skipped | Accept & count |
-| `pp_cup` | skipped | Accept & count |
-| `pet_bottle` | no cap, no label, no liquid (≥ 0.5) | Accept & count · screen: ACCEPT / NO VIOLATION |
-| `pet_bottle` | cap, label, and/or liquid found | Reject, not counted · screen: REJECT / VIOLATION |
+| `--det-conf` | `0.05` | Detector threshold (localization) |
+| `--vote` | `5` | Majority vote over last N frames |
+| `--no-cls` | off | Legacy detector-only (no crop classifier) |
+| `--fps` | `5` | Target frame rate |
 
-**Preparation rule:** users should **remove cap and label and empty the bottle** before inserting PET. Model 2 inspects a **crop of the PET box only**. The kiosk UI shows the verdict, not cap/label/liquid boxes.
+**Expected:** one object in frame; legend shows `PET bottle` (orange) or
+`Aluminum can` (green) with classifier confidence.
 
-Default thresholds:
-
-- Model 1 material: `--conf 0.65`
-- Model 2 cap/label/liquid: `--model2-conf 0.5`
+More detail: [model1-rebuild/README.md](model1-rebuild/README.md)
 
 ---
 
-## Reinforcement learning (live Model 2 improvement)
+## 4. Demo — Model 2 only (cap / label / ring)
 
-This is **outcome learning from kiosk use**, not a game-style RL agent. When a user inserts a PET bottle, the kiosk already decided accept or reject. If learning is on, that crop is saved at that moment and can fine-tune Model 2.
-
-1. Copy `Model1/.env.example` to `Model1/.env` if you do not have one.
-2. Set:
-
-```text
-REINFORCEMENT_LEARNING=on
-RL_AUTO_TRAIN=off
-RL_SAVE_ACCEPTS=on
-RL_MIN_SAMPLES=5
-RL_EPOCHS=3
-RL_DEVICE=0
-```
-
-| Env value | Meaning |
-|---|---|
-| `REINFORCEMENT_LEARNING=on` | Save PET crops when the kiosk accepts or rejects |
-| `REINFORCEMENT_LEARNING=off` | Normal kiosk, no learning |
-| `RL_AUTO_TRAIN=on` | After `RL_MIN_SAMPLES` new items, fine-tune Model 2 in a **background process** and reload weights |
-| `RL_SAVE_ACCEPTS=on` | Also save prepared bottles (empty labels) so the model sees clean PET |
-
-Rejects store the Model 2 cap/label boxes as YOLO OBB labels on the crop. Accepts store the crop with no objects.
-
-Samples land in `Model2/data/live/` (gitignored). The HUD shows `RL ON`.
-
-**Collect only (safe while demoing):** `REINFORCEMENT_LEARNING=on` and `RL_AUTO_TRAIN=off`.
-
-**Train later yourself:**
+Runs **only** the part detector on the full frame (no Model 1 gate).
 
 ```powershell
-cd GreenGuard26\Trash-detection\Model2
-python src\finetune_live.py --epochs 3 --device 0
+cd Trash-detection\model2-rebuild
+.\run_m2_demo.bat
 ```
 
-Then restart `test_webcam.py` (or leave it running with auto-train so it reloads `models/best.pt`).
+Uses `model1-rebuild\.venv` automatically.
 
-Training inside the camera loop would freeze the kiosk. Auto-train uses a separate Python process on purpose.
+```powershell
+.\run_m2_demo.bat --fps 10 --conf 0.4
+.\run_m2_demo.bat --source video.mp4 --save logs\m2_demo
+```
+
+| Key | Action |
+|---|---|
+| `Q` | Quit |
+| `S` | Snapshot to `logs\m2_demo_snap.jpg` |
+
+Classes: `cap` (red), `label` (yellow), `ring` (magenta).
+
+More detail: [model2-rebuild/README.md](model2-rebuild/README.md)
 
 ---
 
-## Troubleshooting
+## 5. Demo — Full gate (Model 1 + Model 2)
 
-### `CUDA GPU not visible` when training Model 2
+This is the **kiosk logic**: Model 1 must see a PET bottle before Model 2 runs.
+Aluminum cans are detected but **do not** trigger the accept/reject banner.
 
-PyTorch was installed as CPU-only (`torch 2.x+cpu`). Reinstall with the CUDA wheel (see Path B above).
+```powershell
+cd Trash-detection\model2-rebuild
+.\run_gate_demo.bat
+```
 
-### `Model 2 weights not found` warning on webcam
+```powershell
+.\run_gate_demo.bat --m1-conf 0.05 --m2-conf 0.5 --fps 5
+.\run_gate_demo.bat --save logs\gate_out --max-frames 30
+```
 
-`Model2/models/best.pt` is missing. Either:
+| Flag | Default | Meaning |
+|---|---|---|
+| `--m1-conf` | `0.05` | Model 1 detector localization threshold |
+| `--m2-conf` | `0.5` | Min confidence for cap/label/ring to count as reject |
+| `--no-m1-cls` | off | Use legacy M1 class ids instead of crop classifier |
+| `--fps` | `5` | Target frame rate |
 
-- `git pull` to get the committed weights, or
-- Train Model 2 (Path B) and ensure `models/best.pt` exists
+**Verdict banner (top center):**
 
-Detection still runs with Model 1 only if you pass `--no-model2`.
+| Situation | Banner |
+|---|---|
+| PET, no cap/label/ring ≥ `--m2-conf` | Green — `PET ACCEPT` |
+| PET, any part ≥ `--m2-conf` | Red — `PET REJECT — cap/label/ring …` |
+| Aluminum can | Box drawn, **no** gate banner |
+| Nothing detected | Gray legend only |
+
+Verdict uses a **3-of-5 frame vote** so borderline detections do not flicker.
+
+---
+
+## 6. Retrain (optional)
+
+You do **not** need this for laptop demo if committed weights are present.
+
+| Goal | Where | Command |
+|---|---|---|
+| Retrain M1 detector (bottle/can OBB) | `model1-rebuild/` | `powershell -ExecutionPolicy Bypass -File scripts\run_training.ps1` |
+| Retrain M1 PET/can classifier | `model1-rebuild/` | `.\run_m1_cls_train.bat` |
+| Retrain M2 (cap/label/ring) | `model2-rebuild/` | `powershell -ExecutionPolicy Bypass -File scripts\run_model2_training.ps1 -AllowNoRing` |
+| Export M2 for Jetson Nano | `model2-rebuild/` | `..\model1-rebuild\.venv\Scripts\python.exe scripts\export_onnx.py` |
+
+See per-model READMEs for dataset layout and smoke tests.
+
+---
+
+## 7. Jetson Nano B01 (deploy)
+
+- Model 2: copy `model2-rebuild/export/onnx_416/` and follow
+  [model2-rebuild/jetson/README.md](model2-rebuild/jetson/README.md)
+- Model 1: ONNX @416 + classifier ONNX @224 under `model1-rebuild/export/`
+- Do **not** install Ultralytics on the Nano; use `onnxruntime` inference scripts.
+
+---
+
+## 8. Troubleshooting
+
+### `No module named ultralytics`
+
+Activate venv and reinstall:
+
+```powershell
+cd Trash-detection\model1-rebuild
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
 
 ### OpenCV window does not open
 
-Run `Model1/setup.ps1` — it reinstalls GUI-enabled `opencv-python` and removes the headless conflict.
+Ensure `opencv-python` is installed (not headless-only):
 
-### Backend / QR errors
+```powershell
+pip uninstall -y opencv-python-headless
+pip install opencv-python
+```
 
-Copy `Model1/.env.example` → `Model1/.env` and set `BACKEND_URL`, `MACHINE_API_KEY`, `QR_SECRET` to match your GreenPoint backend. Detection works without the backend; QR generation does not.
+### Model 1 always says PET / never sees cans
 
-### Dataset folder empty after clone
+Confirm two-stage mode is on (console should print `mode: two-stage`).
+Try lower localization threshold:
 
-Expected. Datasets are gitignored. Download from Roboflow only if you are **training**, not for detection-only testing.
+```powershell
+.\run_m1_demo.bat --det-conf 0.05
+```
+
+### `STALE EXPORT - skipping` in gate demo
+
+An ONNX file is older than `best.pt`. Re-export:
+
+```powershell
+cd model2-rebuild
+..\model1-rebuild\.venv\Scripts\python.exe scripts\export_onnx.py
+```
+
+### Webcam wrong index
+
+```powershell
+.\run_m1_demo.bat --source 1
+```
+
+### Slow FPS on CPU
+
+Normal at ~0.5–5 FPS depending on CPU. `--fps` only caps the target; actual
+speed is shown in the status line.
 
 ---
 
-## Quick reference
+## 9. Repository layout
 
-| Goal | Where to go | Command |
-|---|---|---|
-| Live laptop demo | `Model1/` | `python src\test_webcam.py` |
-| Preview Model 2 on images | `Model2/` | `python src\predict_folder.py` |
-| Train Model 2 | `Model2/` | `.\train.ps1` |
-| Train Model 1 | `Model1/` | `python src\train.py` |
-| Pi / TFLite inference | `Model1/` | `python src\inference_tflite.py` |
+```text
+Trash-detection/
+├── README.md                    ← this file
+├── model1-rebuild/              ← PET vs aluminum (YOLOv8n-OBB + cls)
+│   ├── run_m1_demo.bat
+│   ├── run_m1_cls_train.bat
+│   ├── export/onnx_416/         ← detector deploy
+│   ├── export/cls_onnx_224/     ← PET/can classifier deploy
+│   └── scripts/demo_live.py
+├── model2-rebuild/              ← cap / label / ring (YOLOv8n-OBB)
+│   ├── run_m2_demo.bat
+│   ├── run_gate_demo.bat        ← M1 + M2 kiosk logic
+│   ├── export/onnx_640/         ← PC demo
+│   ├── export/onnx_416/         ← Jetson
+│   └── jetson/
+├── Model1/                      ← legacy kiosk (older 3-class material model)
+└── Model2/                      ← legacy cap/label/liquid model
+```
+
+Use **`model1-rebuild` + `model2-rebuild`** for all new work. Legacy folders remain
+for reference and older Pi/TFLite paths.
 
 ---
 
-## License notes
+## 10. Quick reference
 
-- Model 2 dataset source: [bottle-cap-label-detection](https://universe.roboflow.com/mohammed-essam-iz1ve/bottle-cap-label-detection) (CC BY 4.0)
-- Ultralytics YOLO: check [Ultralytics license](https://docs.ultralytics.com/) before commercial deployment
+| Goal | Command |
+|---|---|
+| Install once | `cd model1-rebuild` → `py -3.11 -m venv .venv` → `pip install -r requirements.txt` |
+| Model 1 demo | `model1-rebuild\run_m1_demo.bat` |
+| Model 2 demo | `model2-rebuild\run_m2_demo.bat` |
+| Full gate demo | `model2-rebuild\run_gate_demo.bat` |
+| Train M1 classifier | `model1-rebuild\run_m1_cls_train.bat` |
+| Train M2 | `model2-rebuild\scripts\run_model2_training.ps1 -AllowNoRing` |
