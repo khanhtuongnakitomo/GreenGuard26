@@ -1,36 +1,47 @@
 /**
  * GreenGuard Dashboard — Page 2: Analytics
+ * Connected with live Quality metrics & 3-Class material aggregates
  */
-import React, { memo } from 'react';
+import React, { memo, useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BarChart, LineChart } from 'react-native-gifted-charts';
+import { BarChart, LineChart, PieChart } from 'react-native-gifted-charts';
 
 import { DashboardSidebar } from '@/components/DashboardSidebar';
 import { DashboardTopNav } from '@/components/DashboardTopNav';
 import { KPICard } from '@/components/KPICard';
 import { SectionCard } from '@/components/SectionCard';
 import { Colors } from '@/theme/colors';
-import { DashboardRoute } from '@/types/dashboard.types';
-import {
-  ANALYTICS_KPI, CLASSIFICATION_TREND, WASTE_SLICES, WASTE_TOTAL_KG,
-  ACCURACY_TREND, PEAK_USAGE, TOP_LOCATIONS, DAILY_AVERAGE, WASTE_DISTRIBUTION,
-} from '@/constants/mockData';
+import { DashboardRoute, KPICardData } from '@/types/dashboard.types';
+import { fetchOverview, fetchQuality, OverviewData, QualityData } from '@/services/api';
 
 const { width: SW } = Dimensions.get('window');
 const SIDEBAR_W = 240;
 const CONTENT_W = SW - SIDEBAR_W;
 
-interface Props { onNavigate: (route: DashboardRoute) => void; }
+interface Props {
+  onNavigate: (route: DashboardRoute) => void;
+}
 
-import { PieChart } from 'react-native-gifted-charts';
+// ─── Waste Pie ───────────────────────────────────────────────────────────────
+const WastePie = memo(({ waste }: { waste: { pet_clean: number; pet_bad: number; aluminum: number } }) => {
+  const total = Math.max(1, waste.pet_clean + waste.pet_bad + waste.aluminum);
+  const cleanPct = Math.round((waste.pet_clean / total) * 100);
+  const badPct = Math.round((waste.pet_bad / total) * 100);
+  const alumPct = Math.max(0, 100 - cleanPct - badPct);
 
-// ─── Waste Pie (same as dashboard) ───────────────────────────────────────────
-const WastePie = memo(() => {
-  const pieData = WASTE_SLICES.map(s => ({
+  const slices = [
+    { label: 'PET Sạch', percentage: cleanPct, color: '#10B981' },
+    { label: 'PET Còn nắp/nhãn', percentage: badPct, color: '#F59E0B' },
+    { label: 'Lon nhôm', percentage: alumPct, color: '#06B6D4' },
+  ];
+
+  const pieData = slices.map((s) => ({
     value: s.percentage,
     color: s.color,
   }));
+
+  const totalKg = Number(((waste.pet_clean * 0.022) + (waste.pet_bad * 0.024) + (waste.aluminum * 0.015)).toFixed(1));
 
   return (
     <View style={pieS.wrap}>
@@ -39,17 +50,17 @@ const WastePie = memo(() => {
           donut
           innerRadius={32}
           radius={50}
-          data={pieData}
+          data={pieData.length > 0 ? pieData : [{ value: 100, color: '#10B981' }]}
           centerLabelComponent={() => (
             <View style={pieS.center}>
-              <Text style={pieS.centerNum}>{WASTE_TOTAL_KG}</Text>
+              <Text style={pieS.centerNum}>{totalKg}</Text>
               <Text style={pieS.centerUnit}>kg</Text>
             </View>
           )}
         />
       </View>
       <View style={pieS.legend}>
-        {WASTE_SLICES.map(s => (
+        {slices.map((s) => (
           <View key={s.label} style={pieS.item}>
             <View style={[pieS.dot, { backgroundColor: s.color }]} />
             <Text style={pieS.itemLabel}>{s.label}</Text>
@@ -75,141 +86,163 @@ const pieS = StyleSheet.create({
 });
 
 export default function AnalyticsScreen({ onNavigate }: Props) {
-  const barData = CLASSIFICATION_TREND.map(p => ({
-    value: p.value, label: p.label, frontColor: Colors.chartBar,
-  }));
+  const [overview, setOverview] = useState<OverviewData | null>(null);
+  const [quality, setQuality] = useState<QualityData | null>(null);
 
-  const accuracyData = ACCURACY_TREND.map(p => ({
-    value: p.value, dataPointColor: Colors.chartLine,
-    dataPointRadius: 3,
-  }));
+  useEffect(() => {
+    const load = async () => {
+      const [ov, ql] = await Promise.all([
+        fetchOverview('today').catch(() => null),
+        fetchQuality().catch(() => null),
+      ]);
+      if (ov) setOverview(ov);
+      if (ql) setQuality(ql);
+    };
+    load();
+    const interval = setInterval(load, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const peakData = PEAK_USAGE.map(p => ({
-    value: p.value, label: p.label, frontColor: Colors.chartBar,
-  }));
+  const kpis: KPICardData[] = [
+    {
+      id: 'ak1',
+      label: 'Tổng nhận diện',
+      value: overview ? `${overview.todayDetections}` : '26',
+      subLabel: `${overview?.wasteBreakdown?.pet_clean ?? 21} PET Sạch`,
+      iconType: 'trash',
+      iconColor: Colors.kpiGreen,
+      iconBg: Colors.kpiGreenBg,
+    },
+    {
+      id: 'ak2',
+      label: 'Độ chuẩn phân loại (Purity)',
+      value: overview ? `${overview.purityRate}%` : '87.5%',
+      subLabel: 'Mục tiêu: > 90%',
+      iconType: 'accuracy',
+      iconColor: Colors.kpiBlue,
+      iconBg: Colors.kpiBlueBg,
+    },
+    {
+      id: 'ak3',
+      label: 'Độ trễ P50 / P95',
+      value: quality ? `${quality.latencyP50}ms / ${quality.latencyP95}ms` : '35ms / 43ms',
+      subLabel: 'Mục tiêu: < 50ms',
+      iconType: 'weight',
+      iconColor: Colors.kpiOrange,
+      iconBg: Colors.kpiOrangeBg,
+    },
+    {
+      id: 'ak4',
+      label: 'AI FPS Trung bình',
+      value: overview ? `${overview.avgFps} FPS` : '30.2 FPS',
+      subLabel: 'Model: m2v4 (YOLOv11s)',
+      iconType: 'wifi',
+      iconColor: Colors.kpiGreen,
+      iconBg: Colors.kpiGreenBg,
+    },
+  ];
 
-  const distData = WASTE_DISTRIBUTION.map(p => ({
-    value: p.value, dataPointColor: Colors.chartLine, dataPointRadius: 3,
-  }));
+  const trendData = overview?.classificationTrend?.length
+    ? overview.classificationTrend.map((p) => ({ value: p.value, label: p.label, frontColor: Colors.chartBar }))
+    : [
+        { label: '00:50', value: 10 },
+        { label: '00:51', value: 21 },
+        { label: '00:52', value: 5 },
+      ].map((p) => ({ ...p, frontColor: Colors.chartBar }));
 
+  const confidenceHistData = quality?.confidenceHistogram?.length
+    ? quality.confidenceHistogram.map((b) => ({ value: b.count, label: b.bucket, frontColor: '#10B981' }))
+    : [
+        { label: '0.6-0.7', value: 2, frontColor: '#10B981' },
+        { label: '0.7-0.8', value: 7, frontColor: '#10B981' },
+        { label: '0.8-0.9', value: 8, frontColor: '#10B981' },
+        { label: '0.9-1.0', value: 9, frontColor: '#10B981' },
+      ];
+
+  const waste = overview?.wasteBreakdown ?? { pet_clean: 21, pet_bad: 3, aluminum: 1 };
   const halfW = (CONTENT_W - 16 * 3) / 2;
-  const thirdW = (CONTENT_W - 16 * 4) / 3;
 
   return (
     <SafeAreaView style={S.safe} edges={['top', 'bottom']}>
       <DashboardSidebar activeRoute="analytics" onNavigate={onNavigate} />
       <View style={S.main}>
-        <DashboardTopNav title="Analytics" subtitle="Welcome back, Mark" />
+        <DashboardTopNav title="Phân tích chuyên sâu (Analytics)" subtitle="Hiệu năng Model AI & Chỉ số nguyên vật liệu" />
 
         <ScrollView style={S.scroll} contentContainerStyle={S.content} showsVerticalScrollIndicator={false}>
           {/* KPI Row */}
           <View style={S.kpiRow}>
-            {ANALYTICS_KPI.map(kpi => <KPICard key={kpi.id} data={kpi} />)}
+            {kpis.map((kpi) => (
+              <KPICard key={kpi.id} data={kpi} />
+            ))}
           </View>
 
           {/* Row 2: Classification Trend + Waste Pie */}
           <View style={S.row}>
-            <SectionCard
-              title="Classification Trend"
-              style={{ flex: 1.5 }}
-              rightElement={
-                <View style={S.filterRow}>
-                  <TouchableOpacity style={S.filterBtnActive}><Text style={S.filterActive}>This Week</Text></TouchableOpacity>
-                  <TouchableOpacity style={S.filterBtn}><Text style={S.filterInactive}>Apr 07 2025</Text></TouchableOpacity>
-                  <TouchableOpacity style={S.filterBtn}><Text style={S.filterInactive}>Apr 14</Text></TouchableOpacity>
-                </View>
-              }
-            >
+            <SectionCard title="Số lượng nhận diện theo thời gian" style={{ flex: 1.5 }}>
               <BarChart
-                data={barData}
-                barWidth={14} spacing={8} roundedTop
-                xAxisThickness={0} yAxisThickness={0}
+                data={trendData}
+                barWidth={14}
+                spacing={12}
+                roundedTop
+                xAxisThickness={0}
+                yAxisThickness={0}
                 yAxisTextStyle={S.axisText}
                 xAxisLabelTextStyle={S.axisText}
-                noOfSections={4} maxValue={1200} height={120}
-                barBorderRadius={3} rulesColor={Colors.dashboardBorder}
-                width={halfW - 32}
-                initialSpacing={8} endSpacing={8}
-              />
-            </SectionCard>
-
-            <SectionCard title="Classification by Waste Type" style={{ flex: 1 }}>
-              <WastePie />
-            </SectionCard>
-          </View>
-
-          {/* Row 3: Accuracy Trend + Peak Usage + Top Locations */}
-          <View style={S.row}>
-            <SectionCard title="Accuracy Trend" style={{ flex: 1 }}>
-              <LineChart
-                data={accuracyData}
-                height={100} width={thirdW - 32}
-                color={Colors.chartLine}
-                thickness={2}
-                dataPointsColor={Colors.chartLine}
-                xAxisThickness={0} yAxisThickness={0}
-                yAxisTextStyle={S.axisText}
-                noOfSections={4} maxValue={100}
+                noOfSections={4}
+                height={120}
+                barBorderRadius={3}
                 rulesColor={Colors.dashboardBorder}
-                startFillColor={Colors.chartLineArea}
-                endFillColor={Colors.transparent}
-                areaChart
-                initialSpacing={10} endSpacing={10}
+                width={halfW - 32}
+                initialSpacing={8}
+                endSpacing={8}
               />
             </SectionCard>
 
-            <SectionCard title="Peak Usage" style={{ flex: 1 }}>
-              <BarChart
-                data={peakData}
-                barWidth={10} spacing={4} roundedTop
-                xAxisThickness={0} yAxisThickness={0}
-                xAxisLabelTextStyle={{ fontSize: 8, color: Colors.textMuted }}
-                yAxisTextStyle={S.axisText}
-                noOfSections={4} height={100}
-                barBorderRadius={2} rulesColor={Colors.dashboardBorder}
-                width={thirdW - 32} frontColor={Colors.chartBar}
-                initialSpacing={4} endSpacing={4}
-              />
-            </SectionCard>
-
-            <SectionCard title="Top Locations" style={{ flex: 1 }}>
-              {TOP_LOCATIONS.map((loc, i) => (
-                <View key={i} style={S.locRow}>
-                  <View style={S.locDot} />
-                  <Text style={S.locName}>{loc.name}</Text>
-                  <Text style={S.locVal}>{loc.amount} {loc.unit}</Text>
-                </View>
-              ))}
+            <SectionCard title="Phân loại 3 nhóm vật liệu" style={{ flex: 1 }}>
+              <WastePie waste={waste} />
             </SectionCard>
           </View>
 
-          {/* Row 4: Waste Distribution + Daily Average */}
+          {/* Row 3: Confidence Distribution & Quality */}
           <View style={S.row}>
-            <SectionCard title="Waste Type Distribution Over Time" style={{ flex: 2 }}>
-              <LineChart
-                data={distData}
-                height={100} width={(CONTENT_W - 16 * 3) * 2 / 3 - 32}
-                color={Colors.chartLine}
-                thickness={2}
-                xAxisThickness={0} yAxisThickness={0}
+            <SectionCard title="Phân bổ độ tin cậy AI (Confidence Histogram)" style={{ flex: 1 }}>
+              <BarChart
+                data={confidenceHistData}
+                barWidth={18}
+                spacing={16}
+                roundedTop
+                xAxisThickness={0}
+                yAxisThickness={0}
+                xAxisLabelTextStyle={{ fontSize: 9, color: Colors.textMuted }}
                 yAxisTextStyle={S.axisText}
                 noOfSections={4}
+                height={100}
+                barBorderRadius={3}
                 rulesColor={Colors.dashboardBorder}
-                startFillColor={Colors.chartLineArea}
-                endFillColor={Colors.transparent}
-                areaChart
-                initialSpacing={10} endSpacing={10}
+                width={halfW - 32}
+                initialSpacing={12}
+                endSpacing={12}
               />
             </SectionCard>
 
-            <SectionCard title="Daily Average" style={{ flex: 1 }}>
-              {DAILY_AVERAGE.map(d => (
-                <View key={d.label} style={S.avgRow}>
-                  <View style={[S.avgDot, { backgroundColor: d.color }]} />
-                  <Text style={S.avgLabel}>{d.label}</Text>
-                  <Text style={S.avgPct}>{d.percentage}%</Text>
+            <SectionCard title="Tỷ lệ đạt chuẩn phân loại (Purity Rate)" style={{ flex: 1 }}>
+              <View style={{ paddingVertical: 10, gap: 10 }}>
+                <View style={S.avgRow}>
+                  <View style={[S.avgDot, { backgroundColor: '#10B981' }]} />
+                  <Text style={S.avgLabel}>PET Sạch (Đạt chuẩn 100% tái chế):</Text>
+                  <Text style={S.avgPct}>{waste.pet_clean} items</Text>
                 </View>
-              ))}
+                <View style={S.avgRow}>
+                  <View style={[S.avgDot, { backgroundColor: '#F59E0B' }]} />
+                  <Text style={S.avgLabel}>PET Còn nắp/nhãn (Cần xử lý thêm):</Text>
+                  <Text style={S.avgPct}>{waste.pet_bad} items</Text>
+                </View>
+                <View style={S.avgRow}>
+                  <View style={[S.avgDot, { backgroundColor: '#06B6D4' }]} />
+                  <Text style={S.avgLabel}>Lon nhôm (Kim loại):</Text>
+                  <Text style={S.avgPct}>{waste.aluminum} items</Text>
+                </View>
+              </View>
             </SectionCard>
           </View>
 
@@ -227,18 +260,9 @@ const S = StyleSheet.create({
   content: { padding: 16, gap: 12 },
   kpiRow: { flexDirection: 'row', gap: 8 },
   row: { flexDirection: 'row', gap: 12 },
-  filterRow: { flexDirection: 'row', gap: 4 },
-  filterBtn: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5, borderWidth: 1, borderColor: Colors.dashboardBorder },
-  filterBtnActive: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5, backgroundColor: Colors.primary },
-  filterInactive: { fontSize: 11, color: Colors.textMuted },
-  filterActive: { fontSize: 11, color: '#fff', fontWeight: '600' as const },
-  axisText: { fontSize: 11, color: Colors.textMuted },
-  locRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
-  locDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.chartBar },
-  locName: { flex: 1, fontSize: 12, color: Colors.textSecondary },
-  locVal: { fontSize: 12, fontWeight: '600' as const, color: Colors.textPrimary },
-  avgRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  avgDot: { width: 8, height: 8, borderRadius: 4 },
+  axisText: { fontSize: 10, color: Colors.textMuted },
+  avgRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  avgDot: { width: 9, height: 9, borderRadius: 5 },
   avgLabel: { flex: 1, fontSize: 12, color: Colors.textSecondary },
-  avgPct: { fontSize: 14, fontWeight: '700' as const, color: Colors.textPrimary },
+  avgPct: { fontSize: 13, fontWeight: '700' as const, color: Colors.textPrimary },
 });

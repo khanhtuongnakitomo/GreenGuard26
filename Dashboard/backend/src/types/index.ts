@@ -1,4 +1,4 @@
-export type ItemType = 'plastic_bottle' | 'can' | 'carton';
+export type ItemType = 'pet_clean' | 'pet_bad' | 'aluminum' | 'plastic_bottle' | 'can' | 'carton';
 export type SessionStatus = 'unclaimed' | 'claimed' | 'expired' | 'cancelled';
 export type MachineStatus = 'online' | 'offline' | 'maintenance' | 'disabled';
 
@@ -6,6 +6,7 @@ export interface SessionItem {
   itemType: ItemType;
   quantity: number;
   pointsPerItem: number;
+  avgConfidence?: number;
 }
 
 export interface SessionResponse {
@@ -31,6 +32,7 @@ export interface MachineResponse {
   locationType: string;
   status: MachineStatus;
   lastSeenAt: string | null;
+  lastHeartbeatAt?: string | null;
   totalSessions: number;
   bins: Array<{ binType: string; capacityPercent: number }>;
 }
@@ -39,7 +41,7 @@ export interface SummaryResponse {
   machineCode: string;       // or "ALL"
   totalSessions: number;
   totalItems: number;
-  byType: Record<ItemType, number>;
+  byType: Partial<Record<ItemType, number>>;
   claimedSessions: number;
   unclaimedSessions: number;
   claimRate: number;

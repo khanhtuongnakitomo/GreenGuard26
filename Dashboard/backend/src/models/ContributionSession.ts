@@ -1,35 +1,39 @@
-import mongoose, { Schema } from "mongoose";
-import { ItemType } from "../types";
+/**
+ * READ-ONLY SCHEMA MIRROR — Contract belongs to GreenPoint-Backend.
+ * Do not perform mutations or change schema structure here.
+ */
+import mongoose, { Schema } from 'mongoose';
 
 const ContributionItemSchema = new Schema(
   {
     itemType: { type: String, required: true },
-    quantity: { type: Number, required: true, min: 1 },
-    pointsPerItem: { type: Number, required: true }
+    quantity: { type: Number, required: true },
+    pointsPerItem: { type: Number, required: true },
+    avgConfidence: Number
   },
   { _id: false }
 );
 
 const ContributionSessionSchema = new Schema(
   {
-    sessionCode: { type: String, required: true, unique: true, index: true },
-    machineId: { type: Schema.Types.ObjectId, ref: "Machine", required: true, index: true },
-    machineName: { type: String },
+    sessionCode: { type: String, required: true },
+    machineId: { type: Schema.Types.ObjectId, ref: 'Machine', required: true },
+    machineName: String,
     items: { type: [ContributionItemSchema], required: true },
-    totalItems: { type: Number, required: true, min: 0 },
-    totalPoints: { type: Number, required: true, min: 0 },
-    claimTokenHash: { type: String, required: true, index: true },
+    totalItems: { type: Number, required: true },
+    totalPoints: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["unclaimed", "claimed", "expired", "cancelled"],
-      default: "unclaimed",
-      index: true
+      enum: ['unclaimed', 'claimed', 'expired', 'cancelled'],
+      default: 'unclaimed'
     },
-    claimedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    claimedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     claimedAt: Date,
-    expiresAt: { type: Date, required: true, index: true }
+    expiresAt: { type: Date, required: true }
   },
-  { timestamps: true }
+  { timestamps: true, collection: 'contributionsessions' }
 );
 
-export const ContributionSession = mongoose.model("ContributionSession", ContributionSessionSchema);
+export const ContributionSessionModel =
+  mongoose.models.ContributionSession || mongoose.model('ContributionSession', ContributionSessionSchema);
+export default ContributionSessionModel;

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { ContributionSession } from '../models/ContributionSession';
-import { Machine } from '../models/Machine';
+import ContributionSessionModel from '../models/ContributionSession';
+import MachineModel from '../models/Machine';
 
 // ─── GET /api/sessions ────────────────────────────────────────────────────
 // Dashboard lấy lịch sử session, hỗ trợ filter + pagination
@@ -19,11 +19,10 @@ export const getSessions = async (req: Request, res: Response): Promise<void> =>
     const filter: Record<string, unknown> = {};
     
     if (machineCode) {
-      const machine = await Machine.findOne({ machineCode });
+      const machine = await MachineModel.findOne({ machineCode });
       if (machine) {
         filter.machineId = machine._id;
       } else {
-        // If machine not found, return empty result
         res.json({ data: [], total: 0, limit: Number(limit), offset: Number(offset) });
         return;
       }
@@ -40,13 +39,13 @@ export const getSessions = async (req: Request, res: Response): Promise<void> =>
     }
 
     const [data, total] = await Promise.all([
-      ContributionSession.find(filter)
+      ContributionSessionModel.find(filter)
         .populate("machineId")
         .sort({ createdAt: -1 })
         .skip(Number(offset))
         .limit(Number(limit))
         .lean(),
-      ContributionSession.countDocuments(filter),
+      ContributionSessionModel.countDocuments(filter),
     ]);
 
     res.json({ data, total, limit: Number(limit), offset: Number(offset) });
@@ -63,7 +62,7 @@ export const getLatestSession = async (req: Request, res: Response): Promise<voi
   try {
     const filter: Record<string, unknown> = {};
     if (machineCode) {
-        const machine = await Machine.findOne({ machineCode });
+        const machine = await MachineModel.findOne({ machineCode });
         if (machine) {
             filter.machineId = machine._id;
         } else {
@@ -72,7 +71,7 @@ export const getLatestSession = async (req: Request, res: Response): Promise<voi
         }
     }
 
-    const latest = await ContributionSession.findOne(filter)
+    const latest = await ContributionSessionModel.findOne(filter)
       .populate("machineId")
       .sort({ createdAt: -1 })
       .lean();

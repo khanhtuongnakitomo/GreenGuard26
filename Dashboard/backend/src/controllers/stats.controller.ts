@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { ContributionSession } from '../models/ContributionSession';
-import { User } from '../models/User';
-import { Machine } from '../models/Machine';
+import ContributionSessionModel from '../models/ContributionSession';
+import UserModel from '../models/User';
+import MachineModel from '../models/Machine';
 import type { ItemType, SummaryResponse } from '../types';
 
 // ─── GET /api/stats/summary ──────────────────────────────────────────────────
@@ -12,7 +12,10 @@ export const getSummary = async (req: Request, res: Response): Promise<void> => 
   try {
     let totalSessions = 0;
     let totalItems = 0;
-    const byType: Record<ItemType, number> = {
+    const byType: Partial<Record<ItemType, number>> = {
+      pet_clean: 0,
+      pet_bad: 0,
+      aluminum: 0,
       plastic_bottle: 0,
       can: 0,
       carton: 0
@@ -23,30 +26,30 @@ export const getSummary = async (req: Request, res: Response): Promise<void> => 
 
     if (!machineCode || machineCode === 'ALL') {
       // Global stats
-      const [userTotals] = await User.aggregate([
+      const [userTotals] = await UserModel.aggregate([
         {
           $group: {
             _id: null,
-            totalBottles: { $sum: '$totalBottles' },
-            totalCans: { $sum: '$totalCans' },
-            totalCarton: { $sum: '$totalCarton' },
+            totalPetClean: { $sum: '$totals.pet_clean' },
+            totalPetBad: { $sum: '$totals.pet_bad' },
+            totalAluminum: { $sum: '$totals.aluminum' },
             totalItems: { $sum: '$totalItems' }
           }
         }
       ]);
 
       if (userTotals) {
-        byType.plastic_bottle = userTotals.totalBottles || 0;
-        byType.can = userTotals.totalCans || 0;
-        byType.carton = userTotals.totalCarton || 0;
+        byType.pet_clean = userTotals.totalPetClean || 0;
+        byType.pet_bad = userTotals.totalPetBad || 0;
+        byType.aluminum = userTotals.totalAluminum || 0;
         totalItems = userTotals.totalItems || 0;
       }
 
-      totalSessions = await ContributionSession.countDocuments();
-      claimedSessions = await ContributionSession.countDocuments({ status: 'claimed' });
-      unclaimedSessions = await ContributionSession.countDocuments({ status: 'unclaimed' });
+      totalSessions = await ContributionSessionModel.countDocuments();
+      claimedSessions = await ContributionSessionModel.countDocuments({ status: 'claimed' });
+      unclaimedSessions = await ContributionSessionModel.countDocuments({ status: 'unclaimed' });
 
-      const [pointsAgg] = await ContributionSession.aggregate([
+      const [pointsAgg] = await ContributionSessionModel.aggregate([
         { $match: { status: 'claimed' } },
         { $group: { _id: null, total: { $sum: '$totalPoints' } } }
       ]);
@@ -54,25 +57,15 @@ export const getSummary = async (req: Request, res: Response): Promise<void> => 
 
     } else {
       // Per-machine stats
-      const machine = await Machine.findOne({ machineCode });
+      const machine = await MachineModel.findOne({ machineCode });
       if (machine) {
         const filter = { machineId: machine._id };
         
-        totalSessions = await ContributionSession.countDocuments(filter);
-        claimedSessions = await ContributionSession.countDocuments({ ...filter, status: 'claimed' });
-        unclaimedSessions = await ContributionSession.countDocuments({ ...filter, status: 'unclaimed' });
+        totalSessions = await ContributionSessionModel.countDocuments(filter);
+        claimedSessions = await ContributionSessionModel.countDocuments({ ...filter, status: 'claimed' });
+        unclaimedSessions = await ContributionSessionModel.countDocuments({ ...filter, status: 'unclaimed' });
         
-        const [itemsAgg] = await ContributionSession.aggregate([
-            { $match: filter },
-            { $unwind: "$items" },
-            { $group: {
-                _id: "$items.itemType",
-                total: { $sum: "$items.quantity" }
-            }}
-        ]);
-        
-        // This query actually returns an array of groups, we need to map them to byType
-        const itemsAggs = await ContributionSession.aggregate([
+        const itemsAggs = await ContributionSessionModel.aggregate([
             { $match: filter },
             { $unwind: "$items" },
             { $group: {
@@ -82,14 +75,16 @@ export const getSummary = async (req: Request, res: Response): Promise<void> => 
         ]);
 
         itemsAggs.forEach(agg => {
-            if (agg._id === 'plastic_bottle') byType.plastic_bottle = agg.total;
-            if (agg._id === 'can') byType.can = agg.total;
-            if (agg._id === 'carton') byType.carton = agg.total;
+            if (agg._id === 'pet_clean') byType.pet_clean = agg.total;
+            else if (agg._id === 'pet_bad') byType.pet_bad = agg.total;
+            else if (agg._id === 'aluminum') byType.aluminum = agg.total;
+            else if (agg._id === 'plastic_bottle') byType.pet_clean = (byType.pet_clean || 0) + agg.total;
+            else if (agg._id === 'can') byType.aluminum = (byType.aluminum || 0) + agg.total;
         });
         
-        totalItems = byType.plastic_bottle + byType.can + byType.carton;
+        totalItems = (byType.pet_clean || 0) + (byType.pet_bad || 0) + (byType.aluminum || 0);
 
-        const [pointsAgg] = await ContributionSession.aggregate([
+        const [pointsAgg] = await ContributionSessionModel.aggregate([
           { $match: { ...filter, status: 'claimed' } },
           { $group: { _id: null, total: { $sum: '$totalPoints' } } }
         ]);
