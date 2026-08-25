@@ -6,8 +6,12 @@ Logic (owner, 2026-08-23 — direction C, full-frame Model 2):
   crops made confidences collapse) and only detections whose box center lies
   INSIDE the bottle polygon count. Any of cap/label/ring >= --m2-conf
   -> big red "PET REJECT" (+ which parts); none -> big green "PET ACCEPT".
-  Verdict is held to a 3-of-last-5-frames vote so a borderline ring (~0.5)
-  cannot flicker the banner frame to frame.
+
+Anti-flicker layers (tuned for ~5 FPS CPU demos):
+  1) EMA-smooth the Model 1 polygon so the box does not jump every frame.
+  2) Miss-hold: keep the last PET/can for a few lost frames before clearing.
+  3) Gate warm-up: wait ~0.5s after PET is stable before Model 2 votes count.
+  4) Stronger verdict vote (default 4-of-7) plus sticky hold (~1.5s) once locked.
 
 CPU-ONLY (app rule; GPU is for training only). 5 FPS governor. Top-left legend
 lists detections; verdict banner sits top-center.
@@ -38,6 +42,7 @@ ROOT = Path(__file__).resolve().parents[1]
 M1_ROOT = ROOT.parent / "model1-rebuild"
 sys.path.insert(0, str(M1_ROOT / "scripts"))
 from m1_two_stage import PetCanDecider  # noqa: E402
+from single_instance import center_in_poly, pick_top1_per_class  # noqa: E402
 
 M1_CANDIDATES = [  # (path, bottle_id, aluminum_id) — first existing wins
     (M1_ROOT / "export" / "onnx_416" / "model.onnx", 0, 1),                 # v2 2-class (in use)
@@ -53,6 +58,8 @@ M2_CANDIDATES = [
 ]
 M2_NAMES = {0: "cap", 1: "label", 2: "ring"}
 M2_REF = ROOT / "runs" / "m2v3_seed42_n640" / "weights" / "best.pt"
+M2_COLORS = {0: (0, 0, 255), 1: (0, 255, 255), 2: (255, 0, 255)}
+DEVICE = "cpu"
 
 
 def onnx_date(path):
@@ -64,8 +71,6 @@ def onnx_date(path):
     except Exception:
         pass
     return None
-M2_COLORS = {0: (0, 0, 255), 1: (0, 255, 255), 2: (255, 0, 255)}
-DEVICE = "cpu"
 
 
 def pick(candidates, label: str):
@@ -93,6 +98,14 @@ def onnx_imgsz(path: Path) -> int | None:
         return None
 
 
+def smooth_poly(prev: np.ndarray | None, new: np.ndarray, alpha: float) -> np.ndarray:
+    """EMA-smooth OBB polygon corners to reduce box flicker."""
+    new_f = new.astype(np.float32)
+    if prev is None or prev.shape != new_f.shape:
+        return new_f
+    return (alpha * new_f) + ((1.0 - alpha) * prev.astype(np.float32))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", default="0")
@@ -105,9 +118,24 @@ def main() -> int:
     ap.add_argument("--m2-imgsz", type=int, default=640,
                     help="Model 2 input size (used for .pt weights; ONNX graphs"
                          " always run at their exported size)")
+    ap.add_argument("--gate-warmup", type=float, default=0.5,
+                    help="seconds PET must stay visible before Model 2 votes count")
+    ap.add_argument("--verdict-hold", type=float, default=1.5,
+                    help="seconds to keep a locked ACCEPT/REJECT before re-judging")
+    ap.add_argument("--miss-hold", type=int, default=3,
+                    help="keep last M1 box this many lost frames before clearing")
+    ap.add_argument("--vote-window", type=int, default=7,
+                    help="frames kept for ACCEPT/REJECT majority vote")
+    ap.add_argument("--vote-need", type=int, default=4,
+                    help="votes required to lock ACCEPT or REJECT")
+    ap.add_argument("--box-smooth", type=float, default=0.35,
+                    help="EMA alpha for M1 polygon (0=sticky, 1=raw)")
     ap.add_argument("--save", default=None)
     ap.add_argument("--max-frames", type=int, default=0)
     args = ap.parse_args()
+
+    vote_need = max(1, min(args.vote_need, args.vote_window))
+    box_alpha = min(max(args.box_smooth, 0.05), 1.0)
 
     m1_c = pick(M1_CANDIDATES, "Model 1 (PET/aluminum)")
     m2_cands = [c for c in M2_CANDIDATES
@@ -123,6 +151,11 @@ def main() -> int:
     m1_imgsz = onnx_imgsz(m1_path) or 416
     m2_imgsz = onnx_imgsz(m2_path) or args.m2_imgsz
     print(f"[gate] inference sizes: M1 det={m1_imgsz}, M2={m2_imgsz}")
+    print(
+        f"[gate] anti-flicker: warmup={args.gate_warmup:.1f}s "
+        f"hold={args.verdict_hold:.1f}s miss={args.miss_hold} "
+        f"vote={vote_need}/{args.vote_window} smooth={box_alpha:.2f}"
+    )
 
     m1_decider = None
     m1 = None
@@ -132,6 +165,7 @@ def main() -> int:
                 det_path=str(m1_path),
                 det_imgsz=m1_imgsz,
                 det_conf=args.m1_conf,
+                vote_frames=max(5, args.vote_window),
             )
             print("[gate] Model 1 mode: two-stage (detect + classify)")
         except FileNotFoundError as e:
@@ -151,10 +185,24 @@ def main() -> int:
         save_dir.mkdir(parents=True, exist_ok=True)
 
     interval = 1.0 / max(args.fps, 0.1)
-    vote: deque[str] = deque(maxlen=5)
+    vote: deque[str] = deque(maxlen=max(1, args.vote_window))
     n = 0
+
+    # Temporal state between layers (anti-flicker)
+    held_box: np.ndarray | None = None
+    held_is_pet = False
+    held_color = (160, 160, 160)
+    held_legend = ""
+    miss_frames = 0
+    pet_since: float | None = None
+    locked_verdict = ""
+    locked_color = (160, 160, 160)
+    locked_hits: list[tuple[str, float]] = []
+    locked_until = 0.0
+
     while True:
         t0 = time.perf_counter()
+        now = t0
         ok, frame = cap.read()
         if not ok:
             print("source ended")
@@ -163,14 +211,17 @@ def main() -> int:
         legend: list[tuple[str, tuple]] = []
         verdict, vcolor = "", (160, 160, 160)
         gate_active = False
+        raw_box = None
+        raw_is_pet = False
+        raw_color = (160, 160, 160)
+        raw_legend = ""
 
         r1 = m1_decider.run(frame) if m1_decider else None
         if m1_decider and r1.get("label"):
-            box = r1["poly"]
-            is_pet = r1["voted"] == "pet"
-            color = r1["color"]
-            cv2.polylines(frame, [box], True, color, 2)
-            legend.append((r1["legend_text"], color))
+            raw_box = r1["poly"]
+            raw_is_pet = r1["voted"] == "pet"
+            raw_color = r1["color"]
+            raw_legend = r1["legend_text"]
         elif m1 is not None:
             r1_legacy = m1.predict(frame, imgsz=m1_imgsz, conf=max(args.m1_conf, 0.25),
                                    device=DEVICE, verbose=False)[0]
@@ -182,62 +233,127 @@ def main() -> int:
                 alu_idx = np.where(clss == m1_aluminum)[0]
                 if len(bottle_idx):
                     best = bottle_idx[int(np.argmax(confs[bottle_idx]))]
-                    is_pet, color = True, (255, 80, 0)
+                    raw_is_pet, raw_color = True, (255, 80, 0)
+                    raw_legend = "PET bottle"
                 elif len(alu_idx):
                     best = alu_idx[int(np.argmax(confs[alu_idx]))]
-                    is_pet, color = False, (0, 255, 0)
+                    raw_is_pet, raw_color = False, (0, 255, 0)
+                    raw_legend = "Aluminum can"
                 else:
                     best = int(np.argmax(confs))
-                    is_pet, color = False, (120, 120, 120)
-                box = polys[best].astype(np.int32)
-                cv2.polylines(frame, [box], True, color, 2)
-                legend.append(("PET bottle" if is_pet else
-                               "Aluminum can" if len(alu_idx) else "other (gate off)", color))
-            else:
-                is_pet = False
-                box = None
+                    raw_is_pet, raw_color = False, (120, 120, 120)
+                    raw_legend = "other (gate off)"
+                raw_box = polys[best].astype(np.int32)
+
+        # Layer delay #1: miss-hold + EMA box so M1 does not blink off
+        if raw_box is not None:
+            miss_frames = 0
+            held_box = smooth_poly(held_box, raw_box, box_alpha)
+            held_is_pet = raw_is_pet
+            held_color = raw_color
+            held_legend = raw_legend
+        elif held_box is not None and miss_frames < args.miss_hold:
+            miss_frames += 1
         else:
-            is_pet = False
-            box = None
+            held_box = None
+            held_is_pet = False
+            held_legend = ""
+            miss_frames = 0
+            pet_since = None
+            vote.clear()
+            if now >= locked_until:
+                locked_verdict = ""
+                locked_hits = []
+
+        box = held_box.astype(np.int32) if held_box is not None else None
+        is_pet = held_is_pet
 
         if box is not None:
+            cv2.polylines(frame, [box], True, held_color, 2)
+            if held_legend:
+                legend.append((held_legend, held_color))
+
             if is_pet:
+                if pet_since is None:
+                    pet_since = now
                 gate_active = True
-                r2 = m2.predict(frame, imgsz=m2_imgsz, conf=0.1,
-                                device=DEVICE, verbose=False)[0]
-                hits: list[tuple[str, float]] = []
-                if r2.obb is not None and len(r2.obb):
-                    from single_instance import pick_top1_per_class, center_in_poly
-                    p2 = r2.obb.xyxyxyxy.cpu().numpy()
-                    c2 = r2.obb.cls.cpu().numpy().astype(int)
-                    f2 = r2.obb.conf.cpu().numpy()
-                    contour = box.astype(np.float32)
-                    # spatial filter, then at most ONE box per class
-                    inside = [i for i in range(len(p2))
-                              if center_in_poly((float(p2[i].mean(axis=0)[0]),
-                                                 float(p2[i].mean(axis=0)[1])), contour)]
-                    top = pick_top1_per_class(p2[inside], c2[inside], f2[inside], (0, 1, 2))                         if inside else {}
-                    for ci, ii in top.items():
-                        poly, cf = p2[inside][ii], f2[inside][ii]
-                        cv2.polylines(frame, [poly.astype(np.int32)], True,
-                                      M2_COLORS.get(ci, (255, 255, 255)), 2)
-                        legend.append((f"{M2_NAMES.get(ci, ci)} {cf*100:.0f}%",
-                                       M2_COLORS.get(ci, (255, 255, 255))))
-                        if cf >= args.m2_conf:
-                            hits.append((M2_NAMES.get(ci, str(ci)), float(cf)))
-                vote.append("REJECT" if hits else "ACCEPT")
-                if vote.count("REJECT") >= 3:
-                    parts = ", ".join(f"{k} {v*100:.0f}%" for k, v in hits) or "residual"
-                    verdict, vcolor = f"PET REJECT — {parts}", (0, 0, 255)
-                elif vote.count("ACCEPT") >= 3:
-                    verdict, vcolor = "PET ACCEPT (no cap/label/ring)", (0, 200, 0)
+                warm = now - pet_since
+                warming = warm < args.gate_warmup
+
+                # Sticky locked verdict: keep banner stable after decision
+                if locked_verdict and now < locked_until:
+                    verdict, vcolor = locked_verdict, locked_color
+                    for name, cf in locked_hits:
+                        cid = next((k for k, v in M2_NAMES.items() if v == name), None)
+                        color = M2_COLORS.get(cid, (255, 255, 255))
+                        legend.append((f"{name} {cf * 100:.0f}%", color))
                 else:
-                    verdict = (f"judging... {vote.count('REJECT')}R/"
-                               f"{vote.count('ACCEPT')}A of {len(vote)}")
+                    r2 = m2.predict(frame, imgsz=m2_imgsz, conf=0.1,
+                                    device=DEVICE, verbose=False)[0]
+                    hits: list[tuple[str, float]] = []
+                    if r2.obb is not None and len(r2.obb):
+                        p2 = r2.obb.xyxyxyxy.cpu().numpy()
+                        c2 = r2.obb.cls.cpu().numpy().astype(int)
+                        f2 = r2.obb.conf.cpu().numpy()
+                        contour = box.astype(np.float32)
+                        inside = [i for i in range(len(p2))
+                                  if center_in_poly((float(p2[i].mean(axis=0)[0]),
+                                                     float(p2[i].mean(axis=0)[1])), contour)]
+                        top = (pick_top1_per_class(p2[inside], c2[inside], f2[inside], (0, 1, 2))
+                               if inside else {})
+                        for ci, ii in top.items():
+                            poly, cf = p2[inside][ii], f2[inside][ii]
+                            cv2.polylines(frame, [poly.astype(np.int32)], True,
+                                          M2_COLORS.get(ci, (255, 255, 255)), 2)
+                            legend.append((f"{M2_NAMES.get(ci, ci)} {cf * 100:.0f}%",
+                                           M2_COLORS.get(ci, (255, 255, 255))))
+                            if cf >= args.m2_conf:
+                                hits.append((M2_NAMES.get(ci, str(ci)), float(cf)))
+
+                    # Layer delay #2: warm-up before M2 votes affect the banner
+                    if warming:
+                        remain = args.gate_warmup - warm
+                        verdict, vcolor = (
+                            f"PET locked — inspecting in {remain:.1f}s",
+                            (0, 200, 255),
+                        )
+                        vote.clear()
+                    else:
+                        vote.append("REJECT" if hits else "ACCEPT")
+                        rejects = vote.count("REJECT")
+                        accepts = vote.count("ACCEPT")
+                        if rejects >= vote_need:
+                            parts = ", ".join(f"{k} {v * 100:.0f}%" for k, v in hits) or "residual"
+                            verdict, vcolor = f"PET REJECT — {parts}", (0, 0, 255)
+                            locked_verdict, locked_color = verdict, vcolor
+                            locked_hits = list(hits)
+                            locked_until = now + args.verdict_hold
+                            vote.clear()
+                        elif accepts >= vote_need:
+                            verdict, vcolor = "PET ACCEPT (no cap/label/ring)", (0, 200, 0)
+                            locked_verdict, locked_color = verdict, vcolor
+                            locked_hits = []
+                            locked_until = now + args.verdict_hold
+                            vote.clear()
+                        else:
+                            verdict = (
+                                f"judging... {rejects}R/{accepts}A "
+                                f"need {vote_need}/{args.vote_window}"
+                            )
+            else:
+                # Aluminum / other: clear PET gate state
+                pet_since = None
+                vote.clear()
+                if now >= locked_until:
+                    locked_verdict = ""
+                    locked_hits = []
         else:
             legend.append(("no PET bottle / aluminum can in frame", (160, 160, 160)))
-        if not gate_active:
+
+        if not gate_active and now >= locked_until:
             vote.clear()
+            locked_verdict = ""
+            locked_hits = []
 
         # verdict banner (top center) + left legend + bottom status
         if verdict:

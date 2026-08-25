@@ -172,14 +172,32 @@ More detail: [model2-rebuild/README.md](model2-rebuild/README.md)
 This is the **kiosk logic**: Model 1 must see a PET bottle before Model 2 runs.
 Aluminum cans are detected but **do not** trigger the accept/reject banner.
 
+**Preferred launcher** (from `Trash-detection/`):
+
+```powershell
+cd Trash-detection
+.\run_live_demo.bat
+```
+
+Starts **paused**. Use on-screen **START** / **PAUSE**, or keys:
+
+| Control | Action |
+|---|---|
+| Click **START** / `S` / `Space` | Start detection |
+| Click **PAUSE** / `P` | Pause detection (camera stays live) |
+| `Q` | Quit |
+
+```powershell
+.\run_live_demo.bat --m1-conf 0.05 --m2-conf 0.5 --fps 5
+.\run_live_demo.bat --auto-start
+.\run_live_demo.bat --save logs\gate_out --max-frames 30
+```
+
+Legacy path (same pipeline, no START/PAUSE UI):
+
 ```powershell
 cd Trash-detection\model2-rebuild
 .\run_gate_demo.bat
-```
-
-```powershell
-.\run_gate_demo.bat --m1-conf 0.05 --m2-conf 0.5 --fps 5
-.\run_gate_demo.bat --save logs\gate_out --max-frames 30
 ```
 
 | Flag | Default | Meaning |
@@ -188,6 +206,11 @@ cd Trash-detection\model2-rebuild
 | `--m2-conf` | `0.5` | Min confidence for cap/label/ring to count as reject |
 | `--no-m1-cls` | off | Use legacy M1 class ids instead of crop classifier |
 | `--fps` | `5` | Target frame rate |
+| `--gate-warmup` | `0.5` | Seconds PET must stay visible before M2 votes count |
+| `--verdict-hold` | `1.5` | Seconds to keep a locked ACCEPT/REJECT banner |
+| `--miss-hold` | `3` | Keep last M1 box this many lost frames |
+| `--vote-window` / `--vote-need` | `7` / `4` | Stronger majority vote before locking verdict |
+| `--auto-start` | off | Begin detecting immediately (skip paused start) |
 
 **Verdict banner (top center):**
 
@@ -198,7 +221,7 @@ cd Trash-detection\model2-rebuild
 | Aluminum can | Box drawn, **no** gate banner |
 | Nothing detected | Gray legend only |
 
-Verdict uses a **3-of-5 frame vote** so borderline detections do not flicker.
+Verdict uses warm-up + majority vote + hold so borderline detections do not flicker.
 
 ---
 
