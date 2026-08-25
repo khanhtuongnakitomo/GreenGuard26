@@ -21,6 +21,13 @@ Trash-detection/training/model1/dataset/audits/flagged_caps/
 Trash-detection/training/model2/dataset/incoming/
 Trash-detection/training/model2/dataset/normalized/
 Trash-detection/training/model2/dataset/splits/
+Trash-detection/training/model2/dataset/test_locked/
+Trash-detection/training/model2/dataset/test_custom/
+Trash-detection/training/model2/dataset/audits/duplicates/
+Trash-detection/training/model2/logs/
+Trash-detection/training/model1/logs/
+Trash-detection/training/model2/runs/smoke_*/
+Trash-detection/training/model2/export/candidates/smoke_*/
 
 # Legacy rebuild paths (if present locally)
 Trash-detection/model1-rebuild/dataset/incoming/
