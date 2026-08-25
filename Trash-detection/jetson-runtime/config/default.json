@@ -1,0 +1,45 @@
+{
+  "m1": {
+    "detector": {
+      "path": "models/m1_detector_416.onnx",
+      "engine": "models/engines/m1_detector_416.engine",
+      "imgsz": 416,
+      "conf": 0.05
+    },
+    "classifier": {
+      "path": "models/m1_classifier_224.onnx",
+      "engine": "models/engines/m1_classifier_224.engine",
+      "imgsz": 224
+    },
+    "min_area_frac": 0.02,
+    "crop_margin": 0.10,
+    "vote_frames": 7,
+    "miss_hold": 3,
+    "box_smooth": 0.35
+  },
+  "m2": {
+    "path": "models/m2_obb_416.onnx",
+    "engine": "models/engines/m2_obb_416.engine",
+    "imgsz": 416,
+    "infer_conf": 0.10,
+    "violation_conf": 0.50,
+    "classes": ["cap", "label", "ring"]
+  },
+  "gate": {
+    "warmup_s": 0.5,
+    "verdict_hold_s": 1.5,
+    "vote_window": 7,
+    "vote_need": 4
+  },
+  "runtime": {
+    "target_fps": 5.0,
+    "backend": "auto"
+  },
+  "camera": {
+    "async_capture": true
+  },
+  "ui": {
+    "window_title": "GreenGuard Jetson Demo",
+    "display_scale": 1.5
+  }
+}

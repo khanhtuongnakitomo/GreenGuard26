@@ -11,7 +11,18 @@ Trash-detection/Model2/logs/
 Trash-detection/Model1/failed/
 Trash-detection/Model2/failed/
 
-# Model1 rebuild dataset bulk (also covered by Trash-detection/model1-rebuild/.gitignore)
+# Training dataset bulk under new layout
+Trash-detection/training/model1/dataset/incoming/
+Trash-detection/training/model1/dataset/normalized/
+Trash-detection/training/model1/dataset/splits/
+Trash-detection/training/model1/dataset/test_locked/
+Trash-detection/training/model1/dataset/audits/duplicates/
+Trash-detection/training/model1/dataset/audits/flagged_caps/
+Trash-detection/training/model2/dataset/incoming/
+Trash-detection/training/model2/dataset/normalized/
+Trash-detection/training/model2/dataset/splits/
+
+# Legacy rebuild paths (if present locally)
 Trash-detection/model1-rebuild/dataset/incoming/
 Trash-detection/model1-rebuild/dataset/normalized/
 Trash-detection/model1-rebuild/dataset/splits/
@@ -31,6 +42,7 @@ __pycache__/
 *.pyo
 *.pyd
 .ipynb_checkpoints/
+.pytest_cache/
 
 # Tool caches
 .ultralytics/
@@ -59,3 +71,25 @@ best_saved_model/
 !Trash-detection/Model1/models/best_float16.tflite
 !Trash-detection/Model2/models/
 !Trash-detection/Model2/models/best.pt
+
+# Packaged detection ONNX (pc-demo + jetson-runtime) and training exports
+!Trash-detection/pc-demo/models/
+!Trash-detection/pc-demo/models/*.onnx
+!Trash-detection/pc-demo/models/labels/
+!Trash-detection/pc-demo/models/labels/*.txt
+!Trash-detection/pc-demo/models/manifest.json
+!Trash-detection/jetson-runtime/models/
+!Trash-detection/jetson-runtime/models/*.onnx
+!Trash-detection/jetson-runtime/models/labels/
+!Trash-detection/jetson-runtime/models/labels/*.txt
+!Trash-detection/jetson-runtime/models/manifest.json
+!Trash-detection/jetson-runtime/models/engines/
+!Trash-detection/jetson-runtime/models/engines/.gitkeep
+!Trash-detection/training/model1/export/
+!Trash-detection/training/model1/export/**/*.onnx
+!Trash-detection/training/model1/export/**/*.txt
+!Trash-detection/training/model2/export/
+!Trash-detection/training/model2/export/**/*.onnx
+!Trash-detection/training/model2/export/**/*.txt
+!Trash-detection/training/model1/runs/**/weights/best.pt
+!Trash-detection/training/model2/runs/**/weights/best.pt
