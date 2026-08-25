@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -26,6 +27,8 @@ from ui import (  # noqa: E402
     scale_for_display,
 )
 
+MAX_CAM_INDEX = 7  # highest camera index to try when cycling
+
 
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="GreenGuard PC demo")
@@ -40,6 +43,27 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--save", default=None)
     ap.add_argument("--max-frames", type=int, default=0)
     return ap.parse_args()
+
+
+def _try_open_next_camera(current_idx: int, result: dict) -> None:
+    """Background thread: try camera indices after *current_idx*, wrapping around.
+
+    Writes into *result* dict so the main loop can pick it up without blocking.
+    Sets result["cap"] to the opened VideoCapture (or None on failure),
+    and result["idx"] to the camera index that worked (or -1).
+    """
+    for offset in range(1, MAX_CAM_INDEX + 1):
+        candidate = (current_idx + offset) % (MAX_CAM_INDEX + 1)
+        cap = cv2.VideoCapture(candidate, cv2.CAP_DSHOW)
+        if cap.isOpened():
+            result["cap"] = cap
+            result["idx"] = candidate
+            result["done"] = True
+            return
+    # nothing found — signal failure
+    result["cap"] = None
+    result["idx"] = -1
+    result["done"] = True
 
 
 def main() -> int:
@@ -60,6 +84,9 @@ def main() -> int:
         gate.m2_violation_conf = float(args.m2_conf)
 
     src = int(args.source) if args.source.isdigit() else args.source
+    is_camera = isinstance(src, int)
+    cam_idx = src if is_camera else 0
+
     cap = cv2.VideoCapture(src)
     if not cap.isOpened():
         print(f"ERROR: cannot open source {src!r}")
@@ -71,7 +98,17 @@ def main() -> int:
 
     window = cfg["ui"].get("window_title", "GreenGuard PC Demo")
     display_scale = float(cfg["ui"].get("display_scale", 1.5))
-    state = {"detecting": detecting, "start_rect": (0, 0, 0, 0), "pause_rect": (0, 0, 0, 0)}
+    state = {
+        "detecting": detecting,
+        "start_rect": (0, 0, 0, 0),
+        "pause_rect": (0, 0, 0, 0),
+        "cam_rect": (0, 0, 0, 0),
+        "switch_cam": False,
+    }
+
+    # Background camera-switch state
+    cam_switch_result: dict | None = None  # set while a switch is in-flight
+    switching = False  # True while the background thread is working
 
     def reset_all():
         gate.reset()
@@ -89,6 +126,8 @@ def main() -> int:
             elif state["detecting"] and hit_button(x, y, state["pause_rect"]):
                 state["detecting"] = False
                 reset_all()
+            elif hit_button(x, y, state["cam_rect"]):
+                state["switch_cam"] = True
 
         cv2.setMouseCallback(window, on_mouse)
 
@@ -100,6 +139,25 @@ def main() -> int:
     window_sized = False
     while True:
         t0 = time.perf_counter()
+
+        # ── Check if a background camera switch has completed ─────────
+        if switching and cam_switch_result and cam_switch_result.get("done"):
+            new_cap = cam_switch_result["cap"]
+            new_idx = cam_switch_result["idx"]
+            if new_cap is not None and new_cap.isOpened():
+                cap.release()
+                cap = new_cap
+                cam_idx = new_idx
+                print(f"[Camera] Switched to camera {cam_idx}")
+            else:
+                print("[Camera] No other camera found, staying on current")
+                if new_cap is not None:
+                    new_cap.release()
+            reset_all()
+            state["detecting"] = False
+            switching = False
+            cam_switch_result = None
+
         ok, frame = cap.read()
         if not ok:
             print("source ended")
@@ -108,7 +166,14 @@ def main() -> int:
         legend = []
         verdict, vcolor = "", (160, 160, 160)
 
-        if not state["detecting"]:
+        if switching:
+            # Show a non-blocking "switching" banner while thread works
+            banner = "Switching camera..."
+            (tw, th), _ = cv2.getTextSize(banner, cv2.FONT_HERSHEY_SIMPLEX, 0.85, 2)
+            cx = frame.shape[1] // 2
+            cv2.rectangle(frame, (cx - tw // 2 - 10, 8), (cx + tw // 2 + 10, 8 + th + 18), (0, 0, 0), -1)
+            cv2.putText(frame, banner, (cx - tw // 2, 8 + th + 8), cv2.FONT_HERSHEY_SIMPLEX, 0.85, (0, 200, 255), 2)
+        elif not state["detecting"]:
             draw_paused_banner(frame)
         else:
             raw = m1.run(frame, det_conf=args.m1_conf)
@@ -132,7 +197,7 @@ def main() -> int:
             draw_legend(frame, legend)
 
         actual = 1.0 / max(time.perf_counter() - t0, 1e-6)
-        mode = "RUNNING" if state["detecting"] else "PAUSED"
+        mode = "SWITCHING" if switching else ("RUNNING" if state["detecting"] else "PAUSED")
         cv2.putText(
             frame,
             f"{frame_count} | {mode} | {target_fps:.0f} fps target | {actual:.1f} actual",
@@ -152,10 +217,14 @@ def main() -> int:
                 f"legend={len(legend)}"
             )
         else:
+            cam_label = f"CAM {cam_idx}" if is_camera else "FILE"
+            if switching:
+                cam_label = "..."
             display = scale_for_display(frame, display_scale)
-            start_r, pause_r = draw_controls(display, state["detecting"])
+            start_r, pause_r, cam_r = draw_controls(display, state["detecting"], cam_label)
             state["start_rect"] = start_r
             state["pause_rect"] = pause_r
+            state["cam_rect"] = cam_r
             if not window_sized:
                 cv2.resizeWindow(window, display.shape[1], display.shape[0])
                 window_sized = True
@@ -171,6 +240,23 @@ def main() -> int:
                 if state["detecting"]:
                     state["detecting"] = False
                     reset_all()
+            if key in (ord("c"), ord("C")):
+                state["switch_cam"] = True
+
+            # ── Kick off background camera switch ────────────────────────
+            if state["switch_cam"] and is_camera and not switching:
+                state["switch_cam"] = False
+                switching = True
+                cam_switch_result = {"done": False, "cap": None, "idx": -1}
+                t = threading.Thread(
+                    target=_try_open_next_camera,
+                    args=(cam_idx, cam_switch_result),
+                    daemon=True,
+                )
+                t.start()
+                print(f"[Camera] Looking for next camera after index {cam_idx}...")
+            else:
+                state["switch_cam"] = False
 
         if args.max_frames and frame_count >= args.max_frames:
             break

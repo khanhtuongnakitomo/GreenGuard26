@@ -5,7 +5,9 @@ import cv2
 import numpy as np
 
 BTN_H, BTN_W, BTN_GAP, BTN_MARGIN = 44, 130, 12, 16
+CAM_BTN_W = 100
 M2_COLORS = {0: (0, 0, 255), 1: (0, 255, 255), 2: (255, 0, 255)}
+
 
 
 def scale_for_display(frame: np.ndarray, scale: float) -> np.ndarray:
@@ -18,7 +20,8 @@ def button_rects(frame_w: int, frame_h: int):
     y1 = y2 - BTN_H
     pause = (frame_w - BTN_MARGIN - BTN_W, y1, frame_w - BTN_MARGIN, y2)
     start = (pause[0] - BTN_GAP - BTN_W, y1, pause[0] - BTN_GAP, y2)
-    return start, pause
+    cam = (start[0] - BTN_GAP - CAM_BTN_W, y1, start[0] - BTN_GAP, y2)
+    return start, pause, cam
 
 
 def hit_button(x: int, y: int, rect) -> bool:
@@ -50,12 +53,33 @@ def draw_button(frame, rect, label: str, active: bool, enabled: bool = True):
     )
 
 
-def draw_controls(frame, detecting: bool):
+def draw_controls(frame, detecting: bool, cam_label: str = "CAM 0"):
     h, w = frame.shape[:2]
-    start_r, pause_r = button_rects(w, h)
+    start_r, pause_r, cam_r = button_rects(w, h)
     draw_button(frame, start_r, "START", active=detecting, enabled=not detecting)
     draw_button(frame, pause_r, "PAUSE", active=not detecting, enabled=detecting)
-    return start_r, pause_r
+    draw_cam_button(frame, cam_r, cam_label)
+    return start_r, pause_r, cam_r
+
+
+def draw_cam_button(frame, rect, label: str):
+    """Draw the camera-switch button with a distinctive cyan accent."""
+    x1, y1, x2, y2 = rect
+    fill, border, text = (60, 40, 10), (255, 200, 0), (255, 220, 80)
+    overlay = frame.copy()
+    cv2.rectangle(overlay, (x1, y1), (x2, y2), fill, -1)
+    cv2.addWeighted(overlay, 0.75, frame, 0.25, 0, frame)
+    cv2.rectangle(frame, (x1, y1), (x2, y2), border, 2)
+    (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+    cv2.putText(
+        frame,
+        label,
+        (x1 + (x2 - x1 - tw) // 2, y1 + (y2 - y1 + th) // 2),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        text,
+        2,
+    )
 
 
 def draw_paused_banner(frame: np.ndarray) -> None:
