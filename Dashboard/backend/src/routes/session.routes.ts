@@ -4,7 +4,7 @@ import {
   getLatestSession,
 } from '../controllers/session.controller';
 
-const router = Router();
+const router: Router = Router();
 
 // GET    /api/sessions/latest    — Dashboard lấy event mới nhất (PHẢI TRƯỚC /:id nếu có)
 router.get('/latest', getLatestSession);

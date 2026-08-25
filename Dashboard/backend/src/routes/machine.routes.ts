@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { getMachines, getMachine } from '../controllers/machine.controller';
 
-const router = Router();
+const router: Router = Router();
 
 // GET  /api/machines                    — Dashboard lấy danh sách machine
 router.get('/', getMachines);

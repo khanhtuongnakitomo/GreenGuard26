@@ -5,7 +5,7 @@ import machineRoutes   from './routes/machine.routes';
 import statsRoutes     from './routes/stats.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 
-const app = express();
+const app: express.Express = express();
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(cors());

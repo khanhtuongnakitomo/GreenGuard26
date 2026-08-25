@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as controller from '../controllers/dashboard.controller';
 
-export const dashboardRoutes = Router();
+export const dashboardRoutes: Router = Router();
 
 dashboardRoutes.get('/overview', controller.getOverview);
 dashboardRoutes.get('/live', controller.getLiveFeed);
