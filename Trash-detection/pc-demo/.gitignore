@@ -1,0 +1,8 @@
+# PC demo local artifacts
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+logs/
+saved_frames/
+config/runtime.json

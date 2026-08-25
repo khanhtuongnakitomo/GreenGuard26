@@ -1,0 +1,9 @@
+# Jetson runtime local artifacts
+.venv/
+__pycache__/
+*.pyc
+models/engines/*.engine
+models/engines/engine_manifest.json
+logs/
+saved_frames/
+*.timing.cache

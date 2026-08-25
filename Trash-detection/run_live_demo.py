@@ -11,7 +11,7 @@ Controls:
 
 Usage (from Trash-detection/):
   .\run_live_demo.bat
-  model1-rebuild\.venv\Scripts\python.exe run_live_demo.py
+  training\model1\.venv\Scripts\python.exe run_live_demo.py
 """
 from __future__ import annotations
 
@@ -26,8 +26,8 @@ import numpy as np
 from ultralytics import YOLO
 
 ROOT = Path(__file__).resolve().parent
-M1_ROOT = ROOT / "model1-rebuild"
-M2_ROOT = ROOT / "model2-rebuild"
+M1_ROOT = ROOT / "training" / "model1"
+M2_ROOT = ROOT / "training" / "model2"
 sys.path.insert(0, str(M1_ROOT / "scripts"))
 sys.path.insert(0, str(M2_ROOT / "scripts"))
 from m1_two_stage import PetCanDecider  # noqa: E402

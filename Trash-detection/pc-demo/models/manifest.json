@@ -1,0 +1,84 @@
+{
+  "target": "pc",
+  "source_commit": "6dbd33a5059f899a6005ee22c7800b513065da9b",
+  "models": [
+    {
+      "filename": "m1_classifier_224.onnx",
+      "path": "models/m1_classifier_224.onnx",
+      "source_path": "Trash-detection/training/model1/export/cls_onnx_224/model.onnx",
+      "source_commit": "6dbd33a5059f899a6005ee22c7800b513065da9b",
+      "sha256": "06856aa726040af8e596e2dc4508dddb32c1e8103e92a1a631cdb46db9b208e6",
+      "bytes": 5779280,
+      "task": "classify",
+      "input_name": "images",
+      "input_shape": [
+        1,
+        3,
+        224,
+        224
+      ],
+      "output_shape": [
+        1,
+        2
+      ],
+      "classes": [
+        "pet",
+        "can"
+      ],
+      "image_size": 224
+    },
+    {
+      "filename": "m1_detector_416.onnx",
+      "path": "models/m1_detector_416.onnx",
+      "source_path": "Trash-detection/training/model1/export/onnx_416/model.onnx",
+      "source_commit": "6dbd33a5059f899a6005ee22c7800b513065da9b",
+      "sha256": "79881d482434675f4f51bd0f6e972d666c93146ed235b0c9795e532095bc4a11",
+      "bytes": 12438025,
+      "task": "obb",
+      "input_name": "images",
+      "input_shape": [
+        1,
+        3,
+        416,
+        416
+      ],
+      "output_shape": [
+        1,
+        7,
+        3549
+      ],
+      "classes": [
+        "bottle",
+        "aluminum"
+      ],
+      "image_size": 416
+    },
+    {
+      "filename": "m2_obb_640.onnx",
+      "path": "models/m2_obb_640.onnx",
+      "source_path": "Trash-detection/training/model2/export/onnx_640/model.onnx",
+      "source_commit": "6dbd33a5059f899a6005ee22c7800b513065da9b",
+      "sha256": "278bc6167f431d3e67ab2165aa6975b1345d79c0882b4ea5d924ca71c7481c82",
+      "bytes": 12497080,
+      "task": "obb",
+      "input_name": "images",
+      "input_shape": [
+        1,
+        3,
+        640,
+        640
+      ],
+      "output_shape": [
+        1,
+        8,
+        8400
+      ],
+      "classes": [
+        "cap",
+        "label",
+        "ring"
+      ],
+      "image_size": 640
+    }
+  ]
+}
