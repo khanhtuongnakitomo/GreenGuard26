@@ -41,12 +41,19 @@ M1_CANDIDATES = [
     (M1_ROOT / "runs" / "v1_4class" / "seed42_n640" / "weights" / "best.pt", 0, 3),
 ]
 M2_CANDIDATES = [
+    M2_ROOT / "export" / "candidates" / "m2v4_caplabel_seed42_n640" / "onnx_640" / "model.onnx",
+    M2_ROOT / "export" / "candidates" / "m2v4_caplabel_seed42_n640" / "onnx_416" / "model.onnx",
+    M2_ROOT / "runs" / "m2v4_caplabel_seed42_n640" / "weights" / "best.pt",
     M2_ROOT / "export" / "onnx_640" / "model.onnx",
     M2_ROOT / "export" / "onnx_416" / "model.onnx",
     M2_ROOT / "runs" / "m2v3_seed42_n640" / "weights" / "best.pt",
 ]
 M2_NAMES = {0: "cap", 1: "label", 2: "ring"}
-M2_REF = M2_ROOT / "runs" / "m2v3_seed42_n640" / "weights" / "best.pt"
+M2_REF = (
+    M2_ROOT / "runs" / "m2v4_caplabel_seed42_n640" / "weights" / "best.pt"
+    if (M2_ROOT / "runs" / "m2v4_caplabel_seed42_n640" / "weights" / "best.pt").is_file()
+    else M2_ROOT / "runs" / "m2v3_seed42_n640" / "weights" / "best.pt"
+)
 M2_COLORS = {0: (0, 0, 255), 1: (0, 255, 255), 2: (255, 0, 255)}
 DEVICE = "cpu"
 WINDOW = "GreenGuard live — M1+M2 (START/PAUSE | Q=quit)"

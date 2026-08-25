@@ -1,7 +1,8 @@
 {
   "skipped_sources": [
-    "PET-cap-ring (mixed Instant auto-label \u2014 not true ring)",
-    "water-bottle-with-cap-and-wrapper (audit: n\u22480 usable part boxes)"
+    "bottle cap defect 2 (whole-bottle state boxes, 52-70% area)",
+    "DefectBottle (single generic defect box)",
+    "ring-dataset (mixed Instant auto-labels)"
   ],
   "PET-bottle-with-cap-and-label": {
     "images_kept": 1320,
@@ -35,19 +36,50 @@
       "test": 65
     }
   },
-  "owner-live": {
-    "images_kept": 393,
+  "bottle-defect-detection": {
+    "images_kept": 628,
     "images_dropped_empty": 0,
-    "lines_dropped": 0,
-    "lines_clamped": 8,
+    "lines_dropped": 1092,
+    "lines_clamped": 3,
     "lines_quarantined": 0,
     "instances": {
-      "cap": 412,
-      "label": 310
+      "cap": 664,
+      "label": 481
     },
     "kept_per_origin_split": {
-      "train": 317,
-      "val": 76
+      "train": 440,
+      "val": 125,
+      "test": 63
+    }
+  },
+  "bottle-label-inspection": {
+    "images_kept": 301,
+    "images_dropped_empty": 4,
+    "lines_dropped": 468,
+    "lines_clamped": 6,
+    "lines_quarantined": 0,
+    "instances": {
+      "label": 301
+    },
+    "kept_per_origin_split": {
+      "train": 238,
+      "val": 35,
+      "test": 28
+    }
+  },
+  "bottle-label-detection": {
+    "images_kept": 1577,
+    "images_dropped_empty": 52,
+    "lines_dropped": 4766,
+    "lines_clamped": 118,
+    "lines_quarantined": 0,
+    "instances": {
+      "label": 3732
+    },
+    "kept_per_origin_split": {
+      "train": 1484,
+      "val": 75,
+      "test": 18
     }
   }
 }

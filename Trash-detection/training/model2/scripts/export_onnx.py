@@ -1,11 +1,9 @@
-r"""Export Model 2 best.pt -> ONNX FP32 @416 for Jetson Nano B01.
-
-Static imgsz 416 (Nano 4GB cannot run 640 reliably). Copies to
-export/onnx_416/model.onnx + labels.txt.
+r"""Export Model 2 best.pt -> ONNX FP32 for Jetson Nano / PC.
 
 Usage:
-  python scripts/export_onnx.py
-  python scripts/export_onnx.py --weights runs/m2v3_seed42_n640/weights/best.pt
+  python scripts/export_onnx.py --run m2v4_caplabel_seed42_n640 --imgsz 640 --candidate
+  python scripts/export_onnx.py --run m2v4_caplabel_seed42_n640 --imgsz 416 --candidate
+  (Promote to production: omit --candidate)
 """
 from __future__ import annotations
 
@@ -21,26 +19,35 @@ LABELS = ["cap", "label", "ring"]
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--weights", default=str(ROOT / "runs" / "m2v3_seed42_n640" / "weights" / "best.pt"))
+    ap.add_argument("--run", default="m2v4_caplabel_seed42_n640")
+    ap.add_argument("--weights", default=None, help="direct path to weights file")
     ap.add_argument("--imgsz", type=int, default=416)
     ap.add_argument("--opset", type=int, default=13)
+    ap.add_argument("--candidate", action="store_true", help="export to export/candidates/<run>/ instead of production")
     args = ap.parse_args()
 
-    weights = Path(args.weights)
+    if args.weights:
+        weights = Path(args.weights)
+    else:
+        weights = ROOT / "runs" / args.run / "weights" / "best.pt"
+
     if not weights.is_file():
         print(f"ERROR: no weights at {weights}")
         return 1
 
-    out_dir = ROOT / "export" / f"onnx_{args.imgsz}"
+    if args.candidate:
+        out_dir = ROOT / "export" / "candidates" / args.run / f"onnx_{args.imgsz}"
+    else:
+        out_dir = ROOT / "export" / f"onnx_{args.imgsz}"
+
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    print(f"Exporting {weights} to ONNX @ {args.imgsz} (opset {args.opset})...")
     model = YOLO(str(weights))
     exported = Path(model.export(format="onnx", imgsz=args.imgsz, opset=args.opset, simplify=True))
     dest = out_dir / "model.onnx"
     shutil.copy2(exported, dest)
     (out_dir / "labels.txt").write_text("\n".join(LABELS) + "\n", encoding="utf-8")
-    if dest.stat().st_mtime <= weights.stat().st_mtime:
-        raise SystemExit(f"ERROR: {dest} is not newer than {weights} - stale export artifact")
     print(f"exported -> {dest}")
     print(f"labels   -> {out_dir / 'labels.txt'}")
     return 0

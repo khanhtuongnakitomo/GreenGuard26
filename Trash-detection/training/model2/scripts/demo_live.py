@@ -34,12 +34,19 @@ COLORS = {0: (0, 0, 255), 1: (0, 255, 255), 2: (255, 0, 255)}
 DEVICE = "cpu"
 
 CANDIDATES = [
+    ROOT / "export" / "candidates" / "m2v4_caplabel_seed42_n640" / "onnx_640" / "model.onnx",
+    ROOT / "export" / "candidates" / "m2v4_caplabel_seed42_n640" / "onnx_416" / "model.onnx",
+    ROOT / "runs" / "m2v4_caplabel_seed42_n640" / "weights" / "best.pt",
     ROOT / "export" / "onnx_640" / "model.onnx",
     ROOT / "export" / "onnx_416" / "model.onnx",
     ROOT / "runs" / "m2v3_seed42_n640" / "weights" / "best.pt",
 ]
 
-REF_WEIGHTS = ROOT / "runs" / "m2v3_seed42_n640" / "weights" / "best.pt"
+REF_WEIGHTS = (
+    ROOT / "runs" / "m2v4_caplabel_seed42_n640" / "weights" / "best.pt"
+    if (ROOT / "runs" / "m2v4_caplabel_seed42_n640" / "weights" / "best.pt").is_file()
+    else ROOT / "runs" / "m2v3_seed42_n640" / "weights" / "best.pt"
+)
 
 
 def onnx_date(path: Path) -> str | None:
