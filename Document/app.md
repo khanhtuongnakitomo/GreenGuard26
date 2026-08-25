@@ -1,7 +1,7 @@
 # GreenPoint App — Comprehensive Documentation
 
-> **Last updated:** 2026-07-16
-> **Codebase path:** `app/`
+> **Last updated:** 2026-08-25
+> **Codebase paths:** `GreenPoint-Backend/` · `FRONTEND_GREENPOINT/`
 > **Platform:** React Native (Expo) · Express 4 · MongoDB Atlas
 
 ---
@@ -10,19 +10,19 @@
 
 The **GreenPoint App** is a full-stack recycling rewards platform built for university campuses. Students and staff earn points by recycling plastic bottles and aluminum cans through AI-powered smart bins, then redeem points for vouchers from campus partners (parking, canteens, retailers).
 
-| Layer | Stack | Port |
-|---|---|---|
-| Backend | Express 4 · TypeScript · MongoDB (Mongoose 8) · Zod | 4000 |
-| Frontend | React Native (Expo) · TypeScript · Zustand · Axios · expo-router | Mobile App |
+| Layer | Directory | Stack | Port |
+|---|---|---|---|
+| Backend | `GreenPoint-Backend/` | Express 4 · TypeScript · MongoDB (Mongoose 8) · Zod | 4000 |
+| Frontend | `FRONTEND_GREENPOINT/` | React Native (Expo) · TypeScript · Zustand · Axios · expo-router | Mobile App |
 
 ---
 
 ## 2. System Architecture
 
 ```
-app/
-├── backend/                     # Express + TypeScript API server
-│   ├── .env.example
+BKI/
+├── GreenPoint-Backend/          # Express + TypeScript API server (Port 4000)
+│   ├── .env
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── src/
@@ -38,7 +38,7 @@ app/
 │       │   ├── notFound.middleware.ts    # 404 catch-all
 │       │   ├── role.middleware.ts        # Role-based access control
 │       │   └── validate.middleware.ts   # Zod schema validation
-│       ├── modules/
+│       ├── modules/             # 13 feature modules
 │       │   ├── admin/           # Admin CRUD, stats, audit logs
 │       │   ├── auth/            # Register, login, OTP, logout
 │       │   ├── campaigns/       # Bonus multiplier campaigns
@@ -66,7 +66,7 @@ app/
 │           ├── pointRules.ts    # Point calculation per item type
 │           ├── qrToken.ts       # Voucher QR token generation
 │           └── token.ts         # JWT access/refresh token utilities
-└── frontend/
+└── FRONTEND_GREENPOINT/         # Student mobile app (Expo)
     ├── app.json                 # Expo config
     ├── babel.config.js
     ├── index.ts                 # Expo entry point

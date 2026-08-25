@@ -1,21 +1,22 @@
 # GreenGuard Dashboard — Comprehensive Documentation
 
-> **Last updated:** 2026-07-16
-> **Codebase path:** `Dashboard/`
-> **Platform:** Expo (React Native Web) · Express 4 · MongoDB Atlas (shared with app)
+> **Last updated:** 2026-08-25  
+> **Codebase path:** `GreenGuard26/Dashboard/`  
+> **Platform:** Expo (React Native Web) · Express 4 + TypeScript · MongoDB Atlas (shared with GreenPoint-Backend)  
+> **Backend Port:** 3003  
 
 ---
 
 ## 1. Product Overview
 
-The **GreenGuard Dashboard** is a web-based monitoring and analytics platform for the GreenGuard smart recycling ecosystem. It is the administrative view into the system, allowing teams to monitor machine health, view recycling statistics, and manage contribution data in real time.
+The **GreenGuard Dashboard** is a web-based administrative and analytics monitoring portal for the GreenGuard smart recycling ecosystem at DHBK. It allows operators and administrators to monitor machine fleet health, track recycling metrics (bottles, cans, cartons, and points), inspect contribution session histories, and view recycling trends.
 
-> **Important:** The Dashboard backend shares the **same MongoDB Atlas database** as the GreenPoint App backend. Metrics like total waste are calculated from the same `ContributionSession` data that the user app writes to.
+> **Important:** The Dashboard backend connects directly to the **same MongoDB Atlas database** as the GreenPoint App backend (`GreenPoint-Backend`). Metrics like total waste, session counts, and claim rates are calculated from the shared `contributionsessions`, `machines`, and `users` collections.
 
-| Layer | Stack | Port |
-|---|---|---|
-| Backend | Express 4 · TypeScript · MongoDB (Mongoose 8) | 3003 |
-| Frontend | React Native (Expo Web) · TypeScript · expo-router | Website |
+| Layer | Stack | Port / Target | Status |
+|---|---|---|---|
+| **Backend** | Express 4 · TypeScript · Mongoose 8 | Port `3003` | Active API server |
+| **Frontend** | React Native (Expo Web) · TypeScript · Gifted Charts | Web Browser (`expo start --web`) | 4 Screens UI (Mock Data ready for API wiring) |
 
 ---
 
@@ -24,280 +25,277 @@ The **GreenGuard Dashboard** is a web-based monitoring and analytics platform fo
 ```
 Dashboard/
 ├── backend/                       # Express + TypeScript API server (port 3003)
-│   ├── .env.example
-│   ├── package.json
+│   ├── .env.example               # Environment variables template
+│   ├── package.json               # express, mongoose, cors, dotenv, tsx
 │   ├── tsconfig.json
 │   └── src/
-│       ├── server.ts              # Entry: load .env → connectDB() → app.listen()
-│       ├── app.ts                 # Express app: middleware, routes, health check
+│       ├── server.ts              # Entry point: load .env → connectDB() → app.listen(3003)
+│       ├── app.ts                 # Express app: cors, json middleware, routes, /health
 │       ├── config/
 │       │   └── db.ts              # Mongoose connection to shared MongoDB Atlas
 │       ├── types/
-│       │   └── index.ts           # Shared TypeScript types and DTOs
+│       │   └── index.ts           # Shared TypeScript interfaces & DTOs
 │       ├── models/
-│       │   ├── ContributionSession.ts  # Session model (same collection as app)
-│       │   ├── Machine.ts              # Machine model (same collection as app)
+│       │   ├── ContributionSession.ts  # Session model (shared collection with GreenPoint-Backend)
+│       │   ├── Machine.ts              # Machine model (shared collection with GreenPoint-Backend)
 │       │   └── User.ts                 # User model (read-only reference)
 │       ├── controllers/
-│       │   ├── machine.controller.ts   # Machine heartbeat & status
-│       │   ├── session.controller.ts   # Contribution session queries & stats
-│       │   └── stats.controller.ts     # Aggregated dashboard statistics
+│       │   ├── machine.controller.ts   # Machine listing & detail queries
+│       │   ├── session.controller.ts   # Session history & latest session feed
+│       │   └── stats.controller.ts     # Aggregated summary statistics
 │       └── routes/
-│           ├── machine.routes.ts       # Machine endpoints
-│           ├── session.routes.ts       # Session endpoints
-│           └── stats.routes.ts         # Stats endpoints
-└── frontend/                      # Expo Web app (compiled to website)
+│           ├── machine.routes.ts       # /api/machines endpoints
+│           ├── session.routes.ts       # /api/sessions endpoints
+│           └── stats.routes.ts         # /api/stats endpoints
+└── frontend/                      # Expo Web app (React Native Web)
     ├── app.json                   # Expo config
-    ├── App.tsx                    # Root component
+    ├── App.tsx                    # Root component with state-driven navigation
     ├── babel.config.js
     ├── index.ts                   # Expo entry point
-    ├── package.json
+    ├── package.json               # Dependencies: expo, react-native, gifted-charts, lucide, zustand, axios, react-query
     ├── tsconfig.json
     └── src/
         ├── components/
-        │   ├── DashboardSidebar.tsx   # Navigation sidebar
-        │   ├── DashboardTopNav.tsx    # Top navigation bar
+        │   ├── DashboardSidebar.tsx   # Left navigation sidebar
+        │   ├── DashboardTopNav.tsx    # Top search and user navbar
         │   ├── KPICard.tsx            # Key metric display card
-        │   ├── SectionCard.tsx        # Section wrapper card
+        │   ├── SectionCard.tsx        # Styled section card container
         │   └── StatusBadge.tsx        # Machine online/offline badge
         ├── constants/
-        │   └── mockData.ts            # Demo data for offline/dev mode
+        │   └── mockData.ts            # UI presentation data
         ├── screens/
-        │   ├── DashboardScreen.tsx    # Main overview with KPI cards
-        │   ├── AnalyticsScreen.tsx    # Charts and trends
-        │   ├── SmartBinsScreen.tsx    # Machine list and status
-        │   └── ReportsScreen.tsx      # Contribution session reports
+        │   ├── DashboardScreen.tsx    # Overview KPIs, classification trend, waste pie, recent items
+        │   ├── AnalyticsScreen.tsx    # Trend charts, peak usage, accuracy, location rankings
+        │   ├── SmartBinsScreen.tsx    # Bin fleet status, map grid, hardware telemetry
+        │   └── ReportsScreen.tsx      # Quick report generation and report download history
         ├── theme/
-        │   ├── colors.ts              # Color palette
-        │   ├── typography.ts          # Typography styles
-        │   └── index.ts               # Theme exports
+        │   ├── colors.ts              # Design token color palette
+        │   ├── typography.ts          # Typography system
+        │   └── index.ts
         └── types/
-            └── dashboard.types.ts     # Dashboard TypeScript types
+            └── dashboard.types.ts     # Frontend domain types
 ```
 
 ---
 
 ## 3. Database Schemas (Mongoose)
 
-The Dashboard backend connects to the **same MongoDB Atlas database** as the GreenPoint App. It accesses the collections read-only for display purposes, and write-access only for machine heartbeat updates.
+The Dashboard backend connects to the **same MongoDB Atlas database** as `GreenPoint-Backend`.
 
-### 3.1 ContributionSession (shared with app)
+### 3.1 ContributionSession (Shared Collection: `contributionsessions`)
 
-```
+```typescript
 Collection: contributionsessions
-Fields (Dashboard reads, App writes):
-  sessionCode     String    unique identifier
-  machineId       ObjectId  ref: Machine
+Fields:
+  sessionCode     String    required, unique, indexed (e.g. "GP-SESSION-XXXX")
+  machineId       ObjectId  ref: "Machine", required, indexed
+  machineName     String    optional cached name
   items           [{
-    itemType      String    "plastic_bottle" | "can"
-    quantity      Number
+    itemType      String    enum: ["plastic_bottle", "can", "carton"]
+    quantity      Number    min: 1
     pointsPerItem Number
   }]
-  totalPoints     Number
-  claimTokenHash  String
-  status          String    "unclaimed" | "claimed" | "expired" | "cancelled"
-  claimedBy       ObjectId  ref: User (populated to get user info)
-  claimedAt       Date
-  expiresAt       Date
+  totalItems      Number    min: 0
+  totalPoints     Number    min: 0
+  claimTokenHash  String    required, indexed
+  status          String    enum: ["unclaimed", "claimed", "expired", "cancelled"], default: "unclaimed", indexed
+  claimedBy       ObjectId  ref: "User", optional
+  claimedAt       Date      optional
+  expiresAt       Date      required, indexed
   timestamps      { createdAt, updatedAt }
 ```
 
-> **Dashboard metrics note:** Total waste items displayed on the dashboard are computed as:
-> - `totalBottles` = SUM of `quantity` where `itemType = "plastic_bottle"` across all sessions
-> - `totalCans` = SUM of `quantity` where `itemType = "can"` across all sessions
+> **Dashboard metrics computation:**
+> - `plastic_bottle`: Sum of quantities where `itemType = "plastic_bottle"`
+> - `can`: Sum of quantities where `itemType = "can"`
+> - `carton`: Sum of quantities where `itemType = "carton"`
+> - `totalItems`: Sum of all items or cached `totalItems`
+> - `totalPointsAwarded`: Sum of `totalPoints` for sessions with `status = "claimed"`
 
-### 3.2 Machine (shared with app)
+### 3.2 Machine (Shared Collection: `machines`)
 
-```
+```typescript
 Collection: machines
-Fields (Dashboard reads + heartbeat writes):
-  machineCode    String   unique
-  name           String
-  locationName   String
-  locationType   String   "canteen" | "parking" | "library" | "classroom_area" | "other"
-  status         String   "online" | "offline" | "maintenance" | "disabled"
-  lastSeenAt     Date     updated on each heartbeat pulse
-  totalSessions  Number
+Fields:
+  machineCode    String   required, unique, indexed (e.g. "0001" or "BK_BIN_01")
+  name           String   required
+  locationName   String   required
+  locationType   String   default: "other" (e.g. "canteen", "parking", "library", "classroom_area", "other")
+  apiKeyHash     String   required, select: false (for machine authentication)
+  status         String   enum: ["online", "offline", "maintenance", "disabled"], default: "offline", indexed
+  lastSeenAt     Date     timestamp of last heartbeat/telemetry pulse
+  totalSessions  Number   default: 0
+  bins           [{
+    binType         String  ("plastic_bottle" | "can" | "carton")
+    capacityPercent Number  0–100, default: 0
+  }]
   timestamps     { createdAt, updatedAt }
 ```
 
-> **Online/Offline detection:** A machine is considered **offline** if `lastSeenAt` is older than 30 seconds from current time.
+> **Online/Offline detection:** A machine is considered **online** if `lastSeenAt` is within the last 30 seconds (`Date.now() - lastSeenAt <= 30000`).
 
-### 3.3 User (shared with app — read-only reference)
+### 3.3 User (Shared Collection: `users` — Read-only Reference)
 
-```
+```typescript
 Collection: users
-Fields (Dashboard reads only — for enriching session data):
-  displayName          String
-  faculty              String
-  phoneNumber          String
-  totalPoints          Number
-  lifetimeEarnedPoints Number
-  totalBottles         Number
-  totalCans            Number
-  totalItems           Number
+Fields (Enriched on session queries / aggregated user stats):
+  phoneNumber             String   unique, indexed
+  displayName             String   default: "Green User"
+  avatar                  String   default: "default-avatar.png"
+  role                    String   default: "user", indexed ("user" | "operator" | "admin" | "partner_admin")
+  className               String   optional
+  studentId               String   sparse, indexed
+  totalPoints             Number   current redeemable balance
+  lifetimeEarnedPoints    Number   all-time earned points
+  lifetimeRedeemedPoints  Number   all-time spent points
+  totalBottles            Number   user total bottles recycled
+  totalCans               Number   user total cans recycled
+  totalCarton             Number   user total cartons recycled
+  totalItems              Number   user total items recycled
+  currentStreak           Number
+  longestStreak           Number
+  lastContributionAt      Date
+  membershipTier          String   ("green_member" | "silver" | "gold" | "platinum")
+  timestamps              { createdAt, updatedAt }
 ```
 
 ---
 
-## 4. Machine Heartbeat System
+## 4. Machine Telemetry & Heartbeat Architecture
 
-The smart bins periodically send a pulse via Wi-Fi to the Dashboard backend to indicate they are alive and operational.
+The smart recycling kiosks (Jetson Nano / Windows demo) interact with the backend infrastructure through the following pattern:
 
-### Heartbeat Flow
+1. **Heartbeat Ingestion:**
+   - Physical machines send periodic heartbeats (every 10–15s) with `x-machine-api-key` or operator tokens.
+   - In the ecosystem architecture, heartbeat ingestion is handled by `GreenPoint-Backend` at `POST /api/machines/:machineId/heartbeat` (updating `status = "online"` and `lastSeenAt = new Date()`).
+2. **Dashboard Fleet Monitoring:**
+   - The Dashboard backend queries the shared `machines` collection via `GET /api/machines` and `GET /api/machines/:machineCode`.
+   - The Dashboard frontend evaluates `isOnline = (Date.now() - new Date(machine.lastSeenAt).getTime()) <= 30000`.
 
-```
-[Jetson Nano — Periodic timer (e.g. every 10–15 seconds)]
-    1. POST /api/machines/heartbeat
-       Body: { machineCode, state, lastSessionId }
-    2. Dashboard backend: Machine.findOneAndUpdate
-       → status = "online"
-       → lastSeenAt = now
-
-[Dashboard Frontend — Polling every 5s]
-    1. GET /api/machines
-    2. For each machine: if (now - lastSeenAt > 30s) → show as OFFLINE
-```
-
-### Machine States
-
-| State | Description |
+| State | Condition / Meaning |
 |---|---|
-| `online` | Heartbeat received within the last 30 seconds |
-| `offline` | No heartbeat for > 30 seconds |
-| `maintenance` | Admin-set state for scheduled downtime |
-| `disabled` | Admin-set state, machine taken out of service |
+| `online` | Heartbeat pulse received within the last 30 seconds |
+| `offline` | No heartbeat received for > 30 seconds |
+| `maintenance` | Machine flagged for maintenance downtime |
+| `disabled` | Machine decommissioned or taken out of service |
 
 ---
 
-## 5. Authentication & Authorization
+## 5. Authentication & Environment Configuration
 
-| Variable | Details |
-|---|---|
-| **JWT Access Secret** | Shared with app backend via env var |
-| **JWT Refresh Secret** | Shared with app backend via env var |
-| **Access token TTL** | 15 minutes |
-| **Refresh token TTL** | 7 days |
+### 5.1 Authentication Status
+- **Current State:** The `Dashboard/backend` service currently serves internal monitoring and aggregation endpoints without active JWT token validation middleware.
+- **Unified Auth Ecosystem:** User and administrative authentication is managed centrally by `GreenPoint-Backend` (port 4000) using JWT access tokens (15m TTL) and refresh tokens (7d TTL).
 
-> **Note:** The Dashboard backend requires valid JWT tokens (Bearer auth) for all non-public endpoints, using the same secrets as the `app/backend`. Dashboard users log in through the same auth system as the GreenPoint App (admin role required for full access).
+### 5.2 Backend Environment Variables (`Dashboard/backend/.env`)
+
+| Variable | Type | Default | Description |
+|---|---|---|---|
+| `PORT` | number | `3003` | Express server port |
+| `NODE_ENV` | string | `development` | Runtime environment (`development` / `production`) |
+| `MONGODB_URI` | string | *required* | MongoDB Atlas connection string (**MUST** point to shared cluster) |
+| `JWT_ACCESS_SECRET` | string | *optional* | Shared JWT secret for future token verification |
+| `JWT_REFRESH_SECRET`| string | *optional* | Shared JWT refresh secret |
+| `FRONTEND_ORIGIN` | string | `*` | Allowed CORS origin |
 
 ---
 
-## 6. API Reference
+## 6. API Reference (Dashboard Backend)
 
 **Base URL:** `http://localhost:3003`
 
 ### 6.1 Health Check
 
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| GET | `/health` | None | Server health check |
+#### `GET /health`
+Liveness check for monitoring and uptime probes.
 
-**Response `200`:**
+- **Auth:** None
+- **Response `200 OK`:**
 ```json
-{ "status": "ok", "ts": "2026-07-16T00:00:00.000Z" }
+{
+  "status": "ok",
+  "ts": "2026-08-25T10:00:00.000Z"
+}
 ```
 
 ---
 
 ### 6.2 Machines (`/api/machines`)
 
-#### `POST /api/machines/heartbeat`
-Receive a heartbeat pulse from the Jetson Nano edge device. Updates machine status to online and refreshes `lastSeenAt`.
-
-| Auth | Source |
-|---|---|
-| `x-machine-api-key` header | Jetson Nano smart bin |
-
-**Request Body:**
-```json
-{
-  "machineCode": "BK_BIN_01",
-  "state": "IDLE | SORTING | ERROR",
-  "lastSessionId": "session-id-string (optional)"
-}
-```
-
-**Response `200`:**
-```json
-{
-  "success": true,
-  "message": "Heartbeat recorded"
-}
-```
-
----
-
 #### `GET /api/machines`
-List all machines with their current status.
+List all machines registered in the database with their location, telemetry status, total sessions, and bin capacities.
 
-| Auth | Roles |
-|---|---|
-| Bearer | admin |
-
-**Response `200`:**
+- **Auth:** None
+- **Response `200 OK`:**
 ```json
 [
   {
-    "machineCode": "BK_BIN_01",
-    "name": "GreenGuard Bin #1",
+    "_id": "664b1f...",
+    "machineCode": "0001",
+    "name": "GreenGuard Kiosk #1",
     "locationName": "Canteen A — DHBK",
     "locationType": "canteen",
     "status": "online",
-    "lastSeenAt": "2026-07-16T10:00:00.000Z",
+    "lastSeenAt": "2026-08-25T10:14:30.000Z",
     "totalSessions": 142,
-    "isOnline": true
+    "bins": [
+      { "binType": "plastic_bottle", "capacityPercent": 65 },
+      { "binType": "can", "capacityPercent": 40 },
+      { "binType": "carton", "capacityPercent": 15 }
+    ],
+    "createdAt": "2026-08-01T00:00:00.000Z",
+    "updatedAt": "2026-08-25T10:14:30.000Z"
   }
 ]
 ```
 
----
+#### `GET /api/machines/:machineCode`
+Get details of a specific machine identified by its `machineCode`.
 
-#### `GET /api/machines/:machineId`
-Get a specific machine with status and recent session count.
-
-| Auth | Roles |
-|---|---|
-| Bearer | admin |
+- **Params:** `machineCode` (string, e.g. `0001`)
+- **Response `200 OK`:** Machine object.
+- **Response `404 Not Found`:** `{ "success": false, "message": "Machine 0001 not found" }`
 
 ---
 
 ### 6.3 Sessions (`/api/sessions`)
 
 #### `GET /api/sessions`
-Get paginated list of contribution sessions with filters.
+Get paginated list of contribution sessions with filtering options.
 
-| Auth | Roles |
-|---|---|
-| Bearer | admin |
+- **Query Parameters:**
+  - `machineCode` (string, optional): Filter by machine's code (e.g. `0001`).
+  - `status` (string, optional): Filter by session status (`unclaimed` | `claimed` | `expired` | `cancelled`).
+  - `itemType` (string, optional): Filter sessions containing item type (`plastic_bottle` | `can` | `carton`).
+  - `startDate` (ISO string, optional): Filter sessions created on or after date.
+  - `endDate` (ISO string, optional): Filter sessions created on or before date.
+  - `limit` (number, default: `50`): Number of records per page.
+  - `offset` (number, default: `0`): Skip count for pagination.
 
-**Query Parameters:**
-
-| Param | Type | Default | Description |
-|---|---|---|---|
-| machineId | string | — | Filter by machine |
-| status | string | — | Filter by session status |
-| startDate | string | — | ISO date, filter `createdAt >= startDate` |
-| endDate | string | — | ISO date, filter `createdAt <= endDate` |
-| limit | number | 50 | Max results per page |
-| offset | number | 0 | Skip count for pagination |
-
-**Response `200`:**
+- **Response `200 OK`:**
 ```json
 {
   "data": [
     {
-      "sessionCode": "GP-SESSION-XXXX",
-      "machineId": { "machineCode": "BK_BIN_01", "locationName": "Canteen A" },
+      "_id": "664b2a...",
+      "sessionCode": "GP-SESSION-172458",
+      "machineId": {
+        "_id": "664b1f...",
+        "machineCode": "0001",
+        "name": "GreenGuard Kiosk #1",
+        "locationName": "Canteen A — DHBK"
+      },
       "items": [
         { "itemType": "plastic_bottle", "quantity": 2, "pointsPerItem": 10 },
         { "itemType": "can", "quantity": 1, "pointsPerItem": 8 }
       ],
+      "totalItems": 3,
       "totalPoints": 28,
       "status": "claimed",
-      "claimedBy": { "displayName": "Nguyen Van A", "faculty": "CNTT" },
-      "claimedAt": "2026-07-16T10:05:00.000Z",
-      "createdAt": "2026-07-16T10:00:00.000Z"
+      "claimedBy": "664b01...",
+      "claimedAt": "2026-08-25T10:05:00.000Z",
+      "expiresAt": "2026-08-25T10:15:00.000Z",
+      "createdAt": "2026-08-25T10:00:00.000Z"
     }
   ],
   "total": 500,
@@ -306,281 +304,139 @@ Get paginated list of contribution sessions with filters.
 }
 ```
 
----
-
 #### `GET /api/sessions/latest`
-Get the most recent contribution session across all machines. Used for live activity feed (polled every 5s).
+Get the single most recent contribution session across the entire fleet or for a specific machine. Used for live activity feeds (short-polled every 3–5 seconds).
 
-| Auth | Roles |
-|---|---|
-| Bearer | admin |
-
-**Query Parameters:**
-
-| Param | Type | Description |
-|---|---|---|
-| machineId | string | Filter by specific machine (optional) |
-
-**Response `200`:** Single populated session object or `null`
+- **Query Parameters:**
+  - `machineCode` (string, optional): Filter by machine.
+- **Response `200 OK`:** Latest populated session object or `null`.
 
 ---
 
-#### `GET /api/sessions/:sessionId`
-Get a specific session with full population.
-
-| Auth | Roles |
-|---|---|
-| Bearer | admin |
-
----
-
-### 6.4 Stats (`/api/stats`)
+### 6.4 Statistics (`/api/stats`)
 
 #### `GET /api/stats/summary`
-Get aggregated dashboard summary statistics. Computed from `ContributionSession` collection.
+Get aggregated recycling statistics.
 
-| Auth | Roles |
-|---|---|
-| Bearer | admin |
+- **Query Parameters:**
+  - `machineCode` (string, optional): Specify `machineCode` (e.g. `0001`) for single-machine stats, or omit/pass `ALL` for global fleet stats.
 
-**Query Parameters:**
-
-| Param | Type | Description |
-|---|---|---|
-| machineId | string | Filter by machine (optional, defaults to ALL) |
-| startDate | string | ISO date range start (optional) |
-| endDate | string | ISO date range end (optional) |
-
-**Response `200`:**
+- **Response `200 OK`:**
 ```json
 {
+  "machineCode": "ALL",
   "totalSessions": 500,
-  "claimedSessions": 420,
-  "unclaimedSessions": 30,
-  "expiredSessions": 50,
   "totalItems": 1200,
-  "totalBottles": 850,
-  "totalCans": 350,
-  "totalPointsDistributed": 11500,
-  "avgItemsPerSession": 2.4,
+  "byType": {
+    "plastic_bottle": 850,
+    "can": 350,
+    "carton": 0
+  },
+  "claimedSessions": 420,
+  "unclaimedSessions": 80,
   "claimRate": 0.84,
-  "byMachine": [
-    {
-      "machineCode": "BK_BIN_01",
-      "locationName": "Canteen A",
-      "sessions": 142,
-      "bottles": 200,
-      "cans": 85
-    }
-  ]
+  "totalPointsAwarded": 11500
 }
 ```
 
----
-
-#### `GET /api/stats/timeline`
-Get session counts over time for charting purposes.
-
-| Auth | Roles |
-|---|---|
-| Bearer | admin |
-
-**Query Parameters:**
-
-| Param | Type | Default | Description |
-|---|---|---|---|
-| machineId | string | — | Filter by machine |
-| period | string | week | `day`, `week`, `month`, `year` |
-| granularity | string | day | `hour`, `day`, `week` |
-
-**Response `200`:**
-```json
-{
-  "labels": ["2026-07-10", "2026-07-11", "2026-07-12"],
-  "sessions": [45, 62, 38],
-  "bottles": [120, 180, 90],
-  "cans": [40, 55, 35]
-}
-```
+> **Note on Extended Analytics:** Time-series trends (`/api/stats/timeline`) and top recyclers leaderboard (`/api/stats/top-users`) are modeled for future backend expansion and are currently rendered using curated presentation data on the frontend (`src/constants/mockData.ts`).
 
 ---
 
-#### `GET /api/stats/top-users`
-Get top recyclers for leaderboard display.
+## 7. Frontend UI & Screens
 
-| Auth | Roles |
-|---|---|
-| Bearer | admin |
+The Dashboard frontend is built with React Native Web (Expo) and features 4 comprehensive administrative screens:
 
-**Response `200`:**
-```json
-[
-  {
-    "displayName": "Nguyen Van A",
-    "faculty": "CNTT",
-    "totalItems": 85,
-    "totalBottles": 60,
-    "totalCans": 25,
-    "lifetimeEarnedPoints": 820
-  }
-]
 ```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ DashboardTopNav  (Title, Subtitle "Welcome back, Mark", Notifications, Profile) │
+├──────────────┬──────────────────────────────────────────────────────────────┤
+│ SIDEBAR      │ ACTIVE SCREEN CONTENT                                        │
+│ • Dashboard  │                                                              │
+│ • Analytics  │ 1. Dashboard: KPI Row, Bar Trend, Donut Pie, Recent Sessions │
+│ • Smart Bins │ 2. Analytics: Multi-chart Trends, Peak Usage, Top Locations  │
+│ • Reports    │ 3. Smart Bins: Campus Map, Fleet Status, Hardware Health     │
+│ • Alerts     │ 4. Reports: Quick Report Generator, History Table & Downloads │
+└──────────────┴──────────────────────────────────────────────────────────────┘
+```
+
+### 7.1 Screen Breakdown
+
+1. **Dashboard Screen (`DashboardScreen.tsx`):**
+   - 4 KPI Cards: Total Recycled Items, AI Detection Accuracy, Active Smart Bins, Today's Classifications.
+   - Classification Trend Bar Chart (Gifted Charts).
+   - Compartment Utilization Progress Bars.
+   - Waste Type Donut Chart (`plastic`, `metal`, `paper`, `others`).
+   - Recent Classifications Table (real-time stream).
+   - Smart Bin Status Quick List with Fill Level indicators.
+   - Campaign Performance widget & System Alert Cards.
+
+2. **Analytics Screen (`AnalyticsScreen.tsx`):**
+   - 5 Analytics KPI Metrics (Classifications, Average Accuracy, Total Waste Kg, Active Bins, Today's Classifications).
+   - Classification Trend with weekly/monthly filters.
+   - Waste Type Distribution Breakdown.
+   - Accuracy Trend Line Chart (area chart).
+   - Peak Usage Hourly Bar Chart (6am – 8pm).
+   - Top Locations Leaderboard (e.g. HCMUT Liners, CircleK).
+   - Waste Type Distribution Over Time & Daily Average Breakdown.
+
+3. **Smart Bins Fleet Screen (`SmartBinsScreen.tsx`):**
+   - Interactive Campus Map coordinate visualization (HCMUT campus grid).
+   - Fleet Overview Donut Counters (`Online`, `Offline`, `Error`, `Nearly Full`).
+   - Searchable Bin Status Table with fill level indicators and status badges.
+   - Selected Bin Hardware Inspector displaying live health of:
+     - Camera Module
+     - Jetson Nano Edge Computer
+     - ESP32-S3 Microcontroller
+     - Servo Motors
+     - AI Computer Vision Model
+
+4. **Reports Screen (`ReportsScreen.tsx`):**
+   - Quick Report Generator for Daily, Weekly, Monthly, and Yearly reports.
+   - Calendar date picker trigger.
+   - Export format buttons (PDF / Excel).
+   - Searchable Report History Table with file size, creation timestamp, and action buttons (Download, View, Delete).
 
 ---
 
-## 7. Key Workflows
+## 8. Frontend Navigation & Data Architecture
 
-### 7.1 Machine Heartbeat Monitoring Workflow
-
-```
-[Jetson Nano — repeating timer]
-  POST /api/machines/heartbeat
-    → Machine.findOneAndUpdate({ machineCode })
-    → Set status = "online", lastSeenAt = now
-
-[Dashboard frontend — polling every 5s]
-  GET /api/machines
-    → For each machine:
-        if (Date.now() - lastSeenAt > 30_000) → mark as OFFLINE
-    → Display colored status badge per machine (green = online, red = offline)
-```
-
-### 7.2 Live Session Feed Workflow
-
-```
-[Dashboard frontend — polling every 5s]
-  GET /api/sessions/latest
-    → Show most recent contribution session in "Live Activity" panel
-    → Update KPI cards if new session since last poll
-
-[Dashboard frontend — polling every 10s]
-  GET /api/stats/summary
-    → Update total waste counters (bottles + cans)
-    → Update claim rate, total sessions, total points distributed
-```
-
-### 7.3 Contribution Session Data Flow
-
-```
-[Jetson Nano]
-  1. Sorts items, generates JWT claim token locally
-  2. Displays QR on LCD
-  3. Background POST to app/backend /api/contributions (x-machine-api-key)
-     → ContributionSession created in shared MongoDB Atlas
-
-[GreenPoint App user]
-  4. Scans QR → claims session → points credited
-  5. ContributionSession.status → "claimed", claimedBy → userId
-
-[Dashboard frontend]
-  6. Reads same ContributionSessions from shared DB
-  7. Displays session stats:
-       totalBottles = SUM(items where itemType = "plastic_bottle")
-       totalCans    = SUM(items where itemType = "can")
-       claimedSessions = COUNT(status = "claimed")
-```
+- **Navigation Pattern:** State-driven screen switching in `App.tsx` (`useState<DashboardRoute>('dashboard')`) passing `onNavigate` callbacks to `DashboardSidebar`. This keeps the web dashboard lightweight and avoids complex routing overhead.
+- **State Management & Data Fetching:** Configured with `@tanstack/react-query` `QueryClientProvider` and `axios` ready for polling API services.
+- **Current Data State:** UI screens render complete, styled layouts using `src/constants/mockData.ts`. Wiring live queries to backend endpoints will replace mock constants seamlessly.
 
 ---
 
-## 8. Frontend Screens
+## 9. Technology Dependencies
 
-| Screen | Description |
-|---|---|
-| **Dashboard** (`DashboardScreen`) | Main KPI overview: total sessions, total waste (bottles + cans), claim rate, active machines, live activity feed |
-| **Analytics** (`AnalyticsScreen`) | Time-series charts of recycling trends, waste type breakdown, machine comparison |
-| **Smart Bins** (`SmartBinsScreen`) | List of all machines, their location, real-time online/offline status, total sessions per machine |
-| **Reports** (`ReportsScreen`) | Filterable, paginated table of contribution sessions with machine, user, items, and status details |
-
-### Dashboard KPI Cards
-- **Total Sessions** — Total number of contribution sessions created
-- **Total Bottles** — Sum of all `plastic_bottle` quantities across sessions
-- **Total Cans** — Sum of all `can` quantities across sessions
-- **Claim Rate** — Percentage of sessions successfully claimed by a user
-- **Active Machines** — Count of machines with heartbeat < 30s ago
-- **Total Points Distributed** — Sum of all `totalPoints` from claimed sessions
-
----
-
-## 9. Real-time Polling Strategy
-
-The Dashboard uses **short-polling** via periodic API calls to keep data current without WebSockets.
-
-| Data | Interval | Endpoint |
-|---|---|---|
-| Machine statuses | 5s | `GET /api/machines` |
-| Latest session | 5s | `GET /api/sessions/latest` |
-| Summary stats | 10s | `GET /api/stats/summary` |
-| Session list | 30s (or manual) | `GET /api/sessions` |
-| Timeline charts | 60s (or manual) | `GET /api/stats/timeline` |
-
-**Offline threshold:** Machine considered offline if `lastSeenAt > 30 seconds` ago.
-
----
-
-## 10. Environment Variables (Backend)
-
-| Variable | Type | Default | Description |
-|---|---|---|---|
-| `NODE_ENV` | string | development | Runtime environment |
-| `PORT` | number | 3003 | HTTP server port |
-| `MONGODB_URI` | string | *required* | MongoDB connection string (SAME as app backend) |
-| `JWT_ACCESS_SECRET` | string | *required* | JWT secret (SAME as app backend) |
-| `JWT_REFRESH_SECRET` | string | *required* | JWT refresh secret (SAME as app backend) |
-| `JWT_ACCESS_EXPIRES_IN` | string | 15m | Access token TTL |
-| `JWT_REFRESH_EXPIRES_IN` | string | 7d | Refresh token TTL |
-| `FRONTEND_ORIGIN` | string | http://localhost:5173 | CORS allowed origin |
-
-> **Critical:** `MONGODB_URI` must point to the same cluster as `app/backend` — this is the key requirement for the unified data architecture.
-
----
-
-## 11. Technology Dependencies
-
-### Backend
+### Backend Dependencies (`Dashboard/backend/package.json`)
 | Package | Version | Purpose |
 |---|---|---|
-| express | 4.x | HTTP framework |
-| mongoose | 8.x | MongoDB ODM |
-| cors | 2.x | Cross-origin resource sharing |
-| dotenv | 16.x | Environment variable loading |
-| jsonwebtoken | 9.x | JWT verification for admin auth |
-| tsx | 4.x | Dev-time TypeScript runner |
+| `express` | `^4.19.2` | Core HTTP web framework |
+| `mongoose` | `^8.3.4` | MongoDB Object Data Modeling (ODM) |
+| `cors` | `^2.8.5` | Cross-Origin Resource Sharing middleware |
+| `dotenv` | `^16.4.5` | Environment variable loader |
+| `tsx` | `^4.8.2` | Fast dev TypeScript execution runner |
+| `typescript` | `^5.4.5` | TypeScript compiler |
 
-### Frontend (React Native / Expo Web)
+### Frontend Dependencies (`Dashboard/frontend/package.json`)
 | Package | Version | Purpose |
 |---|---|---|
-| expo | ~57.x | App framework (compiled to web) |
-| expo-router | ~57.x | File-based routing |
-| expo-linear-gradient | ~57.x | Gradient UI |
-| react-native | 0.86.x | Core framework |
-| react-native-gifted-charts | ^1.x | Charts and data visualization |
-| react-native-svg | 15.x | SVG support for charts |
-| @tanstack/react-query | ^5.x | Data fetching and polling |
-| axios | ^1.x | HTTP client |
-| zustand | ^5.x | State management |
-| lucide-react-native | ^1.x | Icon library |
-| expo-maps | ~57.x | Map for machine locations |
+| `expo` | `~57.0.2` | Expo React Native application framework |
+| `react-native` | `0.86.0` | React Native core |
+| `react-native-web` | `^0.21.2` | React Native web renderer |
+| `react-native-gifted-charts` | `^1.4.77` | Bar charts, line charts, and donut pie charts |
+| `react-native-svg` | `15.15.4` | SVG rendering for chart components |
+| `lucide-react-native` | `^1.23.0` | Iconography (Cpu, Camera, Zap, FileText, etc.) |
+| `@tanstack/react-query` | `^5.101.2` | Async state management and polling cache |
+| `axios` | `^1.18.1` | HTTP API client |
+| `zustand` | `^5.0.14` | Global state management |
+| `expo-linear-gradient` | `~57.0.0` | Gradient backgrounds |
 
 ---
 
-## 12. Shared Database Architecture
+## 10. Summary of Key Architectural Decisions
 
-Both `app/backend` and `Dashboard/backend` connect to the **same MongoDB Atlas cluster**:
-
-```
-MongoDB Atlas (Shared Cluster)
-├── users              → Written by app/backend, read by dashboard/backend
-├── contributionsessions → Written by app/backend, read by dashboard/backend
-├── machines           → Written by BOTH (app: CRUD, dashboard: heartbeat updates)
-├── pointtransactions  → Written by app/backend only
-├── partners           → Written by app/backend only
-├── rewards            → Written by app/backend only
-├── uservouchers       → Written by app/backend only
-├── milestones         → Written by app/backend only
-├── usermilestones     → Written by app/backend only
-├── campaigns          → Written by app/backend only
-├── otps               → Written by app/backend only
-└── auditlogs          → Written by app/backend only
-```
-
-> **Why two backends?** Separating the IoT telemetry/monitoring logic (Dashboard) from the user business logic (App) prevents heartbeat spam and analytics queries from affecting the latency of user-facing actions like QR claims and reward redemptions.
+1. **Shared MongoDB Cluster:** Eliminates data duplication and keeps admin analytics synchronized with mobile user QR claims and machine transactions.
+2. **Dedicated Telemetry Backend:** Runs on port 3003 independently of `GreenPoint-Backend` (port 4000) so heavy admin aggregation queries and short-polling do not impact mobile app user latency.
+3. **Cross-Platform React Native Web:** Shares styling paradigms, color tokens, and domain concepts with the student mobile app while presenting a desktop-optimized admin layout.
