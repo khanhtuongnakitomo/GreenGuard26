@@ -1,12 +1,12 @@
 {
   "target": "jetson",
-  "source_commit": "6dbd33a5059f899a6005ee22c7800b513065da9b",
+  "source_commit": "520cae2b0f26de254c95c6779c69a1c7f37ad430",
   "models": [
     {
       "filename": "m1_classifier_224.onnx",
       "path": "models/m1_classifier_224.onnx",
       "source_path": "Trash-detection/training/model1/export/cls_onnx_224/model.onnx",
-      "source_commit": "6dbd33a5059f899a6005ee22c7800b513065da9b",
+      "source_commit": "520cae2b0f26de254c95c6779c69a1c7f37ad430",
       "sha256": "06856aa726040af8e596e2dc4508dddb32c1e8103e92a1a631cdb46db9b208e6",
       "bytes": 5779280,
       "task": "classify",
@@ -31,7 +31,7 @@
       "filename": "m1_detector_416.onnx",
       "path": "models/m1_detector_416.onnx",
       "source_path": "Trash-detection/training/model1/export/onnx_416/model.onnx",
-      "source_commit": "6dbd33a5059f899a6005ee22c7800b513065da9b",
+      "source_commit": "520cae2b0f26de254c95c6779c69a1c7f37ad430",
       "sha256": "79881d482434675f4f51bd0f6e972d666c93146ed235b0c9795e532095bc4a11",
       "bytes": 12438025,
       "task": "obb",
@@ -57,9 +57,9 @@
       "filename": "m2_obb_416.onnx",
       "path": "models/m2_obb_416.onnx",
       "source_path": "Trash-detection/training/model2/export/onnx_416/model.onnx",
-      "source_commit": "6dbd33a5059f899a6005ee22c7800b513065da9b",
-      "sha256": "f5186b02f591a66b1cadc90c432f175df14e969747984e6c2f4a80cd9b8ac882",
-      "bytes": 12438790,
+      "source_commit": "520cae2b0f26de254c95c6779c69a1c7f37ad430",
+      "sha256": "66821d6054f7d32d231c455fd5fd96f19793658dca49ba1dc72258f38ef96227",
+      "bytes": 12438811,
       "task": "obb",
       "input_name": "images",
       "input_shape": [

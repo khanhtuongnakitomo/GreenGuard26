@@ -1,5 +1,9 @@
 {
-  "skipped_sources": [],
+  "skipped_sources": [
+    "bottle cap defect 2 (whole-bottle state boxes, 52-70% area)",
+    "DefectBottle (single generic defect box)",
+    "ring-dataset (mixed Instant auto-labels)"
+  ],
   "PET-bottle-with-cap-and-label": {
     "images_kept": 1320,
     "images_dropped_empty": 238,
@@ -31,6 +35,33 @@
       "val": 131,
       "test": 65
     }
+  },
+  "bottle-defect-detection": {
+    "images_kept": 0,
+    "images_dropped_empty": 0,
+    "lines_dropped": 0,
+    "lines_clamped": 0,
+    "lines_quarantined": 0,
+    "instances": {},
+    "kept_per_origin_split": {}
+  },
+  "bottle-label-inspection": {
+    "images_kept": 0,
+    "images_dropped_empty": 0,
+    "lines_dropped": 0,
+    "lines_clamped": 0,
+    "lines_quarantined": 0,
+    "instances": {},
+    "kept_per_origin_split": {}
+  },
+  "bottle-label-detection": {
+    "images_kept": 0,
+    "images_dropped_empty": 0,
+    "lines_dropped": 0,
+    "lines_clamped": 0,
+    "lines_quarantined": 0,
+    "instances": {},
+    "kept_per_origin_split": {}
   },
   "Bottle-label": {
     "images_kept": 372,

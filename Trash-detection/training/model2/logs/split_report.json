@@ -1,43 +1,26 @@
 {
-  "images_total": 4101,
+  "images_total": 4430,
   "images_per_split": {
-    "train": 2866,
-    "val": 823,
-    "test": 412
+    "train": 3400,
+    "val": 808,
+    "test": 222
   },
-  "groups": 1592,
-  "groups_spanning_splits": 0,
+  "groups": 1595,
   "instances_per_split": {
     "train": {
-      "cap": 4596,
-      "label": 3496,
-      "ring": 10
+      "cap": 5436,
+      "ring": 26,
+      "label": 4353
     },
     "val": {
-      "cap": 1320,
-      "label": 1270,
-      "ring": 21
+      "ring": 13,
+      "label": 1252,
+      "cap": 1447
     },
     "test": {
-      "cap": 910,
-      "label": 800
-    }
-  },
-  "class_presence": {
-    "train": {
-      "cap": 4596,
-      "label": 3496,
-      "ring": 10
-    },
-    "val": {
-      "cap": 1320,
-      "label": 1270,
-      "ring": 21
-    },
-    "test": {
-      "cap": 910,
-      "label": 800,
-      "ring": 0
+      "cap": 75,
+      "label": 77,
+      "ring": 123
     }
   },
   "dataset_yaml": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\dataset.yaml"
