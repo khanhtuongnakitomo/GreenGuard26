@@ -10,17 +10,24 @@ Trash-detection/Model1/logs/
 Trash-detection/Model2/logs/
 Trash-detection/Model1/failed/
 Trash-detection/Model2/failed/
+Trash-detection/training/model1/logs/
+Trash-detection/training/model2/logs/
+Trash-detection/training/model2/runs/smoke_m2v4/
 
 # Training dataset bulk under new layout
 Trash-detection/training/model1/dataset/incoming/
 Trash-detection/training/model1/dataset/normalized/
 Trash-detection/training/model1/dataset/splits/
 Trash-detection/training/model1/dataset/test_locked/
-Trash-detection/training/model1/dataset/audits/duplicates/
-Trash-detection/training/model1/dataset/audits/flagged_caps/
+Trash-detection/training/model1/dataset/test_custom/
+Trash-detection/training/model1/dataset/audits/
 Trash-detection/training/model2/dataset/incoming/
 Trash-detection/training/model2/dataset/normalized/
 Trash-detection/training/model2/dataset/splits/
+Trash-detection/training/model2/dataset/test_locked/
+Trash-detection/training/model2/dataset/test_custom/
+Trash-detection/training/model2/dataset/audits/
+Trash-detection/training/model2/export/candidates/
 
 # Legacy rebuild paths (if present locally)
 Trash-detection/model1-rebuild/dataset/incoming/

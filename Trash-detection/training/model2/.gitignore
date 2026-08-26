@@ -15,19 +15,29 @@ runs/*/weights/last.pt
 runs/*/train_batch*.jpg
 runs/*/val_batch*.jpg
 runs/*/labels.jpg
+runs/smoke_m2v4/
+
+# --- export candidates ---
+export/candidates/
 
 # --- dataset bulk: regenerable via scripts (normalize -> dedupe -> split) ---
 dataset/incoming/
 dataset/normalized/
 dataset/splits/
 dataset/audits/
+dataset/test_locked/
+dataset/test_custom/
 
 # --- logs: keep small evidence, drop the 20 MB training stdout + renders ---
-logs/m2_train.log
+logs/m2_train*.log
+logs/m2_export*.log
+logs/m2_locked_comparison*.log
 logs/render/
 logs/gate_test/
+logs/predictions/
 logs/*.png
 logs/*.jpg
+logs/*.log
 
 # --- OS junk ---
 Thumbs.db
