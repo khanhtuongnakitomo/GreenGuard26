@@ -1,22 +1,24 @@
 r"""Model 2 — normalize incoming datasets to canonical OBB classes.
 
-Canonical (Model 2 v3, 2026-08-23):
+Canonical (Model 2 v4, 2026-08-25):
     0=cap  1=label  2=ring
 Format: YOLOv8 OBB — `class x1 y1 x2 y2 x3 y3 x4 y4`, normalized [0,1].
 
-Sources under ../dataset/sources/ (shared with Model 1):
+Sources under dataset/incoming/:
   PET-bottle-with-cap-and-label  — 0 cap -> 0, 1 label -> 1
   PET-bottle                     — 1 cap -> 0, 2 label -> 1 (drop bottle/liquid)
-  owner-live                     — identity 0/1/2 when present (owner webcam /
-                                   true-ring OBB; required before full train)
-  PET-cap-ring                   — SKIPPED (Roboflow Instant mixed cap-or-ring)
-  water-bottle-with-cap-and-wrapper — SKIPPED (audit: bottlecap n=2, wrapper
-                                   mostly whole-body boxes)
+  bottle-defect-detection        — 1 cap -> 0, 4 label -> 1 (2 cap-missing/5 label-missing -> negatives)
+  bottle-label-inspection        — 2 label -> 1 (drop bottle/damage)
+  bottle-label-detection         — 1 label -> 1 (drop bottle)
+  owner-live                     — identity 0/1/2 when present (webcam domain)
 
-Rules: wipe previous normalized output; drop out-of-scope rows; drop empty
-images; clamp coords into [0,1]; prefix stems with <src>_; write sources.csv.
+Excluded:
+  bottle cap defect 2            — whole-bottle state boxes (52-70% image area)
+  DefectBottle                   — single generic defect box
+  ring-dataset                   — mixed Instant auto-labels
+  water-bottle                   — no usable part annotations
 
-Usage: python scripts/normalize_labels.py   (via model1-rebuild venv)
+Usage: python scripts/normalize_labels.py
 """
 from __future__ import annotations
 
@@ -29,32 +31,38 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA_ROOT = ROOT.parent / "dataset"
+DATA_ROOT = ROOT / "dataset"
 INCOMING = DATA_ROOT / "sources"
-NORM_ROOT = DATA_ROOT / "model2" / "normalized"
+NORM_ROOT = DATA_ROOT / "normalized"
 IMG_OUT = NORM_ROOT / "images"
 LBL_OUT = NORM_ROOT / "labels"
-SOURCES_CSV = DATA_ROOT / "model2" / "sources.csv"
+SOURCES_CSV = DATA_ROOT / "sources.csv"
 REPORT_JSON = ROOT / "logs" / "normalize_report.json"
 
 CANONICAL = {0: "cap", 1: "label", 2: "ring"}
 
+# Mapping: class_id -> canonical_id (None = drop, -1 = negative marker)
 CLASS_MAPS: dict[str, dict[int, int | None]] = {
     "PET-bottle-with-cap-and-label": {0: 0, 1: 1},
-    "PET-bottle": {0: None, 1: 0, 2: 1, 3: None},  # drop bottle + liquid
+    "PET-bottle": {0: None, 1: 0, 2: 1, 3: None},
+    "bottle-defect-detection": {0: None, 1: 0, 2: None, 3: None, 4: 1, 5: None},
+    "bottle-label-inspection": {0: None, 1: None, 2: 1},
+    "bottle-label-detection": {0: None, 1: 1},
     # Bottle-label: label_standard->1=label; label_defect + liquid dropped
-    # (owner instruction 2026-08-23: extra classes like liquid are dropped)
     "Bottle-label": {0: None, 1: 1, 2: None},
     # Bottle-lying: lid->0=cap (horizontal bottles); bottle body dropped
     "Bottle-lying": {0: None, 1: 0},
+    # owner-live-old: legacy booth captures (pre-2026-08-25), cap/label only
+    "owner-live-old": {0: 0, 1: 1},
 }
 
-# Optional owner drop — only if folder + data.yaml exist
-OWNER_LIVE = "owner-live"
+# Sources allowed to emit empty labels as clean negatives
+NEGATIVE_ALLOWED_SOURCES = {"owner-live", "bottle-defect-detection"}
 
+OWNER_LIVE = "owner-live"
 IMG_EXT = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 CLAMP_LIMIT = 0.30
-SPLITS = ("train", "valid", "test", "val")  # accept val alias
+SPLITS = ("train", "valid", "test", "val")
 
 
 def clear_normalized() -> None:
@@ -75,7 +83,6 @@ def owner_live_map(src_dir: Path) -> dict[int, int | None] | None:
         names = {i: n for i, n in enumerate(names)}
     names = {int(k): str(v).lower() for k, v in names.items()}
     print(f"[owner-live] classes found: {names}")
-    # Prefer identity when already canonical; else map by name
     by_name = {"cap": 0, "label": 1, "ring": 2, "sealant-ring": 2, "sealant_ring": 2}
     out: dict[int, int | None] = {}
     for cid, name in names.items():
@@ -115,24 +122,23 @@ def process_source(src: str, cmap: dict[int, int | None]) -> tuple[dict, list[di
             if img.suffix.lower() not in IMG_EXT:
                 continue
             lbl = lbl_dir / (img.stem + ".txt")
-            if not lbl.is_file():
-                # bare-bottle negatives: keep empty label if owner-live
-                if src == OWNER_LIVE:
-                    out_lines: list[str] = []
-                else:
-                    continue
-            else:
-                out_lines = []
+            out_lines: list[str] = []
+            
+            if lbl.is_file():
                 for ln in lbl.read_text(encoding="utf-8").splitlines():
                     parts = ln.split()
                     if len(parts) != 9:
                         rep["lines_quarantined"] += 1
                         continue
-                    cid = int(parts[0])
+                    try:
+                        cid = int(parts[0])
+                    except ValueError:
+                        rep["lines_quarantined"] += 1
+                        continue
                     if cid not in cmap or cmap[cid] is None:
                         rep["lines_dropped"] += 1
                         continue
-                    mapped = int(cmap[cid])  # type: ignore[arg-type]
+                    mapped = int(cmap[cid])
                     vals = [float(v) for v in parts[1:]]
                     if any(v < -CLAMP_LIMIT or v > 1 + CLAMP_LIMIT for v in vals):
                         rep["lines_quarantined"] += 1
@@ -143,10 +149,11 @@ def process_source(src: str, cmap: dict[int, int | None]) -> tuple[dict, list[di
                     rep["instances"][CANONICAL[mapped]] += 1
                     out_lines.append(f"{mapped} " + " ".join(f"{v:.6f}" for v in vals))
 
-            if not out_lines and src != OWNER_LIVE:
+            # Discard empty labels unless source is allowed to have clean negatives
+            if not out_lines and src not in NEGATIVE_ALLOWED_SOURCES:
                 rep["images_dropped_empty"] += 1
                 continue
-            # owner-live empty labels = negatives (bare bottle / empty frame)
+
             stem = f"{src}_{img.stem}"
             shutil.copy2(img, IMG_OUT / f"{stem}{img.suffix.lower()}")
             (LBL_OUT / f"{stem}.txt").write_text(
@@ -170,18 +177,18 @@ def main() -> int:
     clear_normalized()
     maps = dict(CLASS_MAPS)
 
-    skipped = []
-    if (INCOMING / "PET-cap-ring" / "data.yaml").is_file():
-        skipped.append("PET-cap-ring (mixed Instant auto-label — not true ring)")
-    if (INCOMING / "water-bottle-with-cap-and-wrapper" / "data.yaml").is_file():
-        skipped.append("water-bottle-with-cap-and-wrapper (audit: n≈0 usable part boxes)")
+    skipped = [
+        "bottle cap defect 2 (whole-bottle state boxes, 52-70% area)",
+        "DefectBottle (single generic defect box)",
+        "ring-dataset (mixed Instant auto-labels)",
+    ]
 
     owner_dir = INCOMING / OWNER_LIVE
     ol_map = owner_live_map(owner_dir) if owner_dir.is_dir() else None
     if ol_map is not None:
         maps[OWNER_LIVE] = ol_map
     else:
-        print("[WARN] no owner-live/ yet — ring class will be empty until you add it")
+        print("[WARN] no owner-live/ yet — ring class will be empty until true ring captures exist")
 
     report: dict = {"skipped_sources": skipped}
     rows_csv: list[dict] = []
@@ -211,8 +218,7 @@ def main() -> int:
         if k != "skipped_sources" and isinstance(r, dict)
     ))
     if tot.get("ring", 0) == 0:
-        print("DATA_GAP: ring instances = 0 — add dataset/sources/owner-live/ "
-              "(true ring OBB + live camera photos) before full 4h train.")
+        print("DATA_GAP: ring instances = 0 — ring class reserved in schema for owner-live verified captures.")
     return 0
 
 
