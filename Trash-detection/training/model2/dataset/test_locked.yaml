@@ -1,0 +1,8 @@
+names:
+  0: cap
+  1: label
+  2: ring
+path: D:\Code\Project\bki\GreenGuard26\Trash-detection\training\model2\dataset
+test: test_locked/images
+train: test_locked/images
+val: test_locked/images
