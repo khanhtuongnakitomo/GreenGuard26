@@ -33,6 +33,11 @@ REPORT = ROOT / "logs" / "split_report.json"
 RATIOS = {"val": 0.20, "train": 0.80}
 NAMES = ["cap", "label", "ring"]
 
+# v6 budget: cap the val split at ~VAL_CAP images (subsample whole groups so
+# siblings never split across train/val). Locked test set is untouched, so the
+# v5-vs-v6 comparison of record stays the 222-image locked test.
+VAL_CAP = 2200
+
 
 def group_key(image_name: str) -> tuple[str, str]:
     stem = Path(image_name).stem
@@ -42,7 +47,7 @@ def group_key(image_name: str) -> tuple[str, str]:
     original = rest.split(".rf.")[0] if ".rf." in rest else rest
     if original.endswith("_asim"):
         original = original[:-5]
-    for tag in ("_rob", "_aug"):     # offline-aug siblings stay with source photo
+    for tag in ("_rob", "_aug", "_im"):  # offline-aug siblings stay with source photo
         if tag in original:
             original = original.rsplit(tag, 1)[0]
     # Video / burst frames: keep an entire shot in one split
@@ -122,6 +127,26 @@ def main() -> int:
     n_val = max(0, int(round(n_rest * RATIOS["val"])) - (1 if ring_val else 0))
     val_groups = ([ring_val] if ring_val else []) + rest[:n_val]
     train_groups = ([ring_train] if ring_train else []) + rest[n_val:]
+
+    # Cap val at VAL_CAP images by dropping whole groups (kept groups stay whole).
+    # Overflow val groups are pushed to train (data is still used, not discarded).
+    def _group_size(g):
+        return len(groups[g])
+
+    val_images = sum(_group_size(g) for g in val_groups)
+    if val_images > VAL_CAP:
+        # keep ring_val always; drop largest non-ring val groups until under cap
+        keep = [g for g in val_groups if g == ring_val]
+        pool = sorted((g for g in val_groups if g != ring_val),
+                      key=_group_size)  # smallest first: maximize group diversity
+        for g in pool:
+            if sum(_group_size(x) for x in keep) + _group_size(g) <= VAL_CAP:
+                keep.append(g)
+        overflow = [g for g in val_groups if g not in keep]
+        val_groups = keep
+        train_groups = train_groups + overflow
+        print(f"VAL_CAP: val trimmed to {sum(_group_size(g) for g in val_groups)} "
+              f"images ({len(val_groups)} groups); {len(overflow)} groups -> train")
 
     assigned: dict[str, str] = {}
     for gk in train_groups:

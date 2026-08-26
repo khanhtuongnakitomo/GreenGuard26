@@ -5,125 +5,144 @@
     "ring-dataset (mixed Instant auto-labels)"
   ],
   "PET-bottle-with-cap-and-label": {
-    "images_kept": 3752,
-    "images_dropped_empty": 682,
+    "images_kept": 3264,
+    "images_dropped_empty": 400,
     "lines_dropped": 0,
     "lines_clamped": 0,
     "lines_quarantined": 0,
     "instances": {
-      "cap": 2768,
-      "label": 3071
+      "cap": 2064,
+      "label": 2852
     },
     "kept_per_origin_split": {
-      "train": 3648,
-      "val": 56,
-      "test": 48
-    }
+      "train": 3028,
+      "val": 124,
+      "test": 112
+    },
+    "source_cap": 350,
+    "bases_kept": 350,
+    "images_dropped_cap": 2568
   },
   "PET-bottle": {
-    "images_kept": 4192,
-    "images_dropped_empty": 296,
-    "lines_dropped": 32870,
-    "lines_clamped": 458,
+    "images_kept": 2948,
+    "images_dropped_empty": 324,
+    "lines_dropped": 18585,
+    "lines_clamped": 176,
     "lines_quarantined": 0,
     "instances": {
-      "cap": 14963,
-      "label": 14363
+      "cap": 6581,
+      "label": 9186
     },
     "kept_per_origin_split": {
-      "train": 3996,
-      "val": 131,
-      "test": 65
-    }
+      "train": 2508,
+      "val": 268,
+      "test": 172
+    },
+    "source_cap": 350,
+    "bases_kept": 350,
+    "images_dropped_cap": 3256
   },
   "bottle-defect-detection": {
-    "images_kept": 1508,
+    "images_kept": 2512,
     "images_dropped_empty": 0,
-    "lines_dropped": 2664,
+    "lines_dropped": 4326,
     "lines_clamped": 3,
     "lines_quarantined": 0,
     "instances": {
-      "cap": 1624,
-      "label": 1161
+      "cap": 2542,
+      "label": 1901
     },
     "kept_per_origin_split": {
-      "train": 1320,
-      "val": 125,
-      "test": 63
-    }
+      "train": 1760,
+      "val": 500,
+      "test": 252
+    },
+    "source_cap": 350,
+    "bases_kept": 248
   },
   "bottle-label-inspection": {
-    "images_kept": 787,
+    "images_kept": 1220,
     "images_dropped_empty": 0,
-    "lines_dropped": 1178,
+    "lines_dropped": 1860,
     "lines_clamped": 6,
     "lines_quarantined": 0,
     "instances": {
-      "label": 777
+      "label": 1203
     },
     "kept_per_origin_split": {
-      "train": 723,
-      "val": 36,
-      "test": 28
-    }
+      "train": 964,
+      "val": 144,
+      "test": 112
+    },
+    "source_cap": 305,
+    "bases_kept": 145
   },
   "bottle-label-detection": {
-    "images_kept": 4701,
+    "images_kept": 3720,
     "images_dropped_empty": 0,
-    "lines_dropped": 13696,
-    "lines_clamped": 118,
+    "lines_dropped": 10459,
+    "lines_clamped": 77,
     "lines_quarantined": 0,
     "instances": {
-      "label": 10710
+      "label": 8171
     },
     "kept_per_origin_split": {
-      "train": 4608,
-      "val": 75,
-      "test": 18
-    }
+      "train": 3480,
+      "val": 196,
+      "test": 44
+    },
+    "source_cap": 350,
+    "bases_kept": 350,
+    "images_dropped_cap": 2796
   },
   "Bottle-label": {
-    "images_kept": 1116,
-    "images_dropped_empty": 918,
-    "lines_dropped": 2862,
+    "images_kept": 1488,
+    "images_dropped_empty": 1224,
+    "lines_dropped": 3816,
     "lines_clamped": 0,
     "lines_quarantined": 0,
     "instances": {
-      "label": 1116
+      "label": 1488
     },
     "kept_per_origin_split": {
-      "train": 1116
-    }
+      "train": 1488
+    },
+    "source_cap": 350,
+    "bases_kept": 89
   },
   "Bottle-lying": {
-    "images_kept": 3070,
-    "images_dropped_empty": 165,
-    "lines_dropped": 3235,
+    "images_kept": 4399,
+    "images_dropped_empty": 261,
+    "lines_dropped": 4657,
     "lines_clamped": 65,
     "lines_quarantined": 0,
     "instances": {
-      "cap": 3079
+      "cap": 4411
     },
     "kept_per_origin_split": {
-      "train": 2952,
-      "val": 78,
-      "test": 40
-    }
+      "train": 3928,
+      "val": 312,
+      "test": 159
+    },
+    "source_cap": 350,
+    "bases_kept": 339
   },
   "owner-live-old": {
-    "images_kept": 1027,
+    "images_kept": 1965,
     "images_dropped_empty": 0,
     "lines_dropped": 0,
     "lines_clamped": 8,
     "lines_quarantined": 0,
     "instances": {
-      "cap": 1076,
-      "label": 808
+      "cap": 2041,
+      "label": 1548
     },
     "kept_per_origin_split": {
-      "train": 951,
-      "val": 76
-    }
+      "train": 1585,
+      "val": 380
+    },
+    "source_cap": null,
+    "bases_kept": "uncapped"
   },
   "owner-live": {
     "images_kept": 600,
@@ -138,6 +157,8 @@
     },
     "kept_per_origin_split": {
       "train": 600
-    }
+    },
+    "source_cap": null,
+    "bases_kept": "uncapped"
   }
 }

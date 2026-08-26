@@ -71,6 +71,47 @@ IMG_EXT = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 CLAMP_LIMIT = 0.30
 SPLITS = ("train", "valid", "test", "val")
 
+# Pool trim for the 3-hour v6 budget: cap how many ORIGINAL base photos each
+# studio source may contribute. All siblings (_aug/_rob/_im/.rf.) of a kept
+# base are kept together so groups stay whole. owner-live is EXEMPT (only 40
+# real frames, and the sole source of the scarce ring class).
+SOURCE_CAP: dict[str, int] = {
+    "bottle-defect-detection": 350,
+    "Bottle-label": 350,
+    "bottle-label-detection": 350,
+    "bottle-label-inspection": 305,   # small source, keep all
+    "Bottle-lying": 350,
+    "PET-bottle": 350,
+    "PET-bottle-with-cap-and-label": 350,
+}
+CAP_EXEMPT = {OWNER_LIVE, "owner-live-old"}
+
+
+def _base_key(stem: str) -> str:
+    """Original-photo key: strip Roboflow hash + offline-aug suffixes."""
+    base = stem.split(".rf.")[0] if ".rf." in stem else stem
+    for tag in ("_im", "_rob", "_aug"):
+        if tag in base:
+            base = base.rsplit(tag, 1)[0]
+    return base
+
+
+def _selected_bases(src: str, src_dir: Path) -> set[str] | None:
+    """Return the set of kept base-photo keys, or None if uncapped."""
+    cap = SOURCE_CAP.get(src)
+    if cap is None or src in CAP_EXEMPT:
+        return None
+    bases: set[str] = set()
+    for split in SPLITS:
+        img_dir = src_dir / split / "images"
+        if not img_dir.is_dir():
+            continue
+        for img in sorted(img_dir.iterdir()):
+            if img.suffix.lower() in IMG_EXT:
+                bases.add(_base_key(img.stem))
+    ordered = sorted(bases)             # deterministic
+    return set(ordered[:cap])
+
 
 def clear_normalized() -> None:
     if IMG_OUT.exists():
@@ -119,6 +160,10 @@ def process_source(src: str, cmap: dict[int, int | None]) -> tuple[dict, list[di
         print(f"[WARN] missing source dir: {src_dir}")
         return rep, rows_csv
 
+    kept_bases = _selected_bases(src, src_dir)
+    rep["source_cap"] = SOURCE_CAP.get(src)
+    rep["bases_kept"] = (len(kept_bases) if kept_bases is not None else "uncapped")
+
     for split in SPLITS:
         img_dir = src_dir / split / "images"
         lbl_dir = src_dir / split / "labels"
@@ -127,6 +172,10 @@ def process_source(src: str, cmap: dict[int, int | None]) -> tuple[dict, list[di
         origin = "val" if split == "valid" else split
         for img in sorted(img_dir.iterdir()):
             if img.suffix.lower() not in IMG_EXT:
+                continue
+            # pool trim: drop images whose base photo was not selected
+            if kept_bases is not None and _base_key(img.stem) not in kept_bases:
+                rep["images_dropped_cap"] = rep.get("images_dropped_cap", 0) + 1
                 continue
             lbl = lbl_dir / (img.stem + ".txt")
             out_lines: list[str] = []

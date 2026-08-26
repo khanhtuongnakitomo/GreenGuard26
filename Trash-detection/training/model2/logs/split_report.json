@@ -1,21 +1,21 @@
 {
-  "images_total": 17686,
+  "images_total": 20459,
   "images_per_split": {
-    "train": 13838,
-    "val": 3626,
+    "train": 18037,
+    "val": 2200,
     "test": 222
   },
-  "groups": 2605,
+  "groups": 1934,
   "instances_per_split": {
     "train": {
-      "cap": 14885,
       "ring": 30,
-      "label": 20768
+      "label": 21181,
+      "cap": 14723
     },
     "val": {
+      "cap": 1608,
       "ring": 15,
-      "label": 6697,
-      "cap": 4736
+      "label": 2699
     },
     "test": {
       "cap": 75,
