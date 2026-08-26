@@ -1,10 +1,6 @@
 r"""Eval Model 2 at Jetson deploy size (imgsz 416).
 
-Val mAP@50 soft gate: each class >= 0.70 (live 5-case test is still required).
-Missing class on val (e.g. no ring yet) is reported as BELOW / DATA_GAP.
-
-Usage: python scripts/eval_deploy_size.py [run_name]
-  default: m2v3_seed42_n640
+Usage: python scripts/eval_deploy_size.py [run_name ...]
 """
 from __future__ import annotations
 
@@ -20,14 +16,13 @@ TARGET = 0.70
 IMGSZ = 416
 
 
-def main() -> int:
-    run = sys.argv[1] if len(sys.argv) > 1 else "m2v3_seed42_n640"
+def eval_one(run: str) -> bool:
     weights = ROOT / "runs" / run / "weights" / "best.pt"
     if not weights.is_file():
         print(f"ERROR: no best.pt at {weights}")
-        return 1
+        return False
 
-    print(f"=== deploy-size eval {run} @ imgsz={IMGSZ} (target mAP50>={TARGET}) ===")
+    print(f"\n=== deploy-size eval {run} @ imgsz={IMGSZ} (target mAP50>={TARGET}) ===")
     model = YOLO(str(weights))
     r = model.val(data=str(DATA), split="val", imgsz=IMGSZ, batch=16,
                   plots=False, verbose=False, device="cpu")
@@ -53,17 +48,24 @@ def main() -> int:
     overall50 = r.results_dict.get("metrics/mAP50(B)", float("nan"))
     overall = r.results_dict.get("metrics/mAP50-95(B)", float("nan"))
     print(f"  overall   mAP50={overall50:.4f}  mAP50-95={overall:.4f}")
-    # Cap/label-first trains have no ring yet — that is a data gap, not a
-    # metric failure. FAIL only if a class that WAS evaluated is below target.
     if failed:
         print("DEPLOY_SIZE: FAIL")
-        return 1
+        return False
     if data_gaps:
         print("DEPLOY_SIZE: PASS_WITH_GAP  missing classes:", ", ".join(data_gaps))
-        print("(expected for cap/label-first; add ring data and retrain later)")
-        return 0
+        return True
     print("DEPLOY_SIZE: PASS")
-    return 0
+    return True
+
+
+def main() -> int:
+    runs = sys.argv[1:] or ["m2v4_caplabel_seed42_n640"]
+    all_ok = True
+    for run in runs:
+        ok = eval_one(run)
+        if not ok:
+            all_ok = False
+    return 0 if all_ok else 1
 
 
 if __name__ == "__main__":

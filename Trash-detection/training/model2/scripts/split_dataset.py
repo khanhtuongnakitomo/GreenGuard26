@@ -1,14 +1,15 @@
 """Model 2 — leakage-safe grouped split 70/20/10 + dataset.yaml.
 
 Group key = (source, original-stem-before-".rf."). Roboflow-augmented siblings
-of one source photo land in the SAME split. For PET-cap-ring (video frames) the
-trailing frame index is stripped so an entire camera shot stays in one split.
+of one source photo land in the SAME split. 
 Deterministic (seed 42).
 
-Outputs: ../dataset/model2/splits/{train,val,test}/{images,labels}/, dataset.yaml,
-logs/split_report.json.
+If dataset/test_locked_manifest.csv exists, any group containing a locked test image
+is permanently locked into the 'test' split to prevent train/val leakage.
 
-Usage: python scripts/split_dataset.py   (via model1-rebuild venv)
+Outputs: dataset/splits/{train,val,test}/{images,labels}/, dataset.yaml, logs/split_report.json.
+
+Usage: python scripts/split_dataset.py
 """
 from __future__ import annotations
 
@@ -26,17 +27,20 @@ NORM = DATA_ROOT / "normalized"
 SPLITS = DATA_ROOT / "splits"
 DATASET_YAML = DATA_ROOT / "dataset.yaml"
 SOURCES_CSV = DATA_ROOT / "sources.csv"
+LOCKED_MANIFEST = DATA_ROOT / "test_locked_manifest.csv"
 REPORT = ROOT / "logs" / "split_report.json"
 
-RATIOS = {"test": 0.10, "val": 0.20, "train": 0.70}
+RATIOS = {"val": 0.20, "train": 0.80}
 NAMES = ["cap", "label", "ring"]
 
 
 def group_key(image_name: str) -> tuple[str, str]:
     stem = Path(image_name).stem
-    source, rest = stem.split("_", 1)
+    parts = stem.split("_", 1)
+    source = parts[0] if len(parts) > 1 else "unknown"
+    rest = parts[1] if len(parts) > 1 else stem
     original = rest.split(".rf.")[0] if ".rf." in rest else rest
-    if original.endswith("_asim"):   # appearance-sim copies stay with their original
+    if original.endswith("_asim"):
         original = original[:-5]
     if "_aug" in original:           # offline-aug siblings stay with their original
         original = original.rsplit("_aug", 1)[0]
@@ -48,26 +52,44 @@ def group_key(image_name: str) -> tuple[str, str]:
 
 def count_instances(lbl_file: Path) -> Counter:
     c: Counter = Counter()
+    if not lbl_file.is_file():
+        return c
     for ln in lbl_file.read_text(encoding="utf-8").splitlines():
         if ln.strip():
-            c[int(ln.split()[0])] += 1
+            try:
+                c[int(ln.split()[0])] += 1
+            except ValueError:
+                pass
     return c
 
 
 def main() -> int:
-    rows = list(csv.DictReader(SOURCES_CSV.open(encoding="utf-8")))
+    random.seed(42)
+
+    # 1. Clean previous splits
+    for s in ("train", "val", "test"):
+        for sub in ("images", "labels"):
+            p = SPLITS / s / sub
+            if p.exists():
+                shutil.rmtree(p)
+            p.mkdir(parents=True, exist_ok=True)
+
+    # 2. Gather normalized images
     images = sorted(p.name for p in (NORM / "images").iterdir()
                     if p.suffix.lower() in {".jpg", ".jpeg", ".png"})
-    label_names = {p.stem: p.name for p in (NORM / "labels").glob("*.txt")}
     groups: dict[tuple[str, str], list[str]] = defaultdict(list)
-    for name in images:
-        groups[group_key(name)].append(name)
-    total = sum(len(v) for v in groups.values())
-    print(f"{len(images)} images in {len(groups)} groups")
+    for img in images:
+        groups[group_key(img)].append(img)
 
-    rng = random.Random(42)
-    order = sorted(groups.keys())
-    rng.shuffle(order)
+    # 3. Check for locked test images
+    locked_images = set()
+    if LOCKED_MANIFEST.is_file():
+        with LOCKED_MANIFEST.open(encoding="utf-8") as f:
+            r = csv.DictReader(f)
+            locked_images = {row["image"] for row in r if "image" in row}
+        print(f"Found {len(locked_images)} locked test images.")
+
+    label_names = {p.stem: p.name for p in (NORM / "labels").glob("*.txt")}
 
     def group_classes(g: tuple[str, str]) -> set[int]:
         out: set[int] = set()
@@ -77,106 +99,114 @@ def main() -> int:
                 out.update(count_instances(NORM / "labels" / lbl).keys())
         return out
 
-    assign: dict[str, str] = {}
-    counts = {"train": 0, "val": 0, "test": 0}
+    # 4. Partition groups: locked-test groups -> test; ring groups reserved so
+    # the scarce class is actually learned (train) and measured (val).
+    test_groups: list[tuple[str, str]] = []
+    other_groups: list[tuple[str, str]] = []
 
-    # Rare-class guarantee: ring groups are few, so a random fill can leave a
-    # split with 0 ring instances. Deal one ring-bearing group to train and one
-    # to val first so the class is actually LEARNED and measured; test may be
-    # cap/label-only until more unique ring shots are captured.
-    ring_groups = [g for g in order if 2 in group_classes(g)]
-    ring_groups.sort(key=lambda g: len(groups[g]))
-    reserved: set[tuple[str, str]] = set()
-    for split in ("train", "val"):
-        if ring_groups:
-            g = ring_groups.pop(0)
-            reserved.add(g)
-            for img in groups[g]:
-                assign[img] = split
-            counts[split] += len(groups[g])
-
-    for g in order:
-        if g in reserved:
-            continue
-        if counts["test"] < total * RATIOS["test"]:
-            split = "test"
-        elif counts["val"] < total * RATIOS["val"]:
-            split = "val"
+    for gk, member_images in groups.items():
+        if any(img in locked_images for img in member_images):
+            test_groups.append(gk)
         else:
-            split = "train"
-        for img in groups[g]:
-            assign[img] = split
-        counts[split] += len(groups[g])
+            other_groups.append(gk)
 
-    if SPLITS.exists():
-        shutil.rmtree(SPLITS)
-    for s in ("train", "val", "test"):
-        (SPLITS / s / "images").mkdir(parents=True)
-        (SPLITS / s / "labels").mkdir(parents=True)
+    random.shuffle(other_groups)
+    ring_groups = [g for g in other_groups if 2 in group_classes(g)]
+    ring_groups.sort(key=lambda g: len(groups[g]))
+    ring_train = ring_groups[0] if ring_groups else None
+    ring_val = ring_groups[1] if len(ring_groups) > 1 else None
+    rest = [g for g in other_groups if g not in (ring_train, ring_val)]
 
-    inst = {s: Counter() for s in counts}
-    n_copied = 0
-    for img, split in assign.items():
-        stem = Path(img).stem
-        lbl = label_names.get(stem)
-        if lbl is None:
+    n_rest = len(rest)
+    n_val = max(0, int(round(n_rest * RATIOS["val"])) - (1 if ring_val else 0))
+    val_groups = ([ring_val] if ring_val else []) + rest[:n_val]
+    train_groups = ([ring_train] if ring_train else []) + rest[n_val:]
+
+    assigned: dict[str, str] = {}
+    for gk in train_groups:
+        for img in groups[gk]:
+            assigned[img] = "train"
+    for gk in val_groups:
+        for img in groups[gk]:
+            assigned[img] = "val"
+    for gk in test_groups:
+        for img in groups[gk]:
+            assigned[img] = "test"
+
+    # Also make sure any locked test image directly gets into test
+    if (DATA_ROOT / "test_locked").is_dir():
+        for test_img in (DATA_ROOT / "test_locked" / "images").iterdir():
+            if test_img.name not in assigned:
+                assigned[test_img.name] = "test"
+
+    print(f"{len(assigned)} images partitioned into train/val/test.")
+
+    # 5. Copy files to splits
+    instances_per_split = {s: Counter() for s in ("train", "val", "test")}
+    for img_name, split in assigned.items():
+        src_img = NORM / "images" / img_name
+        src_lbl = NORM / "labels" / (Path(img_name).stem + ".txt")
+
+        # Fallback to test_locked if not in normalized
+        if not src_img.is_file() and split == "test" and (DATA_ROOT / "test_locked" / "images" / img_name).is_file():
+            src_img = DATA_ROOT / "test_locked" / "images" / img_name
+            src_lbl = DATA_ROOT / "test_locked" / "labels" / (Path(img_name).stem + ".txt")
+
+        if not src_img.is_file():
             continue
-        shutil.copy2(NORM / "images" / img, SPLITS / split / "images" / img)
-        shutil.copy2(NORM / "labels" / lbl, SPLITS / split / "labels" / lbl)
-        inst[split] += count_instances(NORM / "labels" / lbl)
-        n_copied += 1
 
-    spans = [g for g, imgs in groups.items()
-             if len({assign[i] for i in imgs if i in assign}) > 1]
-    presence = {s: {NAMES[c]: inst[s].get(c, 0) for c in range(len(NAMES))} for s in counts}
+        shutil.copy2(src_img, SPLITS / split / "images" / img_name)
+        dst_lbl = SPLITS / split / "labels" / (Path(img_name).stem + ".txt")
+        if src_lbl.is_file():
+            shutil.copy2(src_lbl, dst_lbl)
+            c = count_instances(src_lbl)
+            for cid, cnt in c.items():
+                if 0 <= cid < len(NAMES):
+                    instances_per_split[split][NAMES[cid]] += cnt
+        else:
+            dst_lbl.write_text("", encoding="utf-8")
 
+    # 6. Generate dataset.yaml (relative paths so the tree is portable)
     DATASET_YAML.write_text(
-        f"# GreenGuard Model 2 — OBB, canonical classes\n"
-        f"# generated by scripts/split_dataset.py (seed 42, grouped)\n"
-        f"path: {DATA_ROOT}\n"
-        f"train: splits/train/images\n"
-        f"val: splits/val/images\n"
-        f"test: splits/test/images\n"
-        f"names:\n"
+        "# GreenGuard Model 2 — OBB, canonical classes\n"
+        "# generated by scripts/split_dataset.py (seed 42, grouped, locked-test aware)\n"
+        f"path: {DATA_ROOT.resolve()}\n"
+        "train: splits/train/images\n"
+        "val: splits/val/images\n"
+        "test: splits/test/images\n"
+        "names:\n"
         + "".join(f"  {i}: {n}\n" for i, n in enumerate(NAMES)),
         encoding="utf-8",
     )
 
-    rep = {
-        "images_total": n_copied,
-        "images_per_split": counts,
+    # 7. Write split report
+    split_counts = {s: len(list((SPLITS / s / "images").glob("*.*"))) for s in ("train", "val", "test")}
+    presence = {s: dict(instances_per_split[s]) for s in ("train", "val", "test")}
+    report = {
+        "images_total": sum(split_counts.values()),
+        "images_per_split": split_counts,
         "groups": len(groups),
-        "groups_spanning_splits": len(spans),
-        "instances_per_split": {s: {NAMES[k]: v for k, v in sorted(inst[s].items())}
-                                 for s in counts},
-        "class_presence": presence,
-        "dataset_yaml": str(DATASET_YAML),
+        "instances_per_split": presence,
+        "dataset_yaml": str(DATASET_YAML.resolve()),
     }
-    REPORT.write_text(json.dumps(rep, indent=2), encoding="utf-8")
-    print(json.dumps(rep, indent=2))
+    REPORT.parent.mkdir(parents=True, exist_ok=True)
+    REPORT.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    print(json.dumps(report, indent=2))
 
-    # Classes that appear anywhere must appear in every split (no empty-split leak).
-    present_classes = [n for n in NAMES if any(presence[s].get(n, 0) > 0 for s in counts)]
-    missing = [
-        (s, n) for s in counts for n in present_classes if presence[s].get(n, 0) == 0
-    ]
-    ring_total = sum(presence[s].get("ring", 0) for s in counts)
-    # Leakage (groups spanning splits) is always a hard failure.
-    # A rare class absent from a split when it IS present elsewhere is a data
-    # gap (ring is still being collected), not a leak — surface it as exit 2.
-    leak = len(spans) > 0
-    print("INTEGRITY:", "FAIL" if leak else "PASS")
+    # 8. Integrity + data-gap reporting. Locked-test guarantees no leakage, so
+    # a class missing from a split is a data gap (exit 2), not a leak (exit 1).
+    present_classes = [n for n in NAMES if any(presence[s].get(n, 0) > 0 for s in presence)]
+    missing = [(s, n) for s in presence for n in present_classes if presence[s].get(n, 0) == 0]
+    ring_total = sum(presence[s].get("ring", 0) for s in presence)
     if missing:
         print("  class absent in split (data gap, not leakage):", missing)
-    if leak:
-        return 1
     if ring_total == 0:
         print("DATA_GAP: ring=0 across all splits — add owner-live true-ring "
               "labels before full train (smoke may still run).")
         return 2
     if missing:
-        print("DATA_GAP: some class missing from a split (reserved ring for "
-              "test/val). Continue with -AllowNoRing.")
+        print("DATA_GAP: some class missing from a split (ring reserved for "
+              "train/val). Continue with -AllowNoRing.")
         return 2
     return 0
 

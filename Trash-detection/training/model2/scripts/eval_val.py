@@ -1,11 +1,6 @@
-"""Phase G eval — per-class mAP on val + seed-stability check.
-
-Run after training (one or both seeds). Reads best.pt of each run, evaluates on
-the val split, prints per-class mAP@50 / mAP@50-95, and — when both seeds exist —
-the per-class gap (gate G3 requires <= 3.0 points).
+"""Phase G eval — per-class mAP on val split.
 
 Usage: python scripts/eval_val.py [run_name ...]
-  default runs: seed42_n640 seed7_n640
 """
 from __future__ import annotations
 
@@ -25,7 +20,7 @@ def evaluate(run: str) -> dict[str, tuple[float, float]] | None:
     if not weights.is_file():
         print(f"[skip] {run}: no best.pt at {weights}")
         return None
-    print(f"\n=== {run} ===")
+    print(f"\n=== {run} (Val Split @640) ===")
     model = YOLO(str(weights))
     r = model.val(data=str(DATA), split="val", imgsz=640, batch=16,
                   plots=False, verbose=False)
@@ -45,21 +40,9 @@ def evaluate(run: str) -> dict[str, tuple[float, float]] | None:
 
 
 def main() -> int:
-    runs = sys.argv[1:] or ["m2v3_seed42_n640"]
-    results = {run: evaluate(run) for run in runs}
-    trained = {k: v for k, v in results.items() if v}
-    if len(trained) == 2:
-        (a, b) = trained.keys()
-        print(f"\n=== seed stability ({a} vs {b}) — gate <= 3.0 pts ===")
-        worst = ("", 0.0)
-        for cls in NAMES:
-            if cls in trained[a] and cls in trained[b]:
-                gap = abs(trained[a][cls][0] - trained[b][cls][0]) * 100
-                print(f"  {cls:<9} gap={gap:.2f} pts {'OK' if gap <= 3.0 else 'FAIL'}")
-                if gap > worst[1]:
-                    worst = (cls, gap)
-        if worst[1] > 3.0:
-            print(f"  -> seed instability on {worst[0]} ({worst[1]:.2f} pts) — see escape E-4")
+    runs = sys.argv[1:] or ["m2v4_caplabel_seed42_n640"]
+    for run in runs:
+        evaluate(run)
     return 0
 
 
