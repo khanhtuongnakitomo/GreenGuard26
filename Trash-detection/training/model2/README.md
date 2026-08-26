@@ -154,14 +154,23 @@ Copy `export/onnx_416/` to the Nano. See [jetson/README.md](jetson/README.md).
 
 ---
 
-## Dataset notes (v3)
+## Dataset notes (v4 — 2026-08-26)
 
-| Source | Used? |
-|---|---|
-| `PET-bottle-with-cap-and-label` | yes |
-| `PET-bottle` | yes (cap/label rows) |
-| `PET-cap-ring` | **no** (mixed cap/ring labels) |
-| `owner-live/` | add for ring + webcam domain |
+| Source | Used? | Notes |
+|---|---|---|
+| `PET-bottle-with-cap-and-label` | yes | cap + label |
+| `PET-bottle` | yes | cap/label rows |
+| `Bottle-label` | yes | label only |
+| `Bottle-lying` | yes | cap only |
+| `owner-live-old/` | yes | legacy booth captures, cap/label |
+| `owner-live/` | yes | **new 2026-08-25 webcam set — first real ring OBB** |
+| `PET-cap-ring` | **no** | mixed cap/ring auto-labels |
+
+`owner-live/` is offline-augmented by `scripts/augment_owner_live.py`
+(8 geometric + 4 photometric deterministic variants, `_augNN` suffix).
+Dedupe keeps augmented siblings (exact cross-source dupes only); grouped split
+keeps a photo + its variants in the same split. Ring is still scarce (2 unique
+shots) so `test/` is cap/label-only until more ring is captured.
 
 ---
 

@@ -22,6 +22,7 @@ Trash-detection/training/model1/dataset/test_locked/
 Trash-detection/training/model1/dataset/test_custom/
 Trash-detection/training/model1/dataset/audits/
 Trash-detection/training/model2/dataset/incoming/
+Trash-detection/training/model2/dataset/sources/
 Trash-detection/training/model2/dataset/normalized/
 Trash-detection/training/model2/dataset/splits/
 Trash-detection/training/model2/dataset/test_locked/

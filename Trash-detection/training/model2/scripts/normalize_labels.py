@@ -29,12 +29,12 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA_ROOT = ROOT.parent / "dataset"
+DATA_ROOT = ROOT / "dataset"
 INCOMING = DATA_ROOT / "sources"
-NORM_ROOT = DATA_ROOT / "model2" / "normalized"
+NORM_ROOT = DATA_ROOT / "normalized"
 IMG_OUT = NORM_ROOT / "images"
 LBL_OUT = NORM_ROOT / "labels"
-SOURCES_CSV = DATA_ROOT / "model2" / "sources.csv"
+SOURCES_CSV = DATA_ROOT / "sources.csv"
 REPORT_JSON = ROOT / "logs" / "normalize_report.json"
 
 CANONICAL = {0: "cap", 1: "label", 2: "ring"}
@@ -47,6 +47,8 @@ CLASS_MAPS: dict[str, dict[int, int | None]] = {
     "Bottle-label": {0: None, 1: 1, 2: None},
     # Bottle-lying: lid->0=cap (horizontal bottles); bottle body dropped
     "Bottle-lying": {0: None, 1: 0},
+    # owner-live-old: legacy booth captures (pre-2026-08-25), cap/label only
+    "owner-live-old": {0: 0, 1: 1},
 }
 
 # Optional owner drop — only if folder + data.yaml exist

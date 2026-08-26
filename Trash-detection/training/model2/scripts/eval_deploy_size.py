@@ -14,7 +14,7 @@ from pathlib import Path
 from ultralytics import YOLO
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT.parent / "dataset" / "model2" / "dataset.yaml"
+DATA = ROOT / "dataset" / "dataset.yaml"
 NAMES = ["cap", "label", "ring"]
 TARGET = 0.70
 IMGSZ = 416

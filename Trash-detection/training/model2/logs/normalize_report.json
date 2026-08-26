@@ -1,8 +1,5 @@
 {
-  "skipped_sources": [
-    "PET-cap-ring (mixed Instant auto-label \u2014 not true ring)",
-    "water-bottle-with-cap-and-wrapper (audit: n\u22480 usable part boxes)"
-  ],
+  "skipped_sources": [],
   "PET-bottle-with-cap-and-label": {
     "images_kept": 1320,
     "images_dropped_empty": 238,
@@ -35,7 +32,35 @@
       "test": 65
     }
   },
-  "owner-live": {
+  "Bottle-label": {
+    "images_kept": 372,
+    "images_dropped_empty": 306,
+    "lines_dropped": 954,
+    "lines_clamped": 0,
+    "lines_quarantined": 0,
+    "instances": {
+      "label": 372
+    },
+    "kept_per_origin_split": {
+      "train": 372
+    }
+  },
+  "Bottle-lying": {
+    "images_kept": 1102,
+    "images_dropped_empty": 63,
+    "lines_dropped": 1165,
+    "lines_clamped": 65,
+    "lines_quarantined": 0,
+    "instances": {
+      "cap": 1105
+    },
+    "kept_per_origin_split": {
+      "train": 984,
+      "val": 78,
+      "test": 40
+    }
+  },
+  "owner-live-old": {
     "images_kept": 393,
     "images_dropped_empty": 0,
     "lines_dropped": 0,
@@ -48,6 +73,21 @@
     "kept_per_origin_split": {
       "train": 317,
       "val": 76
+    }
+  },
+  "owner-live": {
+    "images_kept": 520,
+    "images_dropped_empty": 0,
+    "lines_dropped": 0,
+    "lines_clamped": 0,
+    "lines_quarantined": 0,
+    "instances": {
+      "cap": 234,
+      "ring": 39,
+      "label": 117
+    },
+    "kept_per_origin_split": {
+      "train": 520
     }
   }
 }

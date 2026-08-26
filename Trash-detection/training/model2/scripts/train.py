@@ -28,7 +28,7 @@ def main() -> int:
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--fraction", type=float, default=1.0)
     ap.add_argument("--close-mosaic", type=int, default=20)
-    ap.add_argument("--data", default=str(ROOT.parent / "dataset" / "model2" / "dataset.yaml"))
+    ap.add_argument("--data", default=str(ROOT / "dataset" / "dataset.yaml"))
     ap.add_argument("--weights", default="yolov8n-obb.pt",
                     help="start weights; runs/m2v3_seed42_n640/weights/best.pt for fine-tune")
     ap.add_argument("--lr0", type=float, default=None, help="override initial LR (fine-tune ~0.001)")

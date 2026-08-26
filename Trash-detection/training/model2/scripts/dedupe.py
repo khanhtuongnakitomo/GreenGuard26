@@ -24,11 +24,11 @@ import numpy as np
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA_ROOT = ROOT.parent / "dataset"
-IMG_DIR = DATA_ROOT / "model2" / "normalized" / "images"
-LBL_DIR = DATA_ROOT / "model2" / "normalized" / "labels"
-DUP_DIR = DATA_ROOT / "model2" / "audits" / "duplicates"
-SOURCES_CSV = DATA_ROOT / "model2" / "sources.csv"
+DATA_ROOT = ROOT / "dataset"
+IMG_DIR = DATA_ROOT / "normalized" / "images"
+LBL_DIR = DATA_ROOT / "normalized" / "labels"
+DUP_DIR = DATA_ROOT / "audits" / "duplicates"
+SOURCES_CSV = DATA_ROOT / "sources.csv"
 REPORT = ROOT / "logs" / "dedupe_report.json"
 
 PRIORITY = [
@@ -103,8 +103,9 @@ def main() -> int:
 
     def allowed(i: int, j: int, d: int) -> bool:
         a, b = src_of_all[i], src_of_all[j]
-        if a == "owner-live" and b == "owner-live":
-            return d <= threshold
+        # offline-augmented owner-live variants are deterministic + grouped by
+        # split_dataset; pHash would wrongly cull them. Only exact cross-source
+        # byte-duplicates are removed now.
         return d == 0
     B = 512
     for start in range(0, n, B):
