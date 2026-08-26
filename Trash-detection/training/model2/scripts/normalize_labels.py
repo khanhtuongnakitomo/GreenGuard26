@@ -56,8 +56,15 @@ CLASS_MAPS: dict[str, dict[int, int | None]] = {
     "owner-live-old": {0: 0, 1: 1},
 }
 
-# Sources allowed to emit empty labels as clean negatives
-NEGATIVE_ALLOWED_SOURCES = {"owner-live", "bottle-defect-detection"}
+# Sources allowed to emit empty labels as clean negatives (hard negatives).
+# These teach "no false reject" — a bottle with cap/label MISSING must NOT fire.
+NEGATIVE_ALLOWED_SOURCES = {
+    "owner-live",
+    "owner-live-old",
+    "bottle-defect-detection",
+    "bottle-label-inspection",
+    "bottle-label-detection",
+}
 
 OWNER_LIVE = "owner-live"
 IMG_EXT = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}

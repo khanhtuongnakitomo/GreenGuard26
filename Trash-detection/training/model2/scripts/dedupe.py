@@ -119,11 +119,14 @@ def main() -> int:
     raw_bits = np.array([hashes[i].hash.flatten() for i in valid_idx], dtype=np.uint8)
 
     def base_of(name: str) -> str:
-        # offline-augmented siblings "X_augNN" belong to the same photo as "X";
-        # they are deterministic + grouped by split_dataset, so pHash must not
-        # cull them. Only exact cross-source byte-duplicates are removed.
+        # offline-augmented siblings "X_augNN" / "X_robNN" belong to the same
+        # photo as "X"; they are deterministic + grouped by split_dataset, so
+        # pHash must not cull them. Only exact cross-source byte-dupes removed.
         stem = Path(name).stem
-        return stem.rsplit("_aug", 1)[0] if "_aug" in stem else stem
+        for tag in ("_rob", "_aug"):
+            if tag in stem:
+                stem = stem.rsplit(tag, 1)[0]
+        return stem
 
     uf = UnionFind(n)
     dup_pairs = 0

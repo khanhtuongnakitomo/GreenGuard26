@@ -13,6 +13,9 @@ Trash-detection/Model2/failed/
 Trash-detection/training/model1/logs/
 Trash-detection/training/model2/logs/
 Trash-detection/training/model2/runs/smoke_m2v4/
+# Keep run dirs local (large); keep only the best.pt of each run via negation at bottom
+Trash-detection/training/model1/runs/
+Trash-detection/training/model2/runs/
 
 # Training dataset bulk under new layout
 Trash-detection/training/model1/dataset/incoming/

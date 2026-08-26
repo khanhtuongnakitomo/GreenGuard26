@@ -5,120 +5,139 @@
     "ring-dataset (mixed Instant auto-labels)"
   ],
   "PET-bottle-with-cap-and-label": {
-    "images_kept": 1320,
-    "images_dropped_empty": 238,
+    "images_kept": 3752,
+    "images_dropped_empty": 682,
     "lines_dropped": 0,
     "lines_clamped": 0,
     "lines_quarantined": 0,
     "instances": {
-      "cap": 970,
-      "label": 1087
+      "cap": 2768,
+      "label": 3071
     },
     "kept_per_origin_split": {
-      "train": 1216,
+      "train": 3648,
       "val": 56,
       "test": 48
     }
   },
   "PET-bottle": {
-    "images_kept": 1528,
-    "images_dropped_empty": 104,
-    "lines_dropped": 11834,
+    "images_kept": 4192,
+    "images_dropped_empty": 296,
+    "lines_dropped": 32870,
     "lines_clamped": 458,
     "lines_quarantined": 0,
     "instances": {
-      "cap": 5339,
-      "label": 5111
+      "cap": 14963,
+      "label": 14363
     },
     "kept_per_origin_split": {
-      "train": 1332,
+      "train": 3996,
       "val": 131,
       "test": 65
     }
   },
   "bottle-defect-detection": {
-    "images_kept": 0,
+    "images_kept": 1508,
     "images_dropped_empty": 0,
-    "lines_dropped": 0,
-    "lines_clamped": 0,
+    "lines_dropped": 2664,
+    "lines_clamped": 3,
     "lines_quarantined": 0,
-    "instances": {},
-    "kept_per_origin_split": {}
+    "instances": {
+      "cap": 1624,
+      "label": 1161
+    },
+    "kept_per_origin_split": {
+      "train": 1320,
+      "val": 125,
+      "test": 63
+    }
   },
   "bottle-label-inspection": {
-    "images_kept": 0,
+    "images_kept": 787,
     "images_dropped_empty": 0,
-    "lines_dropped": 0,
-    "lines_clamped": 0,
+    "lines_dropped": 1178,
+    "lines_clamped": 6,
     "lines_quarantined": 0,
-    "instances": {},
-    "kept_per_origin_split": {}
+    "instances": {
+      "label": 777
+    },
+    "kept_per_origin_split": {
+      "train": 723,
+      "val": 36,
+      "test": 28
+    }
   },
   "bottle-label-detection": {
-    "images_kept": 0,
+    "images_kept": 4701,
     "images_dropped_empty": 0,
-    "lines_dropped": 0,
-    "lines_clamped": 0,
+    "lines_dropped": 13696,
+    "lines_clamped": 118,
     "lines_quarantined": 0,
-    "instances": {},
-    "kept_per_origin_split": {}
+    "instances": {
+      "label": 10710
+    },
+    "kept_per_origin_split": {
+      "train": 4608,
+      "val": 75,
+      "test": 18
+    }
   },
   "Bottle-label": {
-    "images_kept": 372,
-    "images_dropped_empty": 306,
-    "lines_dropped": 954,
+    "images_kept": 1116,
+    "images_dropped_empty": 918,
+    "lines_dropped": 2862,
     "lines_clamped": 0,
     "lines_quarantined": 0,
     "instances": {
-      "label": 372
+      "label": 1116
     },
     "kept_per_origin_split": {
-      "train": 372
+      "train": 1116
     }
   },
   "Bottle-lying": {
-    "images_kept": 1102,
-    "images_dropped_empty": 63,
-    "lines_dropped": 1165,
+    "images_kept": 3070,
+    "images_dropped_empty": 165,
+    "lines_dropped": 3235,
     "lines_clamped": 65,
     "lines_quarantined": 0,
     "instances": {
-      "cap": 1105
+      "cap": 3079
     },
     "kept_per_origin_split": {
-      "train": 984,
+      "train": 2952,
       "val": 78,
       "test": 40
     }
   },
   "owner-live-old": {
-    "images_kept": 393,
+    "images_kept": 1027,
     "images_dropped_empty": 0,
     "lines_dropped": 0,
     "lines_clamped": 8,
     "lines_quarantined": 0,
     "instances": {
-      "cap": 412,
-      "label": 310
+      "cap": 1076,
+      "label": 808
     },
     "kept_per_origin_split": {
-      "train": 317,
+      "train": 951,
       "val": 76
     }
   },
   "owner-live": {
-    "images_kept": 520,
+    "images_kept": 600,
     "images_dropped_empty": 0,
     "lines_dropped": 0,
     "lines_clamped": 0,
     "lines_quarantined": 0,
     "instances": {
-      "cap": 234,
-      "ring": 39,
-      "label": 117
+      "cap": 270,
+      "ring": 45,
+      "label": 135
     },
     "kept_per_origin_split": {
-      "train": 520
+      "train": 600
     }
   }
 }

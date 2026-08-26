@@ -1,14 +1,14 @@
 {
   "threshold": 8,
-  "images_before": 5235,
-  "duplicate_pairs": 2441,
-  "clusters_ge2": 613,
-  "images_moved_to_duplicates": 1027,
-  "images_after": 4208,
+  "images_before": 20753,
+  "duplicate_pairs": 6993,
+  "clusters_ge2": 1728,
+  "images_moved_to_duplicates": 3289,
+  "images_after": 17464,
   "unreadable": [],
   "instances_after": {
-    "1": 5605,
-    "0": 6883,
-    "2": 39
+    "0": 19621,
+    "1": 27465,
+    "2": 45
   }
 }

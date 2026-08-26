@@ -42,8 +42,9 @@ def group_key(image_name: str) -> tuple[str, str]:
     original = rest.split(".rf.")[0] if ".rf." in rest else rest
     if original.endswith("_asim"):
         original = original[:-5]
-    if "_aug" in original:           # offline-aug siblings stay with their original
-        original = original.rsplit("_aug", 1)[0]
+    for tag in ("_rob", "_aug"):     # offline-aug siblings stay with source photo
+        if tag in original:
+            original = original.rsplit(tag, 1)[0]
     # Video / burst frames: keep an entire shot in one split
     if source in {"PET-cap-ring", "ring-dataset", "owner-live"}:
         original = re.sub(r"_\d+$", "", original)
