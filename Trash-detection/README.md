@@ -65,6 +65,7 @@ python scripts\package_models.py --target all --check
 
 ## Docs
 
+- [../DOCUMENTATION.md](../DOCUMENTATION.md) - reading order and document authority
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - [docs/MODEL_CONTRACT.md](docs/MODEL_CONTRACT.md)
 - [pc-demo/README.md](pc-demo/README.md)

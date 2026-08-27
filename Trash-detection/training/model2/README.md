@@ -1,5 +1,26 @@
 # Model 2 rebuild — cap / label / sealant-ring (YOLOv8n-OBB)
 
+> **Current line: V6 in-machine domain.** The older v3/v4 rebuild material in
+> this file is retained only as historical reference. For the current training
+> workflow, use `scripts/run_m2_v6_training.ps1`; do not use
+> `run_model2_training.ps1` or `run_model2_rebuild_training.ps1` for V6 work.
+
+## Current V6 Workflow
+
+From `Trash-detection/training/model2/` on the GPU training machine:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_m2_v6_training.ps1 -Smoke
+powershell -ExecutionPolicy Bypass -File scripts\run_m2_v6_training.ps1
+```
+
+V6 fine-tunes from the local V5 checkpoint when available, trains YOLO11s-OBB
+at 640 with a 2.1-hour cap, and exports candidates only. It preserves the
+locked 222-image test set, uses grouped splits, keeps `workers=0` for Windows
+dataloader reliability, and watches for stalls. Review the candidate against
+the locked test before any manual promotion. See `../../../DOCUMENTATION.md`
+for the project-wide documentation map.
+
 Part detector for **PET bottles only**. Classes:
 
 | ID | Name | Color in demo |
@@ -70,7 +91,7 @@ cd GreenGuard26\Trash-detection\training/model2
 - Model 1 (two-stage): PET vs aluminum on one object in frame.
 - If **PET** → Model 2 runs on the **full frame**; only detections whose center
   lies inside the bottle polygon count.
-- Any cap/label/ring ≥ `--m2-conf` → **PET REJECT** (3-of-5 frame vote).
+- Any cap/label/ring ≥ `--m2-conf` → **PET REJECT** (4-of-7 frame vote).
 - **Aluminum** → box drawn, gate off.
 
 | Flag | Default | Meaning |
@@ -88,13 +109,13 @@ cd GreenGuard26\Trash-detection\training/model2
 |---|---|
 | `export/onnx_640/model.onnx` | PC demo / gate |
 | `export/onnx_416/model.onnx` | Jetson Nano deploy |
-| `runs/m2v3_seed42_n640/weights/best.pt` | PyTorch reference weights |
+| `runs/m2v6_inmachine_seed42_n640/weights/best.pt` | Local V6 training checkpoint |
 
 Labels: `export/onnx_*/labels.txt` → `cap`, `label`, `ring`.
 
 ---
 
-## Retrain (optional)
+## Historical V4 Retrain Procedure (Do Not Use For V6)
 
 Dataset lives under `Detection-rebuild/dataset/` on the training workstation
 (not fully in Git). On a machine with sources prepared:
@@ -174,7 +195,7 @@ shots) so `test/` is cap/label-only until more ring is captured.
 
 ---
 
-## Jetson Nano B01
+## Historical M2-Only Jetson Notes (Do Not Use)
 
 Standalone M2 inference without Ultralytics:
 
@@ -187,7 +208,7 @@ Target: ONNX FP32 @416, `onnxruntime` CPU on Nano.
 
 ---
 
-## Troubleshooting
+## Historical Rebuild Troubleshooting
 
 | Problem | Fix |
 |---|---|
@@ -196,9 +217,9 @@ Target: ONNX FP32 @416, `onnxruntime` CPU on Nano.
 | No ring detections | Expected if trained with `-AllowNoRing`; add ring data and retrain |
 | Gate never shows REJECT | Lower `--m2-conf 0.4` or check M1 is calling PET (not aluminum) |
 
-## Training (which script to use)
+## Historical Training Script Notes (Do Not Use For V6)
 
-**Current training entry point:**
+**Historical training entry point:**
 ```powershell
 powershell -ExecutionPolicy Bypass -File scriptsun_model2_rebuild_training.ps1
 ```

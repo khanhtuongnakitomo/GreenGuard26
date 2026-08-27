@@ -79,8 +79,8 @@ Do not use `training/model2/jetson/infer_obb_onnx.py` (wrong channel order / AAB
 
 ## Branches
 
-Only these matter (3 stale merged feature branches were slated for deletion):
-`main`, `feature/m2v5-allangle` (v5 pipeline), `feature/m2v6-inmachine-domain` (v6, current).
+V6 is merged into `main`. Check `git status` and `git branch -vv` for current
+branch state; do not infer active or existing branches from this handoff.
 
 ## Jetson constraints
 
@@ -94,9 +94,8 @@ Only these matter (3 stale merged feature branches were slated for deletion):
 
 ## Docs
 
-- `Trash-detection/docs/ARCHITECTURE.md`
-- `Trash-detection/docs/MODEL_CONTRACT.md`
-- `Trash-detection/README.md`
+Start with `DOCUMENTATION.md`. It defines the current reading order, component
+documents, and historical material that must not be treated as active guidance.
 
 ## Out of scope / stale
 

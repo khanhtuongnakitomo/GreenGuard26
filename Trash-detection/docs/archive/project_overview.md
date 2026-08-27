@@ -1,4 +1,9 @@
 # GreenGuard project overview
+
+> **ARCHIVED.** This is a dated conversation and planning export. It is not a
+> current implementation contract, runtime guide, or training instruction.
+> Start with `DOCUMENTATION.md` and the current component documentation.
+
 _Exported on 8/22/2026 at 00:29:16 GMT+7 from Cursor (3.17.8)_
 
 ---

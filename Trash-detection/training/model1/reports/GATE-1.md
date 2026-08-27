@@ -1,5 +1,8 @@
 # GATE-1 — Merged dataset healthy
 
+> **HISTORICAL EVIDENCE.** This dated Model 1 report is not current product
+> behavior or an instruction for new work. Start with `DOCUMENTATION.md`.
+
 **Status: AWAITING HUMAN SIGN-OFF (Tường)** — 2026-08-22, after Phases B+C+D.
 
 ## Checks
