@@ -38,11 +38,16 @@ def main() -> int:
     ap.add_argument("--time", type=float, default=2.1,
                     help="HARD wall-clock cap in hours (overrides epochs)")
     ap.add_argument("--patience", type=int, default=25)
-    ap.add_argument("--batch", type=int, default=16)
+    # batch 24 @640 uses ~6-7GB of the 12GB card (was 16 using only ~3.9GB) —
+    # more VRAM per step = fewer steps/epoch = faster. Override with --batch.
+    ap.add_argument("--batch", type=int, default=24)
     # workers=0 is the Windows-safe default: >0 spawns dataloader subprocesses
     # that deadlock on large OBB datasets + heavy augmentation (the m2v5 hang).
     ap.add_argument("--workers", type=int, default=0)
-    ap.add_argument("--cache", default=None, help="'disk' to speed re-runs (opt-in)")
+    # cache="disk" decodes images to SSD once then reads that — removes the
+    # per-epoch disk/decode bottleneck at workers=0 WITHOUT needing ~22GB free
+    # RAM (cache=True gets refused if RAM is low; disk only needs ~20GB disk).
+    ap.add_argument("--cache", default="disk", help="'disk' (default) | true | false")
     ap.add_argument("--fraction", type=float, default=1.0)
     ap.add_argument("--lr0", type=float, default=0.001)
     ap.add_argument("--full", action="store_true", help="train from yolo11s-obb.pt, not m2v5")
@@ -55,7 +60,12 @@ def main() -> int:
         args.epochs, args.imgsz, args.fraction = 1, 320, 0.05
         args.batch, args.workers, args.patience = 8, 0, 1
         args.time = 0.0  # no wall-clock cap on the smoke (1 epoch)
+        args.cache = "false"
         args.name = "smoke_m2v6"
+
+    # normalise cache flag: Ultralytics wants True | False | "disk"
+    cache = {"true": True, "1": True, "yes": True, "disk": "disk"}.get(
+        str(args.cache).lower(), False)
 
     if args.weights:
         start = args.weights
@@ -90,7 +100,8 @@ def main() -> int:
         batch=args.batch,
         workers=args.workers,
         fraction=args.fraction,
-        cache=args.cache if args.cache else False,
+        cache=cache,                 # "disk" = decoded cache on SSD (removes disk bottleneck)
+        multi_scale=False,           # OFF: it thrashes VRAM and slows ~10-15% (was the wrong lever)
         optimizer="AdamW",
         cos_lr=True,
         lr0=args.lr0,
