@@ -1,0 +1,867 @@
+{
+  "run_name": "m2v6_liveft_20260828_seed42_n640_e50",
+  "candidate_weights": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\runs\\m2v6_liveft_20260828_seed42_n640_e50\\weights\\best.pt",
+  "baseline_weights": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\runs\\m2v6_inmachine_seed42_n640\\weights\\best.pt",
+  "prepare_report": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\logs\\live_finetune\\m2v6_liveft_20260828_seed42_n640_e50\\reports\\prepare_report.json",
+  "surfaces": {
+    "machine_val": {
+      "candidate": {
+        "overall_precision": 0.817865,
+        "overall_recall": 0.803138,
+        "overall_mAP50": 0.820706,
+        "overall_mAP50-95": 0.58881,
+        "macro_recall": 0.803138,
+        "macro_f1": 0.799931,
+        "classes": {
+          "cap": {
+            "precision": 0.828216,
+            "recall": 0.992746,
+            "f1": 0.903048,
+            "mAP50": 0.989085,
+            "mAP50-95": 0.718373
+          },
+          "label": {
+            "precision": 0.982229,
+            "recall": 1.0,
+            "f1": 0.991035,
+            "mAP50": 0.995,
+            "mAP50-95": 0.833395
+          },
+          "ring": {
+            "precision": 0.64315,
+            "recall": 0.416667,
+            "f1": 0.505709,
+            "mAP50": 0.478031,
+            "mAP50-95": 0.214663
+          }
+        }
+      },
+      "baseline": {
+        "overall_precision": 0.740832,
+        "overall_recall": 0.283937,
+        "overall_mAP50": 0.286705,
+        "overall_mAP50-95": 0.203313,
+        "macro_recall": 0.283937,
+        "macro_f1": 0.319954,
+        "classes": {
+          "cap": {
+            "precision": 0.682264,
+            "recall": 0.294118,
+            "f1": 0.41104,
+            "mAP50": 0.347613,
+            "mAP50-95": 0.216791
+          },
+          "label": {
+            "precision": 0.540232,
+            "recall": 0.557692,
+            "f1": 0.548823,
+            "mAP50": 0.512501,
+            "mAP50-95": 0.393148
+          },
+          "ring": {
+            "precision": 1.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "mAP50": 0.0,
+            "mAP50-95": 0.0
+          }
+        }
+      }
+    },
+    "machine_holdout": {
+      "candidate": {
+        "overall_precision": 0.718165,
+        "overall_recall": 0.712292,
+        "overall_mAP50": 0.695896,
+        "overall_mAP50-95": 0.521335,
+        "macro_recall": 0.712292,
+        "macro_f1": 0.714757,
+        "classes": {
+          "cap": {
+            "precision": 0.8183,
+            "recall": 0.818182,
+            "f1": 0.818241,
+            "mAP50": 0.853157,
+            "mAP50-95": 0.65508
+          },
+          "label": {
+            "precision": 0.975984,
+            "recall": 1.0,
+            "f1": 0.987846,
+            "mAP50": 0.994464,
+            "mAP50-95": 0.8063
+          },
+          "ring": {
+            "precision": 0.360212,
+            "recall": 0.318693,
+            "f1": 0.338183,
+            "mAP50": 0.240065,
+            "mAP50-95": 0.102627
+          }
+        }
+      },
+      "baseline": {
+        "overall_precision": 0.672253,
+        "overall_recall": 0.208081,
+        "overall_mAP50": 0.212079,
+        "overall_mAP50-95": 0.137201,
+        "macro_recall": 0.208081,
+        "macro_f1": 0.219973,
+        "classes": {
+          "cap": {
+            "precision": 0.475115,
+            "recall": 0.060606,
+            "f1": 0.107499,
+            "mAP50": 0.136407,
+            "mAP50-95": 0.059025
+          },
+          "label": {
+            "precision": 0.541644,
+            "recall": 0.563636,
+            "f1": 0.552421,
+            "mAP50": 0.49983,
+            "mAP50-95": 0.352579
+          },
+          "ring": {
+            "precision": 1.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "mAP50": 0.0,
+            "mAP50-95": 0.0
+          }
+        }
+      }
+    },
+    "locked_test": {
+      "candidate": {
+        "overall_precision": 0.809609,
+        "overall_recall": 0.617893,
+        "overall_mAP50": 0.565135,
+        "overall_mAP50-95": 0.471363,
+        "macro_recall": 0.617893,
+        "macro_f1": 0.53127,
+        "classes": {
+          "cap": {
+            "precision": 0.828155,
+            "recall": 0.866667,
+            "f1": 0.846973,
+            "mAP50": 0.937708,
+            "mAP50-95": 0.782676
+          },
+          "label": {
+            "precision": 0.600672,
+            "recall": 0.987013,
+            "f1": 0.746837,
+            "mAP50": 0.700591,
+            "mAP50-95": 0.618813
+          },
+          "ring": {
+            "precision": 1.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "mAP50": 0.057106,
+            "mAP50-95": 0.0126
+          }
+        }
+      },
+      "baseline": {
+        "overall_precision": 0.439118,
+        "overall_recall": 0.640115,
+        "overall_mAP50": 0.583444,
+        "overall_mAP50-95": 0.520317,
+        "macro_recall": 0.640115,
+        "macro_f1": 0.518116,
+        "classes": {
+          "cap": {
+            "precision": 0.738223,
+            "recall": 0.933333,
+            "f1": 0.824391,
+            "mAP50": 0.955504,
+            "mAP50-95": 0.828008
+          },
+          "label": {
+            "precision": 0.579131,
+            "recall": 0.987013,
+            "f1": 0.729958,
+            "mAP50": 0.794827,
+            "mAP50-95": 0.732944
+          },
+          "ring": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "mAP50": 0.0,
+            "mAP50-95": 0.0
+          }
+        }
+      },
+      "per_class_regressions": {
+        "cap": -0.017796,
+        "label": -0.094236,
+        "ring": 0.057106
+      }
+    },
+    "clean_negative": {
+      "candidate": {
+        "image_count": 0,
+        "false_rejects": null,
+        "false_reject_rate": null,
+        "missing": true
+      },
+      "baseline": {
+        "image_count": 0,
+        "false_rejects": null,
+        "false_reject_rate": null,
+        "missing": true
+      }
+    },
+    "gate_replay": {
+      "candidate": {
+        "sequence_count": 51,
+        "positive_sequences": 51,
+        "positive_rejects": 28,
+        "positive_reject_rate": 0.54902,
+        "details": [
+          {
+            "group_id": "seq_001",
+            "split": "val",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_002",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_003",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_004",
+            "split": "val",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_005",
+            "split": "val",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_006",
+            "split": "val",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_007",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_008",
+            "split": "holdout",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_009",
+            "split": "holdout",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_010",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_011",
+            "split": "holdout",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_012",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_013",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_014",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_015",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_016",
+            "split": "val",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_017",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_018",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_019",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_020",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_021",
+            "split": "val",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_022",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_023",
+            "split": "holdout",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_024",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_025",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_026",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_027",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_028",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_029",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_030",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_031",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_032",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_033",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_034",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_035",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_036",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_037",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_038",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_039",
+            "split": "holdout",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_040",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_041",
+            "split": "holdout",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_042",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_043",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_044",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_045",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_046",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_047",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_048",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_049",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_050",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_051",
+            "split": "val",
+            "positive": true,
+            "reject_locked": true
+          }
+        ]
+      },
+      "baseline": {
+        "sequence_count": 51,
+        "positive_sequences": 51,
+        "positive_rejects": 14,
+        "positive_reject_rate": 0.27451,
+        "details": [
+          {
+            "group_id": "seq_001",
+            "split": "val",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_002",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_003",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_004",
+            "split": "val",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_005",
+            "split": "val",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_006",
+            "split": "val",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_007",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_008",
+            "split": "holdout",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_009",
+            "split": "holdout",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_010",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_011",
+            "split": "holdout",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_012",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_013",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_014",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_015",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_016",
+            "split": "val",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_017",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_018",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_019",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_020",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_021",
+            "split": "val",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_022",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_023",
+            "split": "holdout",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_024",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_025",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_026",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_027",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_028",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_029",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_030",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_031",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_032",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_033",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_034",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_035",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_036",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_037",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_038",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_039",
+            "split": "holdout",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_040",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_041",
+            "split": "holdout",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_042",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_043",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_044",
+            "split": "train",
+            "positive": true,
+            "reject_locked": true
+          },
+          {
+            "group_id": "seq_045",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_046",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_047",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_048",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_049",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_050",
+            "split": "train",
+            "positive": true,
+            "reject_locked": false
+          },
+          {
+            "group_id": "seq_051",
+            "split": "val",
+            "positive": true,
+            "reject_locked": true
+          }
+        ]
+      }
+    }
+  },
+  "gates": {
+    "prepare_data_prereqs": false,
+    "class_coverage_val": true,
+    "class_coverage_holdout": true,
+    "class_coverage_locked": true,
+    "holdout_macro_f1_preserved": true,
+    "holdout_macro_recall_preserved": true,
+    "locked_test_regression_ok": false,
+    "clean_negative_not_worse": false,
+    "gate_replay_preserved": true
+  },
+  "gate_blockers": [
+    "baseline_clean_negative_surface_missing",
+    "clean_negative_not_worse",
+    "locked_test_regression_ok",
+    "missing_clean_negative_surface",
+    "prepare_data_prereqs"
+  ]
+}

@@ -1,0 +1,462 @@
+{
+  "run_name": "m2v6_liveft_20260828_seed42_n640_e50",
+  "prepared_at": "2026-08-27T22:10:36Z",
+  "git_branch": "feature/m2v6-live-finetune-workflow",
+  "git_head": "a07b448f40d34c47a535f8fc4ce4934e0351f292",
+  "baseline_checkpoint": {
+    "path": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\runs\\m2v6_inmachine_seed42_n640\\weights\\best.pt",
+    "expected_sha256": "755D3857E334B2E477D19A132A5AFCBF9F661F4CDDE67DE084959CE10BBEAB5F",
+    "exists": true,
+    "actual_sha256": "755D3857E334B2E477D19A132A5AFCBF9F661F4CDDE67DE084959CE10BBEAB5F"
+  },
+  "dataset_source_hash": "E37529CB725BD893A37BF1F925DE327B4DBDF493F2E16BEE349093F749209D23",
+  "ignored_inputs": [
+    "train.txt",
+    "GreenGuard.zip"
+  ],
+  "live_dataset": {
+    "source_root": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\incoming\\live-dataset",
+    "total_images": 443,
+    "kept_images": 440,
+    "quarantined_images": 3,
+    "reviewed_machine_negative_count": 0,
+    "split_counts": {
+      "val": 66,
+      "train": 308,
+      "holdout": 66
+    },
+    "group_counts": {
+      "val": 7,
+      "train": 38,
+      "holdout": 6
+    },
+    "sequence_gap_seconds": 45,
+    "phash_similarity_warnings": [
+      {
+        "left": "WIN_20260827_14_41_22_Pro.jpg",
+        "right": "WIN_20260827_14_41_36_Pro.jpg",
+        "distance": 2
+      },
+      {
+        "left": "WIN_20260827_14_41_36_Pro.jpg",
+        "right": "WIN_20260827_14_42_31_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_14_42_31_Pro.jpg",
+        "right": "WIN_20260827_14_43_04_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_14_44_10_Pro.jpg",
+        "right": "WIN_20260827_14_44_22_Pro.jpg",
+        "distance": 2
+      },
+      {
+        "left": "WIN_20260827_14_47_46_Pro.jpg",
+        "right": "WIN_20260827_14_47_57_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_14_49_28_Pro.jpg",
+        "right": "WIN_20260827_14_49_39_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_14_49_39_Pro.jpg",
+        "right": "WIN_20260827_14_51_29_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_14_51_29_Pro.jpg",
+        "right": "WIN_20260827_14_51_40_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_14_52_08_Pro.jpg",
+        "right": "WIN_20260827_14_52_24_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_14_53_55_Pro.jpg",
+        "right": "WIN_20260827_14_54_29_Pro.jpg",
+        "distance": 2
+      },
+      {
+        "left": "WIN_20260827_14_56_21_Pro.jpg",
+        "right": "WIN_20260827_14_56_31_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_14_58_30_Pro.jpg",
+        "right": "WIN_20260827_14_58_44_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_15_00_36_Pro.jpg",
+        "right": "WIN_20260827_15_01_17_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_15_07_43_Pro.jpg",
+        "right": "WIN_20260827_15_07_50_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_15_16_28_Pro.jpg",
+        "right": "WIN_20260827_15_16_37_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_15_20_39_Pro.jpg",
+        "right": "WIN_20260827_15_20_48_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_15_26_41_Pro.jpg",
+        "right": "WIN_20260827_15_26_58_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_15_28_33_Pro.jpg",
+        "right": "WIN_20260827_15_28_47_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_15_31_53_Pro.jpg",
+        "right": "WIN_20260827_15_32_00_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_15_32_00_Pro.jpg",
+        "right": "WIN_20260827_15_32_30_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_15_32_51_Pro.jpg",
+        "right": "WIN_20260827_15_33_00_Pro.jpg",
+        "distance": 2
+      },
+      {
+        "left": "WIN_20260827_15_40_22_Pro.jpg",
+        "right": "WIN_20260827_15_40_31_Pro.jpg",
+        "distance": 2
+      },
+      {
+        "left": "WIN_20260827_15_41_13_Pro.jpg",
+        "right": "WIN_20260827_15_41_25_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_15_48_34_Pro.jpg",
+        "right": "WIN_20260827_15_48_50_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_16_11_55_Pro.jpg",
+        "right": "WIN_20260827_16_12_03_Pro.jpg",
+        "distance": 2
+      },
+      {
+        "left": "WIN_20260827_16_12_32_Pro.jpg",
+        "right": "WIN_20260827_16_12_56_Pro.jpg",
+        "distance": 0
+      },
+      {
+        "left": "WIN_20260827_16_19_50_Pro.jpg",
+        "right": "WIN_20260827_16_19_57_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_16_20_15_Pro.jpg",
+        "right": "WIN_20260827_16_21_15_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_16_22_25_Pro.jpg",
+        "right": "WIN_20260827_16_22_33_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_16_26_06_Pro.jpg",
+        "right": "WIN_20260827_16_26_13_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_16_28_26_Pro.jpg",
+        "right": "WIN_20260827_16_28_33_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_16_32_50_Pro.jpg",
+        "right": "WIN_20260827_16_33_07_Pro.jpg",
+        "distance": 2
+      },
+      {
+        "left": "WIN_20260827_16_34_37_Pro.jpg",
+        "right": "WIN_20260827_16_34_47_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_16_35_30_Pro.jpg",
+        "right": "WIN_20260827_16_36_21_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_16_39_55_Pro.jpg",
+        "right": "WIN_20260827_16_40_08_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_16_40_21_Pro.jpg",
+        "right": "WIN_20260827_16_40_36_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_16_41_16_Pro.jpg",
+        "right": "WIN_20260827_16_41_23_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_16_42_19_Pro.jpg",
+        "right": "WIN_20260827_16_42_28_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_16_42_28_Pro.jpg",
+        "right": "WIN_20260827_16_43_10_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_16_43_37_Pro.jpg",
+        "right": "WIN_20260827_16_43_45_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_16_47_21_Pro.jpg",
+        "right": "WIN_20260827_16_47_32_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_16_51_02_Pro.jpg",
+        "right": "WIN_20260827_16_51_09_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_16_52_52_Pro.jpg",
+        "right": "WIN_20260827_16_53_23_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_16_54_14_Pro.jpg",
+        "right": "WIN_20260827_16_54_27_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_01_33_Pro.jpg",
+        "right": "WIN_20260827_17_01_44_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_17_01_55_Pro.jpg",
+        "right": "WIN_20260827_17_02_04_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_17_02_44_Pro.jpg",
+        "right": "WIN_20260827_17_03_01_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_03_58_Pro.jpg",
+        "right": "WIN_20260827_17_04_03_Pro.jpg",
+        "distance": 2
+      },
+      {
+        "left": "WIN_20260827_17_05_44_Pro.jpg",
+        "right": "WIN_20260827_17_05_51_Pro.jpg",
+        "distance": 2
+      },
+      {
+        "left": "WIN_20260827_17_06_04_Pro.jpg",
+        "right": "WIN_20260827_17_06_11_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_06_42_Pro.jpg",
+        "right": "WIN_20260827_17_06_49_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_07_05_Pro.jpg",
+        "right": "WIN_20260827_17_07_13_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_08_43_Pro.jpg",
+        "right": "WIN_20260827_17_08_50_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_09_39_Pro.jpg",
+        "right": "WIN_20260827_17_09_48_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_17_10_04_Pro.jpg",
+        "right": "WIN_20260827_17_10_32_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_10_32_Pro.jpg",
+        "right": "WIN_20260827_17_10_39_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_10_52_Pro.jpg",
+        "right": "WIN_20260827_17_12_46_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_16_22_Pro.jpg",
+        "right": "WIN_20260827_17_16_54_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_17_20_32_Pro.jpg",
+        "right": "WIN_20260827_17_21_18_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_24_22_Pro.jpg",
+        "right": "WIN_20260827_17_24_31_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_26_05_Pro.jpg",
+        "right": "WIN_20260827_17_26_15_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_28_30_Pro.jpg",
+        "right": "WIN_20260827_17_28_44_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_30_24_Pro.jpg",
+        "right": "WIN_20260827_17_30_31_Pro.jpg",
+        "distance": 2
+      },
+      {
+        "left": "WIN_20260827_17_31_53_Pro.jpg",
+        "right": "WIN_20260827_17_32_04_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_32_18_Pro.jpg",
+        "right": "WIN_20260827_17_32_30_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_33_10_Pro.jpg",
+        "right": "WIN_20260827_17_33_22_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_17_34_56_Pro.jpg",
+        "right": "WIN_20260827_17_35_15_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_17_36_23_Pro.jpg",
+        "right": "WIN_20260827_17_36_32_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_17_40_00_Pro.jpg",
+        "right": "WIN_20260827_17_40_06_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_17_41_08_Pro.jpg",
+        "right": "WIN_20260827_17_41_15_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_41_42_Pro.jpg",
+        "right": "WIN_20260827_17_41_49_Pro.jpg",
+        "distance": 4
+      },
+      {
+        "left": "WIN_20260827_17_41_49_Pro.jpg",
+        "right": "WIN_20260827_17_42_18_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_42_18_Pro.jpg",
+        "right": "WIN_20260827_17_42_23_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_42_30_Pro.jpg",
+        "right": "WIN_20260827_17_42_38_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_43_13_Pro.jpg",
+        "right": "WIN_20260827_17_43_21_Pro.jpg",
+        "distance": 6
+      },
+      {
+        "left": "WIN_20260827_17_44_08_Pro.jpg",
+        "right": "WIN_20260827_17_44_16_Pro.jpg",
+        "distance": 4
+      }
+    ]
+  },
+  "train_surface": {
+    "live_train_originals": 308,
+    "live_train_augmented": 616,
+    "legacy_replay_selected": 924,
+    "legacy_replay_target": 924
+  },
+  "quarantine": [
+    {
+      "image_name": "WIN_20260827_14_41_12_Pro.jpg",
+      "reason": "missing_label",
+      "detail": "No label file was found and the frame is not in the reviewed-negative allowlist.",
+      "source_image": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\incoming\\live-dataset\\image\\WIN_20260827_14_41_12_Pro.jpg",
+      "source_label": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\incoming\\live-dataset\\labels\\WIN_20260827_14_41_12_Pro.txt",
+      "quarantine_image": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\generated\\m2v6_liveft_20260828_seed42_n640_e50\\quarantine\\images\\WIN_20260827_14_41_12_Pro.jpg",
+      "quarantine_label": null
+    },
+    {
+      "image_name": "WIN_20260827_14_43_51_Pro.jpg",
+      "reason": "coordinate_out_of_bounds",
+      "detail": "Line 1: validation failed.",
+      "source_image": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\incoming\\live-dataset\\image\\WIN_20260827_14_43_51_Pro.jpg",
+      "source_label": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\incoming\\live-dataset\\labels\\WIN_20260827_14_43_51_Pro.txt",
+      "quarantine_image": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\generated\\m2v6_liveft_20260828_seed42_n640_e50\\quarantine\\images\\WIN_20260827_14_43_51_Pro.jpg",
+      "quarantine_label": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\generated\\m2v6_liveft_20260828_seed42_n640_e50\\quarantine\\labels\\WIN_20260827_14_43_51_Pro.txt"
+    },
+    {
+      "image_name": "WIN_20260827_17_15_02_Pro.jpg",
+      "reason": "missing_label",
+      "detail": "No label file was found and the frame is not in the reviewed-negative allowlist.",
+      "source_image": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\incoming\\live-dataset\\image\\WIN_20260827_17_15_02_Pro.jpg",
+      "source_label": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\incoming\\live-dataset\\labels\\WIN_20260827_17_15_02_Pro.txt",
+      "quarantine_image": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\generated\\m2v6_liveft_20260828_seed42_n640_e50\\quarantine\\images\\WIN_20260827_17_15_02_Pro.jpg",
+      "quarantine_label": null
+    }
+  ],
+  "promotion_prereq_failures": [
+    "unresolved_live_annotations",
+    "insufficient_reviewed_machine_negatives"
+  ],
+  "promotion_ready_from_data": false,
+  "generated_root": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\generated\\m2v6_liveft_20260828_seed42_n640_e50",
+  "dataset_yaml": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\generated\\m2v6_liveft_20260828_seed42_n640_e50\\dataset.yaml",
+  "live_val_yaml": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\generated\\m2v6_liveft_20260828_seed42_n640_e50\\live_val.yaml",
+  "live_holdout_yaml": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\generated\\m2v6_liveft_20260828_seed42_n640_e50\\live_holdout.yaml",
+  "clean_negative_yaml": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\generated\\m2v6_liveft_20260828_seed42_n640_e50\\clean_negative.yaml"
+}

@@ -1,0 +1,576 @@
+{
+  "run_name": "m2v6_liveft_20260828_seed42_n640_e50",
+  "candidate_weights": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\runs\\m2v6_liveft_20260828_seed42_n640_e50\\weights\\best.pt",
+  "candidate_export_root": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\export\\candidates\\m2v6_liveft_20260828_seed42_n640_e50",
+  "exports": {
+    "onnx_640": {
+      "model": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\export\\candidates\\m2v6_liveft_20260828_seed42_n640_e50\\onnx_640\\model.onnx",
+      "labels": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\export\\candidates\\m2v6_liveft_20260828_seed42_n640_e50\\onnx_640\\labels.txt",
+      "sha256": "4FC9AB3A2D5DDE1EBF03063692FE05E4374CE5B6406D66870899ADC2D8C6A0BB",
+      "bytes": 12497149
+    },
+    "onnx_416": {
+      "model": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\export\\candidates\\m2v6_liveft_20260828_seed42_n640_e50\\onnx_416\\model.onnx",
+      "labels": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\export\\candidates\\m2v6_liveft_20260828_seed42_n640_e50\\onnx_416\\labels.txt",
+      "sha256": "43D57F5FFED444DB3C3AC417D5BF9FD8A6C45BF471A911C879B714A2B08CA203",
+      "bytes": 12438859
+    },
+    "onnx_768": {
+      "model": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\export\\candidates\\m2v6_liveft_20260828_seed42_n640_e50\\onnx_768\\model.onnx",
+      "labels": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\export\\candidates\\m2v6_liveft_20260828_seed42_n640_e50\\onnx_768\\labels.txt",
+      "sha256": "C766D155FCD54D229FF1B06198DFC6497A57AA510BFC9B402A736C527CD50A1F",
+      "bytes": 12541501
+    }
+  },
+  "export_validation": {
+    "onnx_640": {
+      "meta": {
+        "input_name": "images",
+        "input_shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "output_name": "output0",
+        "output_shape": [
+          1,
+          8,
+          8400
+        ]
+      },
+      "finite_outputs": true,
+      "labels": [
+        "cap",
+        "label",
+        "ring"
+      ],
+      "class_order_ok": true
+    },
+    "onnx_416": {
+      "meta": {
+        "input_name": "images",
+        "input_shape": [
+          1,
+          3,
+          416,
+          416
+        ],
+        "output_name": "output0",
+        "output_shape": [
+          1,
+          8,
+          3549
+        ]
+      },
+      "finite_outputs": true,
+      "labels": [
+        "cap",
+        "label",
+        "ring"
+      ],
+      "class_order_ok": true
+    },
+    "onnx_768": {
+      "meta": {
+        "input_name": "images",
+        "input_shape": [
+          1,
+          3,
+          768,
+          768
+        ],
+        "output_name": "output0",
+        "output_shape": [
+          1,
+          8,
+          12096
+        ]
+      },
+      "finite_outputs": true,
+      "labels": [
+        "cap",
+        "label",
+        "ring"
+      ],
+      "class_order_ok": true
+    }
+  },
+  "pc_parity": {
+    "sample_count": 24,
+    "comparisons": [
+      {
+        "image_name": "WIN_20260827_14_41_22_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.00205922,
+        "polygon_iou": 0.981979
+      },
+      {
+        "image_name": "WIN_20260827_14_41_22_Pro.jpg",
+        "class_name": "ring",
+        "conf_diff": 0.00967184,
+        "polygon_iou": 0.984244
+      },
+      {
+        "image_name": "WIN_20260827_14_41_36_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.00117284,
+        "polygon_iou": 0.992953
+      },
+      {
+        "image_name": "WIN_20260827_14_51_29_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.04720563,
+        "polygon_iou": 0.954269
+      },
+      {
+        "image_name": "WIN_20260827_14_51_29_Pro.jpg",
+        "class_name": "ring",
+        "conf_diff": 0.01792808,
+        "polygon_iou": 0.98138
+      },
+      {
+        "image_name": "WIN_20260827_14_51_40_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.00433624,
+        "polygon_iou": 0.996856
+      },
+      {
+        "image_name": "WIN_20260827_14_51_40_Pro.jpg",
+        "class_name": "ring",
+        "conf_diff": 0.02072859,
+        "polygon_iou": 0.963981
+      },
+      {
+        "image_name": "WIN_20260827_14_52_08_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.00103921,
+        "polygon_iou": 0.997485
+      },
+      {
+        "image_name": "WIN_20260827_14_52_24_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.00205773,
+        "polygon_iou": 0.974875
+      },
+      {
+        "image_name": "WIN_20260827_14_52_24_Pro.jpg",
+        "class_name": "ring",
+        "conf_diff": 0.01648718,
+        "polygon_iou": 0.951753
+      },
+      {
+        "image_name": "WIN_20260827_14_53_55_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00115716,
+        "polygon_iou": 0.994147
+      },
+      {
+        "image_name": "WIN_20260827_14_54_29_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.01063371,
+        "polygon_iou": 0.965435
+      },
+      {
+        "image_name": "WIN_20260827_14_54_29_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00378674,
+        "polygon_iou": 0.986863
+      },
+      {
+        "image_name": "WIN_20260827_14_54_29_Pro.jpg",
+        "class_name": "ring",
+        "conf_diff": 0.01054814,
+        "polygon_iou": 0.975606
+      },
+      {
+        "image_name": "WIN_20260827_14_54_48_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.00725728,
+        "polygon_iou": 0.979719
+      },
+      {
+        "image_name": "WIN_20260827_14_54_48_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00124294,
+        "polygon_iou": 0.979427
+      },
+      {
+        "image_name": "WIN_20260827_14_54_48_Pro.jpg",
+        "class_name": "ring",
+        "conf_diff": 0.01900969,
+        "polygon_iou": 0.964196
+      },
+      {
+        "image_name": "WIN_20260827_14_55_10_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.06259564,
+        "polygon_iou": 0.988209
+      },
+      {
+        "image_name": "WIN_20260827_14_55_10_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00013572,
+        "polygon_iou": 0.991812
+      },
+      {
+        "image_name": "WIN_20260827_14_56_21_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00173318,
+        "polygon_iou": 0.991084
+      },
+      {
+        "image_name": "WIN_20260827_14_56_31_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00035441,
+        "polygon_iou": 0.991299
+      },
+      {
+        "image_name": "WIN_20260827_14_56_31_Pro.jpg",
+        "class_name": "ring",
+        "conf_diff": 0.00511742,
+        "polygon_iou": 0.971923
+      },
+      {
+        "image_name": "WIN_20260827_14_56_55_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 3.546e-05,
+        "polygon_iou": 0.989854
+      },
+      {
+        "image_name": "WIN_20260827_14_57_07_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00123769,
+        "polygon_iou": 0.995146
+      },
+      {
+        "image_name": "WIN_20260827_15_01_17_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.00537199,
+        "polygon_iou": 0.964468
+      },
+      {
+        "image_name": "WIN_20260827_15_01_17_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.01896471,
+        "polygon_iou": 0.991064
+      },
+      {
+        "image_name": "WIN_20260827_15_02_03_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.0042966,
+        "polygon_iou": 0.981652
+      },
+      {
+        "image_name": "WIN_20260827_15_02_25_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.03666468,
+        "polygon_iou": 0.984784
+      },
+      {
+        "image_name": "WIN_20260827_15_09_46_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.00244093,
+        "polygon_iou": 0.99372
+      },
+      {
+        "image_name": "WIN_20260827_15_09_46_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00016636,
+        "polygon_iou": 0.998437
+      },
+      {
+        "image_name": "WIN_20260827_15_09_46_Pro.jpg",
+        "class_name": "ring",
+        "conf_diff": 0.00993952,
+        "polygon_iou": 0.992573
+      },
+      {
+        "image_name": "WIN_20260827_15_09_55_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.00226837,
+        "polygon_iou": 0.992727
+      },
+      {
+        "image_name": "WIN_20260827_15_09_55_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00013798,
+        "polygon_iou": 0.995618
+      },
+      {
+        "image_name": "WIN_20260827_15_22_03_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00256854,
+        "polygon_iou": 0.98549
+      },
+      {
+        "image_name": "WIN_20260827_15_22_36_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00412607,
+        "polygon_iou": 0.996163
+      },
+      {
+        "image_name": "WIN_20260827_15_22_54_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.0022949,
+        "polygon_iou": 0.997808
+      },
+      {
+        "image_name": "WIN_20260827_15_23_05_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00359577,
+        "polygon_iou": 0.993728
+      },
+      {
+        "image_name": "WIN_20260827_15_23_05_Pro.jpg",
+        "class_name": "ring",
+        "conf_diff": 0.0035843,
+        "polygon_iou": 0.968667
+      }
+    ],
+    "verdict_mismatch_count": 0,
+    "missing_detection_mismatch_count": 0,
+    "max_conf_diff": 0.06259564,
+    "min_polygon_iou": 0.951753,
+    "iou_min_required": 0.9,
+    "conf_tolerance": 0.0001,
+    "passed": false
+  },
+  "jetson_parity": {
+    "sample_count": 24,
+    "comparisons": [
+      {
+        "image_name": "WIN_20260827_14_41_36_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.30052787,
+        "polygon_iou": 0.856405
+      },
+      {
+        "image_name": "WIN_20260827_14_51_29_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.00224364,
+        "polygon_iou": 0.936367
+      },
+      {
+        "image_name": "WIN_20260827_14_51_40_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.00685698,
+        "polygon_iou": 0.974939
+      },
+      {
+        "image_name": "WIN_20260827_14_51_40_Pro.jpg",
+        "class_name": "ring",
+        "conf_diff": 0.01839092,
+        "polygon_iou": 0.955606
+      },
+      {
+        "image_name": "WIN_20260827_14_52_08_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.00653243,
+        "polygon_iou": 0.969782
+      },
+      {
+        "image_name": "WIN_20260827_14_52_08_Pro.jpg",
+        "class_name": "ring",
+        "conf_diff": 0.07276545,
+        "polygon_iou": 0.962818
+      },
+      {
+        "image_name": "WIN_20260827_14_52_24_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.03213251,
+        "polygon_iou": 0.934819
+      },
+      {
+        "image_name": "WIN_20260827_14_53_55_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.01882181,
+        "polygon_iou": 0.866083
+      },
+      {
+        "image_name": "WIN_20260827_14_53_55_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.0055089,
+        "polygon_iou": 0.975455
+      },
+      {
+        "image_name": "WIN_20260827_14_54_29_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00011122,
+        "polygon_iou": 0.972034
+      },
+      {
+        "image_name": "WIN_20260827_14_54_48_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.14548552,
+        "polygon_iou": 0.973171
+      },
+      {
+        "image_name": "WIN_20260827_14_54_48_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00655055,
+        "polygon_iou": 0.984599
+      },
+      {
+        "image_name": "WIN_20260827_14_54_48_Pro.jpg",
+        "class_name": "ring",
+        "conf_diff": 0.0283547,
+        "polygon_iou": 0.936078
+      },
+      {
+        "image_name": "WIN_20260827_14_55_10_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.01655599,
+        "polygon_iou": 0.0
+      },
+      {
+        "image_name": "WIN_20260827_14_55_10_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.02777231,
+        "polygon_iou": 0.969824
+      },
+      {
+        "image_name": "WIN_20260827_14_56_21_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00068486,
+        "polygon_iou": 0.945609
+      },
+      {
+        "image_name": "WIN_20260827_14_56_31_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00321478,
+        "polygon_iou": 0.755568
+      },
+      {
+        "image_name": "WIN_20260827_14_56_55_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00880605,
+        "polygon_iou": 0.939376
+      },
+      {
+        "image_name": "WIN_20260827_14_57_07_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.01872456,
+        "polygon_iou": 0.983484
+      },
+      {
+        "image_name": "WIN_20260827_15_01_17_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.10067928,
+        "polygon_iou": 0.9503
+      },
+      {
+        "image_name": "WIN_20260827_15_02_03_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.03593409,
+        "polygon_iou": 0.952861
+      },
+      {
+        "image_name": "WIN_20260827_15_09_46_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.0044241,
+        "polygon_iou": 0.915071
+      },
+      {
+        "image_name": "WIN_20260827_15_09_46_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00162089,
+        "polygon_iou": 0.96655
+      },
+      {
+        "image_name": "WIN_20260827_15_09_55_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.00062269,
+        "polygon_iou": 0.891505
+      },
+      {
+        "image_name": "WIN_20260827_15_09_55_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00205523,
+        "polygon_iou": 0.961389
+      },
+      {
+        "image_name": "WIN_20260827_15_22_03_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00055945,
+        "polygon_iou": 0.965719
+      },
+      {
+        "image_name": "WIN_20260827_15_22_36_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00118285,
+        "polygon_iou": 0.936376
+      },
+      {
+        "image_name": "WIN_20260827_15_22_54_Pro.jpg",
+        "class_name": "cap",
+        "conf_diff": 0.01583111,
+        "polygon_iou": 0.470039
+      },
+      {
+        "image_name": "WIN_20260827_15_22_54_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.01927453,
+        "polygon_iou": 0.980302
+      },
+      {
+        "image_name": "WIN_20260827_15_23_05_Pro.jpg",
+        "class_name": "label",
+        "conf_diff": 0.00315481,
+        "polygon_iou": 0.944233
+      }
+    ],
+    "verdict_mismatch_count": 0,
+    "missing_detection_mismatch_count": 5,
+    "max_conf_diff": 0.30052787,
+    "min_polygon_iou": 0.0,
+    "iou_min_required": 0.85,
+    "conf_tolerance": null,
+    "passed": false
+  },
+  "stage_root": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\logs\\live_finetune\\m2v6_liveft_20260828_seed42_n640_e50\\m2v6_liveft_20260828_seed42_n640_e50_stage_kuegwh0w",
+  "stage_package": {
+    "pc": {
+      "package": {
+        "manifest_path": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\logs\\live_finetune\\m2v6_liveft_20260828_seed42_n640_e50\\m2v6_liveft_20260828_seed42_n640_e50_stage_kuegwh0w\\pc\\models\\manifest.json",
+        "output_dir": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\logs\\live_finetune\\m2v6_liveft_20260828_seed42_n640_e50\\m2v6_liveft_20260828_seed42_n640_e50_stage_kuegwh0w\\pc\\models"
+      },
+      "check": {
+        "manifest": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\logs\\live_finetune\\m2v6_liveft_20260828_seed42_n640_e50\\m2v6_liveft_20260828_seed42_n640_e50_stage_kuegwh0w\\pc\\models\\manifest.json",
+        "failures": []
+      }
+    },
+    "jetson": {
+      "package": {
+        "manifest_path": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\logs\\live_finetune\\m2v6_liveft_20260828_seed42_n640_e50\\m2v6_liveft_20260828_seed42_n640_e50_stage_kuegwh0w\\jetson\\models\\manifest.json",
+        "output_dir": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\logs\\live_finetune\\m2v6_liveft_20260828_seed42_n640_e50\\m2v6_liveft_20260828_seed42_n640_e50_stage_kuegwh0w\\jetson\\models"
+      },
+      "check": {
+        "manifest": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\logs\\live_finetune\\m2v6_liveft_20260828_seed42_n640_e50\\m2v6_liveft_20260828_seed42_n640_e50_stage_kuegwh0w\\jetson\\models\\manifest.json",
+        "failures": []
+      }
+    }
+  },
+  "export_validation_gates": {
+    "onnx_graph_load_640": true,
+    "onnx_graph_load_416": true,
+    "onnx_graph_load_768": true,
+    "class_order_640": true,
+    "class_order_416": true,
+    "pc_parity": false,
+    "jetson_parity": false,
+    "packaged_hash_match_pc": true,
+    "packaged_hash_match_jetson": true
+  },
+  "gate_blockers": [
+    "baseline_clean_negative_surface_missing",
+    "clean_negative_not_worse",
+    "jetson_parity",
+    "locked_test_regression_ok",
+    "missing_clean_negative_surface",
+    "pc_parity",
+    "prepare_data_prereqs"
+  ],
+  "promotion_occurred": false,
+  "status": "blocked"
+}

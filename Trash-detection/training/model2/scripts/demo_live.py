@@ -3,10 +3,10 @@ r"""Live demo — Model 2 ONLY (cap / label / ring detector, OBB).
 Single-model app: no Model 1, no gating — draws OBB polygons and a top-left
 legend with class + confidence. CPU-only (GPU is for training), 5 FPS default.
 
-Model auto-pick (first found):
-  1. export/onnx_640/model.onnx           — train size (PC)
-  2. export/onnx_416/model.onnx           — Jetson deploy size
-  3. runs/m2v3_seed42_n640/weights/best.pt
+Default model selection:
+  1. export/onnx_640/model.onnx           — active PC production export
+  2. export/onnx_416/model.onnx           — active Jetson-size production export
+Use --model <path> to test a specific candidate or checkpoint.
 
 Static ONNX graphs only accept their exported imgsz (read from the graph).
 
@@ -33,30 +33,10 @@ NAMES = {0: "cap", 1: "label", 2: "ring"}
 COLORS = {0: (0, 0, 255), 1: (0, 255, 255), 2: (255, 0, 255)}
 DEVICE = "cpu"
 
-CANDIDATES = [
-    ROOT / "export" / "candidates" / "m2v6_inmachine_seed42_n640" / "onnx_768" / "model.onnx",
-    ROOT / "export" / "candidates" / "m2v6_inmachine_seed42_n640" / "onnx_640" / "model.onnx",
-    ROOT / "runs" / "m2v6_inmachine_seed42_n640" / "weights" / "best.pt",
-    ROOT / "export" / "candidates" / "m2v5_allangle_seed42_n768" / "onnx_768" / "model.onnx",
-    ROOT / "export" / "candidates" / "m2v5_allangle_seed42_n768" / "onnx_640" / "model.onnx",
-    ROOT / "runs" / "m2v5_allangle_seed42_n768" / "weights" / "best.pt",
-    ROOT / "export" / "candidates" / "m2v4_caplabel_seed42_n640" / "onnx_640" / "model.onnx",
-    ROOT / "export" / "candidates" / "m2v4_caplabel_seed42_n640" / "onnx_416" / "model.onnx",
-    ROOT / "runs" / "m2v4_caplabel_seed42_n640" / "weights" / "best.pt",
+PRODUCTION_CANDIDATES = [
     ROOT / "export" / "onnx_640" / "model.onnx",
     ROOT / "export" / "onnx_416" / "model.onnx",
-    ROOT / "runs" / "m2v3_seed42_n640" / "weights" / "best.pt",
 ]
-
-REF_WEIGHTS = (
-    ROOT / "runs" / "m2v6_inmachine_seed42_n640" / "weights" / "best.pt"
-    if (ROOT / "runs" / "m2v6_inmachine_seed42_n640" / "weights" / "best.pt").is_file()
-    else ROOT / "runs" / "m2v5_allangle_seed42_n768" / "weights" / "best.pt"
-    if (ROOT / "runs" / "m2v5_allangle_seed42_n768" / "weights" / "best.pt").is_file()
-    else ROOT / "runs" / "m2v4_caplabel_seed42_n640" / "weights" / "best.pt"
-    if (ROOT / "runs" / "m2v4_caplabel_seed42_n640" / "weights" / "best.pt").is_file()
-    else ROOT / "runs" / "m2v3_seed42_n640" / "weights" / "best.pt"
-)
 
 
 def onnx_date(path: Path) -> str | None:
@@ -68,11 +48,6 @@ def onnx_date(path: Path) -> str | None:
     except Exception:
         pass
     return None
-
-
-def stale_onnx(path: Path) -> bool:
-    return (path.suffix == ".onnx" and REF_WEIGHTS.is_file()
-            and path.stat().st_mtime < REF_WEIGHTS.stat().st_mtime)
 
 
 def onnx_imgsz(path: Path) -> int | None:
@@ -87,24 +62,21 @@ def onnx_imgsz(path: Path) -> int | None:
 
 
 def resolve_model(arg: str) -> tuple[str, int | None]:
-    if arg and arg != "auto":
+    if arg and arg not in {"auto", "production"}:
         p = Path(arg)
         if not p.is_file():
             print(f"ERROR: model not found: {p}")
             raise SystemExit(1)
         print(f"[m2 demo] using model: {p}")
         return str(p), onnx_imgsz(p) if p.suffix == ".onnx" else None
-    for path in CANDIDATES:
+    for path in PRODUCTION_CANDIDATES:
         if not path.is_file():
-            continue
-        if stale_onnx(path):
-            print(f"STALE EXPORT - skipping {path} (older than {REF_WEIGHTS})")
             continue
         print(f"[m2 demo] using model: {path}")
         if path.suffix == ".onnx":
             print(f"[m2 demo] onnx date: {onnx_date(path)}")
         return str(path), onnx_imgsz(path) if path.suffix == ".onnx" else None
-    print("ERROR: no Model 2 found. Looked for:\n  " + "\n  ".join(str(p) for p in CANDIDATES))
+    print("ERROR: no production Model 2 export found. Looked for:\n  " + "\n  ".join(str(p) for p in PRODUCTION_CANDIDATES))
     raise SystemExit(1)
 
 
@@ -135,7 +107,7 @@ def draw_legend(frame: np.ndarray, legend: list[tuple[str, tuple]]) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", default="0", help="webcam index or image/video path")
-    ap.add_argument("--model", default="auto")
+    ap.add_argument("--model", default="production")
     ap.add_argument("--fps", type=float, default=5.0)
     ap.add_argument("--conf", type=float, default=0.25)
     ap.add_argument("--imgsz", type=int, default=640,

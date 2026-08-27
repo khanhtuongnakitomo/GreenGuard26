@@ -1,0 +1,11 @@
+{
+  "run_name": "m2v6_liveft_20260828_seed42_n640_smoke",
+  "best_weights": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\runs\\m2v6_liveft_20260828_seed42_n640_smoke\\weights\\best.pt",
+  "last_weights": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\runs\\m2v6_liveft_20260828_seed42_n640_smoke\\weights\\last.pt",
+  "results_csv": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\runs\\m2v6_liveft_20260828_seed42_n640_smoke\\results.csv",
+  "duration_seconds": 19.477,
+  "duration_hours": 0.0054,
+  "epochs_completed": 2,
+  "target_epochs": 1,
+  "terminal_state": "STOPPED"
+}
