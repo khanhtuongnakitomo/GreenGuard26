@@ -1,11 +1,9 @@
 {
   "target": "pc",
-  "source_commit": "ec5e28208277ca4a93a944664f875fdf31c657e6",
-  "packaged_at_utc": "2026-08-28T09:07:53Z",
-  "package_scope": "m1",
-  "provenance": {
-    "model1_source": "Dump/new-model-1"
-  },
+  "source_commit": "9248cec855e8277cadb0e4ad869dd0adeec916fa",
+  "packaged_at_utc": "2026-08-28T09:44:09Z",
+  "package_scope": "all",
+  "provenance": {},
   "models": [
     {
       "filename": "m1_detect_640.onnx",
@@ -13,7 +11,7 @@
       "family": "m1",
       "task": "detect",
       "source_path": "Trash-detection/training/model1/export/detect_640/model.onnx",
-      "source_commit": "ec5e28208277ca4a93a944664f875fdf31c657e6",
+      "source_commit": "9248cec855e8277cadb0e4ad869dd0adeec916fa",
       "source_sha256": "5069bfae324db8c1aef1fbce4b68aaad217a80a95a6f6b83eacfa60cdb620038",
       "source_bytes": 44748966,
       "sha256": "5069bfae324db8c1aef1fbce4b68aaad217a80a95a6f6b83eacfa60cdb620038",
@@ -43,7 +41,7 @@
       "family": "m2",
       "task": "obb",
       "source_path": "Trash-detection/training/model2/export/onnx_640/model.onnx",
-      "source_commit": "ec5e28208277ca4a93a944664f875fdf31c657e6",
+      "source_commit": "9248cec855e8277cadb0e4ad869dd0adeec916fa",
       "source_sha256": "d4c5f235fbb78e3a8451de695480400a916ffec235a518af47fd5b448c6eb999",
       "source_bytes": 12497101,
       "sha256": "d4c5f235fbb78e3a8451de695480400a916ffec235a518af47fd5b448c6eb999",

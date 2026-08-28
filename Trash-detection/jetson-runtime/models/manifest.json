@@ -1,11 +1,9 @@
 {
   "target": "jetson",
-  "source_commit": "ec5e28208277ca4a93a944664f875fdf31c657e6",
-  "packaged_at_utc": "2026-08-28T09:07:53Z",
-  "package_scope": "m1",
-  "provenance": {
-    "model1_source": "Dump/new-model-1"
-  },
+  "source_commit": "9248cec855e8277cadb0e4ad869dd0adeec916fa",
+  "packaged_at_utc": "2026-08-28T09:44:10Z",
+  "package_scope": "all",
+  "provenance": {},
   "models": [
     {
       "filename": "m1_detect_416.onnx",
@@ -13,7 +11,7 @@
       "family": "m1",
       "task": "detect",
       "source_path": "Trash-detection/training/model1/export/detect_416/model.onnx",
-      "source_commit": "ec5e28208277ca4a93a944664f875fdf31c657e6",
+      "source_commit": "9248cec855e8277cadb0e4ad869dd0adeec916fa",
       "source_sha256": "367bad246b324ce2add6357a556edec22afc6ede445c966881c7eda1bced657b",
       "source_bytes": 44651868,
       "sha256": "367bad246b324ce2add6357a556edec22afc6ede445c966881c7eda1bced657b",
@@ -43,7 +41,7 @@
       "family": "m2",
       "task": "obb",
       "source_path": "Trash-detection/training/model2/export/onnx_416/model.onnx",
-      "source_commit": "ec5e28208277ca4a93a944664f875fdf31c657e6",
+      "source_commit": "9248cec855e8277cadb0e4ad869dd0adeec916fa",
       "source_sha256": "3588ebd3f5d442a2b2aaf61988431b549fcc139e2a8c2d119322da998cbf6d8c",
       "source_bytes": 12438811,
       "sha256": "3588ebd3f5d442a2b2aaf61988431b549fcc139e2a8c2d119322da998cbf6d8c",
