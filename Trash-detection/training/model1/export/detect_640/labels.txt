@@ -1,0 +1,3 @@
+metal_can
+pet_bottle
+pp_cup

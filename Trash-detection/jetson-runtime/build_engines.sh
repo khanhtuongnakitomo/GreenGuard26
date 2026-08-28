@@ -25,8 +25,7 @@ build_one() {
   fi
 }
 
-build_one "$ROOT/models/m1_detector_416.onnx" "$ENGINES/m1_detector_416.engine"
-build_one "$ROOT/models/m1_classifier_224.onnx" "$ENGINES/m1_classifier_224.engine"
+build_one "$ROOT/models/m1_detect_416.onnx" "$ENGINES/m1_detect_416.engine"
 build_one "$ROOT/models/m2_obb_416.onnx" "$ENGINES/m2_obb_416.engine"
 
 python3 - <<'PY'
@@ -40,8 +39,7 @@ root = os.path.dirname(os.path.abspath(__file__))
 engines = os.path.join(root, "models", "engines")
 models = os.path.join(root, "models")
 onnx_map = {
-    "m1_detector_416.engine": "m1_detector_416.onnx",
-    "m1_classifier_224.engine": "m1_classifier_224.onnx",
+    "m1_detect_416.engine": "m1_detect_416.onnx",
     "m2_obb_416.engine": "m2_obb_416.onnx",
 }
 
@@ -97,6 +95,5 @@ print("wrote %s" % out)
 PY
 
 echo "Engine build complete. Benchmark examples:"
-echo "  trtexec --loadEngine=$ENGINES/m1_detector_416.engine"
-echo "  trtexec --loadEngine=$ENGINES/m1_classifier_224.engine"
+echo "  trtexec --loadEngine=$ENGINES/m1_detect_416.engine"
 echo "  trtexec --loadEngine=$ENGINES/m2_obb_416.engine"

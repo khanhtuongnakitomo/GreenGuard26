@@ -16,14 +16,13 @@ import onnxruntime as ort
 ROOT = Path(__file__).resolve().parents[1]
 TRAINING = ROOT / "training"
 
-M1_DET = TRAINING / "model1" / "export" / "onnx_416" / "model.onnx"
-M1_CLS = TRAINING / "model1" / "export" / "cls_onnx_224" / "model.onnx"
+M1_DET_640 = TRAINING / "model1" / "export" / "detect_640" / "model.onnx"
+M1_DET_416 = TRAINING / "model1" / "export" / "detect_416" / "model.onnx"
 M2_640 = TRAINING / "model2" / "export" / "onnx_640" / "model.onnx"
 M2_416 = TRAINING / "model2" / "export" / "onnx_416" / "model.onnx"
 
 LABEL_SOURCES = {
-    "m1_detector.txt": TRAINING / "model1" / "export" / "onnx_416" / "labels.txt",
-    "m1_classifier.txt": TRAINING / "model1" / "export" / "cls_onnx_224" / "labels.txt",
+    "m1_detector.txt": TRAINING / "model1" / "export" / "detect_640" / "labels.txt",
     "m2_obb.txt": TRAINING / "model2" / "export" / "onnx_640" / "labels.txt",
 }
 
@@ -31,16 +30,14 @@ MODEL_SPECS = {
     "pc": {
         "dir": ROOT / "pc-demo" / "models",
         "models": [
-            {"filename": "m1_detector_416.onnx", "source": M1_DET, "labels": "m1_detector.txt", "family": "m1", "task": "obb"},
-            {"filename": "m1_classifier_224.onnx", "source": M1_CLS, "labels": "m1_classifier.txt", "family": "m1", "task": "classify"},
+            {"filename": "m1_detect_640.onnx", "source": M1_DET_640, "labels": "m1_detector.txt", "family": "m1", "task": "detect"},
             {"filename": "m2_obb_640.onnx", "source": M2_640, "labels": "m2_obb.txt", "family": "m2", "task": "obb"},
         ],
     },
     "jetson": {
         "dir": ROOT / "jetson-runtime" / "models",
         "models": [
-            {"filename": "m1_detector_416.onnx", "source": M1_DET, "labels": "m1_detector.txt", "family": "m1", "task": "obb"},
-            {"filename": "m1_classifier_224.onnx", "source": M1_CLS, "labels": "m1_classifier.txt", "family": "m1", "task": "classify"},
+            {"filename": "m1_detect_416.onnx", "source": M1_DET_416, "labels": "m1_detector.txt", "family": "m1", "task": "detect"},
             {"filename": "m2_obb_416.onnx", "source": M2_416, "labels": "m2_obb.txt", "family": "m2", "task": "obb"},
         ],
     },
@@ -118,7 +115,7 @@ def copy_selected_files(target: str, output_dir: Path, source_map: dict[str, Pat
     labels_dir = output_dir / "labels"
     labels_dir.mkdir(parents=True, exist_ok=True)
     for spec in MODEL_SPECS[target]["models"]:
-        if scope == "m2" and spec["family"] != "m2":
+        if scope in {"m1", "m2"} and spec["family"] != scope:
             continue
         src = source_map[spec["filename"]]
         dst = output_dir / spec["filename"]
@@ -226,7 +223,7 @@ def package_target(
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--target", choices=["pc", "jetson", "all"], default="all")
-    parser.add_argument("--scope", choices=["all", "m2"], default="all")
+    parser.add_argument("--scope", choices=["all", "m1", "m2"], default="all")
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--stage-root", default=None)
     parser.add_argument("--m2-source-root", default=None)

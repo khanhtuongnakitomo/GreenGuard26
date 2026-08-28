@@ -2,7 +2,7 @@ param(
     [switch]$PreflightOnly,
     [switch]$Smoke,
     [switch]$Resume,
-    [switch]$Promote,
+    [switch]$NoPromote,
     [string]$RunName = "m2v6_liveft_20260828_seed42_n640_e50",
     [string]$Config = "config\m2v6_live_finetune.yaml"
 )
@@ -37,7 +37,7 @@ $status = @{
     updated_at = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     step = "workflow"
     smoke = [bool]$Smoke
-    promote_requested = [bool]$Promote
+    promote_requested = [bool](-not $NoPromote -and -not $Smoke)
 }
 $statusJson = $status | ConvertTo-Json
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
@@ -83,12 +83,12 @@ Write-Host "== [3/4] Evaluate candidate ==" -ForegroundColor Cyan
 & $py scripts\evaluate_m2v6_live_finetune.py --config $Config --run $effectiveRunName
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-if ($Promote) {
+if (-not $NoPromote) {
     Write-Host "== [4/4] Export, validate, and promote candidate if all gates pass ==" -ForegroundColor Cyan
     & $py scripts\promote_m2_candidate.py --config $Config --run $effectiveRunName
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } else {
-    Write-Host "== [4/4] Promotion skipped (run with -Promote to attempt deployment) ==" -ForegroundColor Yellow
+    Write-Host "== [4/4] Promotion skipped (-NoPromote was supplied) ==" -ForegroundColor Yellow
 }
 
 Write-Host "Workflow complete. Reports are under $logsRoot" -ForegroundColor Green

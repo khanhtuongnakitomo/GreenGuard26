@@ -1,0 +1,20 @@
+{
+  "weights": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\imported\\bki_dt3_three_class\\best.pt",
+  "task": "detect",
+  "names": {
+    "0": "metal_can",
+    "1": "pet_bottle",
+    "2": "pp_cup"
+  },
+  "visible_class_ids": [
+    0,
+    1
+  ],
+  "ignored_class_ids": [
+    2
+  ],
+  "exports": {
+    "640": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\export\\detect_640\\model.onnx",
+    "416": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\export\\detect_416\\model.onnx"
+  }
+}

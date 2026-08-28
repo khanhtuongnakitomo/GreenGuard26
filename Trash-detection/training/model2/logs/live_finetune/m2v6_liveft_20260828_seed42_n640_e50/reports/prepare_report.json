@@ -1,8 +1,8 @@
 {
   "run_name": "m2v6_liveft_20260828_seed42_n640_e50",
-  "prepared_at": "2026-08-27T22:10:36Z",
-  "git_branch": "feature/m2v6-live-finetune-workflow",
-  "git_head": "a07b448f40d34c47a535f8fc4ce4934e0351f292",
+  "prepared_at": "2026-08-28T09:19:57Z",
+  "git_branch": "main",
+  "git_head": "ec5e28208277ca4a93a944664f875fdf31c657e6",
   "baseline_checkpoint": {
     "path": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\runs\\m2v6_inmachine_seed42_n640\\weights\\best.pt",
     "expected_sha256": "755D3857E334B2E477D19A132A5AFCBF9F661F4CDDE67DE084959CE10BBEAB5F",
@@ -10,6 +10,7 @@
     "actual_sha256": "755D3857E334B2E477D19A132A5AFCBF9F661F4CDDE67DE084959CE10BBEAB5F"
   },
   "dataset_source_hash": "E37529CB725BD893A37BF1F925DE327B4DBDF493F2E16BEE349093F749209D23",
+  "true_negative_source_hash": "6DFFCB37BD4249CF708E192F1CA913038A1EFDC8609D6FEA87F3094B8F9C49B5",
   "ignored_inputs": [
     "train.txt",
     "GreenGuard.zip"
@@ -21,14 +22,14 @@
     "quarantined_images": 3,
     "reviewed_machine_negative_count": 0,
     "split_counts": {
-      "val": 66,
-      "train": 308,
-      "holdout": 66
+      "train": 325,
+      "val": 56,
+      "holdout": 59
     },
     "group_counts": {
-      "val": 7,
       "train": 38,
-      "holdout": 6
+      "val": 6,
+      "holdout": 7
     },
     "sequence_gap_seconds": 45,
     "phash_similarity_warnings": [
@@ -414,11 +415,43 @@
       }
     ]
   },
+  "true_negative_dataset": {
+    "source_root": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\incoming\\true-negative",
+    "total_images": 5,
+    "kept_images": 5,
+    "quarantined_images": 0,
+    "capture_group_count": 2,
+    "lighting_buckets": {
+      "dark": 3,
+      "normal": 2
+    },
+    "groups": [
+      {
+        "group_id": "seq_001",
+        "split": "holdout",
+        "sample_names": [
+          "WIN_20260828_14_17_40_Pro.jpg",
+          "WIN_20260828_14_17_47_Pro.jpg"
+        ]
+      },
+      {
+        "group_id": "seq_002",
+        "split": "train",
+        "sample_names": [
+          "WIN_20260828_15_47_20_Pro.jpg",
+          "WIN_20260828_15_47_23_Pro.jpg",
+          "WIN_20260828_15_47_42_Pro.jpg"
+        ]
+      }
+    ],
+    "holdout_policy": "earliest capture group is locked clean-negative holdout; later groups train",
+    "photometric_augmented_train_count": 6
+  },
   "train_surface": {
-    "live_train_originals": 308,
-    "live_train_augmented": 616,
-    "legacy_replay_selected": 924,
-    "legacy_replay_target": 924
+    "live_train_originals": 325,
+    "live_train_augmented": 650,
+    "legacy_replay_selected": 975,
+    "legacy_replay_target": 975
   },
   "quarantine": [
     {
@@ -450,8 +483,7 @@
     }
   ],
   "promotion_prereq_failures": [
-    "unresolved_live_annotations",
-    "insufficient_reviewed_machine_negatives"
+    "unresolved_live_annotations"
   ],
   "promotion_ready_from_data": false,
   "generated_root": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\dataset\\generated\\m2v6_liveft_20260828_seed42_n640_e50",

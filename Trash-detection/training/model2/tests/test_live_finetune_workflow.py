@@ -89,7 +89,7 @@ def test_package_models_stage_root_supports_m2_only_snapshot():
         staged_dir = stage_root / "pc" / "models"
         assert (staged_dir / "manifest.json").is_file()
         assert (staged_dir / "m2_obb_640.onnx").is_file()
-        assert (staged_dir / "m1_detector_416.onnx").is_file()
+        assert (staged_dir / "m1_detect_640.onnx").is_file()
 
         check_code, check_info = package_models.package_target("pc", scope="m2", check_only=True, stage_root=stage_root)
         assert check_code == 0, check_info

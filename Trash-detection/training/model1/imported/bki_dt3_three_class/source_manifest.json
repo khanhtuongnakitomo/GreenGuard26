@@ -1,0 +1,18 @@
+{
+  "source": "D:/Code/Project/bki/Dump/new-model-1",
+  "checkpoint": "best.pt",
+  "checkpoint_sha256": "145C7F829FC7DC450CB2A9490E585FFC0763B054B3CD3F26E3F2EE24F28F2957",
+  "checkpoint_bytes": 22517134,
+  "tflite": "best_float16.tflite",
+  "tflite_sha256": "01551004E02EE888E35B5A7AE2BB0394B24557424DCF53C9535D32D4E688CD72",
+  "tflite_bytes": 22364349,
+  "task": "detect",
+  "imgsz": 640,
+  "names": {
+    "0": "metal_can",
+    "1": "pet_bottle",
+    "2": "pp_cup"
+  },
+  "visible_class_ids": [0, 1],
+  "ignored_class_ids": [2]
+}

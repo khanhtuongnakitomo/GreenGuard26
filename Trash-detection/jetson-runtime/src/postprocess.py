@@ -1,4 +1,4 @@
-"""OBB decode and polygon NMS (Python 3.6)."""
+"""HBB/OBB decode and polygon NMS (Python 3.6)."""
 import cv2
 import numpy as np
 
@@ -15,6 +15,10 @@ class ObbDetection(object):
         self.polygon = polygon
 
 
+class DetectDetection(ObbDetection):
+    """Axis-aligned detector output represented as a four-corner polygon."""
+
+
 def box_area(poly):
     p = np.asarray(poly, dtype=np.float64).reshape(4, 2)
     return 0.5 * abs(
@@ -28,6 +32,14 @@ def xywhr_to_poly(cx, cy, w, h, angle):
     corners = np.array([[-dx, -dy], [dx, -dy], [dx, dy], [-dx, dy]], dtype=np.float32)
     rot = np.array([[cos_a, -sin_a], [sin_a, cos_a]], dtype=np.float32)
     return corners @ rot.T + np.array([cx, cy], dtype=np.float32)
+
+
+def xywh_to_poly(cx, cy, w, h):
+    return np.array(
+        [[cx - w / 2.0, cy - h / 2.0], [cx + w / 2.0, cy - h / 2.0],
+         [cx + w / 2.0, cy + h / 2.0], [cx - w / 2.0, cy + h / 2.0]],
+        dtype=np.float32,
+    )
 
 
 def poly_iou(p1, p2):
@@ -59,6 +71,25 @@ def parse_obb_output(out, num_classes):
     cls_ids = cls_scores.argmax(axis=1)
     scores = cls_scores.max(axis=1)
     return xywhr, scores, cls_ids
+
+
+def parse_detect_output(out, num_classes):
+    """Parse Ultralytics detect output [cx,cy,w,h,class_scores...]."""
+    x = np.squeeze(out)
+    if x.ndim != 2:
+        raise ValueError("unexpected detect output shape %s" % (out.shape,))
+    if x.shape[0] == 4 + num_classes:
+        x = x.T
+    elif x.shape[1] != 4 + num_classes:
+        raise ValueError("could not identify detect channel dimension in shape %s" % (out.shape,))
+    nc = x.shape[1] - 4
+    if nc != num_classes:
+        raise ValueError("expected %d classes, got %d" % (num_classes, nc))
+    xywh = x[:, :4].astype(np.float64)
+    cls_scores = x[:, 4 : 4 + nc].astype(np.float64)
+    cls_ids = cls_scores.argmax(axis=1)
+    scores = cls_scores.max(axis=1)
+    return xywh, scores, cls_ids
 
 
 def nms_obb_class_aware(polys, scores, cls_ids, iou_thr=0.45):
@@ -121,6 +152,36 @@ def decode_obb(out, labels, conf, ratio, pad, iou_thr=0.45, max_det=MAX_DET):
             )
         )
     return dets
+
+
+def decode_detect(out, labels, conf, ratio, pad, allowed_ids=None, iou_thr=0.45, max_det=MAX_DET):
+    xywh, scores, cls_ids = parse_detect_output(out, len(labels))
+    mask = scores >= conf
+    if allowed_ids is not None:
+        mask &= np.isin(cls_ids, list(allowed_ids))
+    xywh, scores, cls_ids = xywh[mask], scores[mask], cls_ids[mask]
+    if len(scores) == 0:
+        return []
+    if len(scores) > max_det:
+        top = np.argsort(scores)[::-1][:max_det]
+        xywh, scores, cls_ids = xywh[top], scores[top], cls_ids[top]
+    polys = []
+    for row in xywh:
+        cx, cy, w, h = map(float, row)
+        cx, cy = undo_letterbox_xy(cx, cy, ratio, pad)
+        w, h = undo_letterbox_wh(w, h, ratio)
+        polys.append(xywh_to_poly(cx, cy, w, h))
+    polys_arr = np.asarray(polys, dtype=np.float32)
+    keep = nms_obb_class_aware(polys_arr, scores, cls_ids, iou_thr)
+    return [
+        DetectDetection(
+            int(cls_ids[i]),
+            labels[int(cls_ids[i])] if 0 <= int(cls_ids[i]) < len(labels) else str(int(cls_ids[i])),
+            float(scores[i]),
+            polys_arr[i],
+        )
+        for i in keep
+    ]
 
 
 def pick_top1_detector(dets, min_area_frac, frame_area):

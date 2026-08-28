@@ -1,66 +1,53 @@
 {
   "target": "pc",
-  "source_commit": "f720637e6af2e0d46a3f6336af366dd0cf766f69",
+  "source_commit": "ec5e28208277ca4a93a944664f875fdf31c657e6",
+  "packaged_at_utc": "2026-08-28T09:07:53Z",
+  "package_scope": "m1",
+  "provenance": {
+    "model1_source": "Dump/new-model-1"
+  },
   "models": [
     {
-      "filename": "m1_classifier_224.onnx",
-      "path": "models/m1_classifier_224.onnx",
-      "source_path": "Trash-detection/training/model1/export/cls_onnx_224/model.onnx",
-      "source_commit": "f720637e6af2e0d46a3f6336af366dd0cf766f69",
-      "sha256": "06856aa726040af8e596e2dc4508dddb32c1e8103e92a1a631cdb46db9b208e6",
-      "bytes": 5779280,
-      "task": "classify",
+      "filename": "m1_detect_640.onnx",
+      "path": "models/m1_detect_640.onnx",
+      "family": "m1",
+      "task": "detect",
+      "source_path": "Trash-detection/training/model1/export/detect_640/model.onnx",
+      "source_commit": "ec5e28208277ca4a93a944664f875fdf31c657e6",
+      "source_sha256": "5069bfae324db8c1aef1fbce4b68aaad217a80a95a6f6b83eacfa60cdb620038",
+      "source_bytes": 44748966,
+      "sha256": "5069bfae324db8c1aef1fbce4b68aaad217a80a95a6f6b83eacfa60cdb620038",
+      "bytes": 44748966,
       "input_name": "images",
       "input_shape": [
         1,
         3,
-        224,
-        224
-      ],
-      "output_shape": [
-        1,
-        2
-      ],
-      "classes": [
-        "pet",
-        "can"
-      ],
-      "image_size": 224
-    },
-    {
-      "filename": "m1_detector_416.onnx",
-      "path": "models/m1_detector_416.onnx",
-      "source_path": "Trash-detection/training/model1/export/onnx_416/model.onnx",
-      "source_commit": "f720637e6af2e0d46a3f6336af366dd0cf766f69",
-      "sha256": "79881d482434675f4f51bd0f6e972d666c93146ed235b0c9795e532095bc4a11",
-      "bytes": 12438025,
-      "task": "obb",
-      "input_name": "images",
-      "input_shape": [
-        1,
-        3,
-        416,
-        416
+        640,
+        640
       ],
       "output_shape": [
         1,
         7,
-        3549
+        8400
       ],
       "classes": [
-        "bottle",
-        "aluminum"
+        "metal_can",
+        "pet_bottle",
+        "pp_cup"
       ],
-      "image_size": 416
+      "image_size": 640
     },
     {
       "filename": "m2_obb_640.onnx",
       "path": "models/m2_obb_640.onnx",
+      "family": "m2",
+      "task": "obb",
       "source_path": "Trash-detection/training/model2/export/onnx_640/model.onnx",
-      "source_commit": "f720637e6af2e0d46a3f6336af366dd0cf766f69",
+      "source_commit": "ec5e28208277ca4a93a944664f875fdf31c657e6",
+      "source_sha256": "d4c5f235fbb78e3a8451de695480400a916ffec235a518af47fd5b448c6eb999",
+      "source_bytes": 12497101,
       "sha256": "d4c5f235fbb78e3a8451de695480400a916ffec235a518af47fd5b448c6eb999",
       "bytes": 12497101,
-      "task": "obb",
       "input_name": "images",
       "input_shape": [
         1,

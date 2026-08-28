@@ -7,7 +7,10 @@ cap / label / ring gate on PET only (Model 2).
 
 ```text
 Trash-detection/
-  setup.ps1 / run_demo.bat     # Windows wrappers → pc-demo/
+  setup.ps1                    # environment setup
+  demo_model1.bat              # public Model 1-only launcher
+  demo_model2.bat              # public Model 2-only launcher
+  full_demo.bat                # public M1 → M2 launcher
   pc-demo/                     # Windows Ultralytics reference runtime
   jetson-runtime/              # Self-contained Jetson Nano B01 copy folder
   training/model1|model2       # Research / training trees
@@ -21,7 +24,7 @@ Trash-detection/
 ```powershell
 cd Trash-detection
 powershell -ExecutionPolicy Bypass -File setup.ps1
-.\run_demo.bat --source 0
+.\full_demo.bat --source 0
 ```
 
 Headless smoke:
@@ -49,10 +52,10 @@ on-device and never committed.
 
 ## Detection contract (locked)
 
-1. M1 OBB detector @416 → top object by confidence (min area 2% of frame)
-2. Axis-aligned crop + 10% margin → PET/can classifier @224
-3. Can → display aluminum; skip M2
-4. PET → M2 OBB on full frame; keep centers inside PET polygon; one box per class
+1. M1 HBB detector @640 on PC / @416 on Jetson with `metal_can`, `pet_bottle`, and `pp_cup`
+2. Only aluminum can and PET bottle are visible; PP cup is filtered before top-1 selection
+3. Aluminum can → display aluminum and skip M2
+4. PET bottle → M2 OBB on the full frame; keep centers inside the PET polygon; one box per class
 5. Gate: 0.5s warmup, 4-of-7 vote, 1.5s verdict hold, miss hold 3 frames
 
 ## Packaging models after retrain
@@ -73,5 +76,5 @@ python scripts\package_models.py --target all --check
 - [training/README.md](training/README.md)
 - [validation/README.md](validation/README.md)
 
-Legacy live launcher `run_live_demo.py` still works against `training/` for
-parity checks; prefer `pc-demo/` for day-to-day PC demos.
+The three root BAT files are the only supported Windows live launchers. Training
+and validation scripts remain internal tools and are not live entrypoints.

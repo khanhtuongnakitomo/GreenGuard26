@@ -22,11 +22,16 @@ powershell -ExecutionPolicy Bypass -File setup.ps1
 
 ## Run
 
+The supported launchers are at the `Trash-detection/` root:
+
 ```powershell
-.\run_demo.bat --source 0
-# or
-.\run_demo.ps1 --source 0 --auto-start
+.\demo_model1.bat --source 0 --auto-start
+.\demo_model2.bat --source 0 --auto-start
+.\full_demo.bat --source 0 --auto-start
 ```
+
+The `--mode` values are `model1`, `model2`, and `full`. Model 1 is a single
+three-class detector; PP cup is filtered and never shown.
 
 Useful flags: `--headless`, `--save <dir>`, `--max-frames N`, `--m1-conf`, `--m2-conf`,
 `--fps`.

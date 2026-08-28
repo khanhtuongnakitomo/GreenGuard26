@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 import cv2
+import numpy as np
 
 SRC = Path(__file__).resolve().parent
 if str(SRC) not in sys.path:
@@ -33,6 +34,7 @@ MAX_CAM_INDEX = 7  # highest camera index to try when cycling
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="GreenGuard PC demo")
     ap.add_argument("--config", default="default")
+    ap.add_argument("--mode", choices=["full", "model1", "model2"], default="full")
     ap.add_argument("--source", default="0")
     ap.add_argument("--fps", type=float, default=None)
     ap.add_argument("--m1-conf", type=float, default=None)
@@ -77,10 +79,10 @@ def main() -> int:
     if args.auto_start:
         detecting = True
 
-    m1 = M1Pipeline(cfg)
-    m2 = M2Pipeline(cfg)
-    gate = PetGate(cfg)
-    if args.m2_conf is not None:
+    m1 = M1Pipeline(cfg) if args.mode in {"full", "model1"} else None
+    m2 = M2Pipeline(cfg) if args.mode in {"full", "model2"} else None
+    gate = PetGate(cfg) if args.mode == "full" else None
+    if args.m2_conf is not None and gate is not None:
         gate.m2_violation_conf = float(args.m2_conf)
 
     src = int(args.source) if args.source.isdigit() else args.source
@@ -111,8 +113,10 @@ def main() -> int:
     switching = False  # True while the background thread is working
 
     def reset_all():
-        gate.reset()
-        m1.reset_vote()
+        if gate is not None:
+            gate.reset()
+        if m1 is not None:
+            m1.reset_vote()
 
     if not args.headless:
         cv2.namedWindow(window, cv2.WINDOW_NORMAL)
@@ -176,22 +180,38 @@ def main() -> int:
         elif not state["detecting"]:
             draw_paused_banner(frame)
         else:
-            raw = m1.run(frame, det_conf=args.m1_conf)
-            held = gate.update_m1_hold(raw, now=t0)
-            if held is None:
-                legend.append(("no PET bottle / aluminum can in frame", (160, 160, 160)))
-            else:
-                draw_m1_poly(frame, held.poly, held.color)
-                if held.is_pet:
-                    m2_hits = m2.run(frame, held.poly)
-                    result = gate.evaluate_pet(held, m2_hits, now=t0)
-                    draw_m2_hits(frame, result["m2_hits"])
-                    legend.extend(result["legend"])
-                    verdict, vcolor = result["verdict"], result["color"]
+            if args.mode == "model1":
+                raw = m1.run(frame, det_conf=args.m1_conf)
+                if raw.poly is None:
+                    legend.append(("no PET bottle / aluminum can in frame", (160, 160, 160)))
                 else:
-                    legend.append((held.legend, held.color))
-                    gate.state.pet_since = None
-                    gate.state.vote.clear()
+                    draw_m1_poly(frame, raw.poly, raw.color)
+                    legend.append((raw.legend, raw.color))
+            elif args.mode == "model2":
+                full_poly = np.asarray(
+                    [[0, 0], [frame.shape[1] - 1, 0], [frame.shape[1] - 1, frame.shape[0] - 1], [0, frame.shape[0] - 1]],
+                    dtype=np.float32,
+                )
+                m2_hits = m2.run(frame, full_poly, infer_conf=args.m2_conf)
+                draw_m2_hits(frame, m2_hits)
+                legend.extend((f"{hit.name} {hit.confidence * 100:.0f}%", (255, 255, 255)) for hit in m2_hits)
+            else:
+                raw = m1.run(frame, det_conf=args.m1_conf)
+                held = gate.update_m1_hold(raw, now=t0)
+                if held is None:
+                    legend.append(("no PET bottle / aluminum can in frame", (160, 160, 160)))
+                else:
+                    draw_m1_poly(frame, held.poly, held.color)
+                    if held.is_pet:
+                        m2_hits = m2.run(frame, held.poly)
+                        result = gate.evaluate_pet(held, m2_hits, now=t0)
+                        draw_m2_hits(frame, result["m2_hits"])
+                        legend.extend(result["legend"])
+                        verdict, vcolor = result["verdict"], result["color"]
+                    else:
+                        legend.append((held.legend, held.color))
+                        gate.state.pet_since = None
+                        gate.state.vote.clear()
 
             draw_verdict(frame, verdict, vcolor)
             draw_legend(frame, legend)

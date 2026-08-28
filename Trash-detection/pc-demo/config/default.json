@@ -1,17 +1,15 @@
 {
   "m1": {
     "detector": {
-      "path": "models/m1_detector_416.onnx",
-      "imgsz": 416,
+      "path": "models/m1_detect_640.onnx",
+      "imgsz": 640,
+      "task": "detect",
+      "classes": ["metal_can", "pet_bottle", "pp_cup"],
+      "visible_class_ids": [0, 1],
+      "ignored_class_ids": [2],
       "conf": 0.05
     },
-    "classifier": {
-      "path": "models/m1_classifier_224.onnx",
-      "imgsz": 224
-    },
     "min_area_frac": 0.02,
-    "crop_margin": 0.10,
-    "vote_frames": 7,
     "miss_hold": 3,
     "box_smooth": 0.35
   },

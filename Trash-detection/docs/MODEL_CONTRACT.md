@@ -5,12 +5,18 @@ Committed deployment ONNX files (packaged into `pc-demo/models` and
 
 | Role | Source export | Packaged name | Input | Output | Classes |
 |---|---|---|---|---|---|
-| M1 detector | `training/model1/export/onnx_416` | `m1_detector_416.onnx` | `[1,3,416,416]` | `[1,7,3549]` | bottle, aluminum |
-| M1 classifier | `training/model1/export/cls_onnx_224` | `m1_classifier_224.onnx` | `[1,3,224,224]` | `[1,2]` | pet, can |
+| M1 detector | `training/model1/export/detect_640` / `detect_416` | `m1_detect_640.onnx` / `m1_detect_416.onnx` | `[1,3,640,640]` / `[1,3,416,416]` | `[1,7,8400]` / `[1,7,3549]` | metal_can, pet_bottle, pp_cup |
 | M2 OBB (PC) | `training/model2/export/onnx_640` | `m2_obb_640.onnx` | `[1,3,640,640]` | `[1,8,8400]` | cap, label, ring |
 | M2 OBB (Jetson) | `training/model2/export/onnx_416` | `m2_obb_416.onnx` | `[1,3,416,416]` | `[1,8,3549]` | cap, label, ring |
 
-## OBB output layout
+M1 is a single-stage HBB detector. Class IDs 0 and 1 map to the visible
+aluminum-can and PET-bottle verdicts. Class ID 2 (`pp_cup`) is intentionally
+ignored before top-1 selection and is never shown or sent to Model 2.
+
+## Output layouts
+
+M1 HBB channels are `[cx, cy, w, h, class_probs...]`; do not apply a second
+sigmoid. The class score is the maximum class probability.
 
 Channels-first or transposed to rows. For `nc` classes:
 
@@ -24,8 +30,6 @@ argmax. Angle is radians for polygon reconstruction.
 ## Preprocessing
 
 - **OBB:** Ultralytics letterbox fill 114, BGR→RGB, CHW float32, `/255`
-- **Classifier:** resize shortest edge to 224, center crop 224, BGR→RGB, CHW float32,
-  `/255` (mean 0, std 1)
 
 ## Gate defaults
 
@@ -33,8 +37,6 @@ argmax. Angle is radians for polygon reconstruction.
 |---|---|
 | M1 det conf | 0.05 |
 | Min area fraction | 0.02 |
-| Crop margin | 0.10 |
-| Classifier vote window | 7 |
 | M2 infer conf | 0.10 |
 | M2 violation conf | 0.50 |
 | Warmup | 0.5 s |

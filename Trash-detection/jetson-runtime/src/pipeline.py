@@ -1,14 +1,13 @@
-"""Three-model detection pipeline for Jetson (Python 3.6)."""
+"""Two-model detection pipeline for Jetson (Python 3.6)."""
 import os
-from collections import deque
 
 import cv2
 import numpy as np
 
 from config_loader import resolve_path
 from gate import M1FrameResult, M2Hit, M2_NAMES
-from postprocess import center_in_poly, decode_obb, pick_top1_detector, pick_top1_per_class
-from preprocess import blob_from_bgr, classifier_blob_from_bgr
+from postprocess import center_in_poly, decode_detect, decode_obb, pick_top1_detector, pick_top1_per_class
+from preprocess import blob_from_bgr
 
 
 DISPLAY = {
@@ -22,40 +21,6 @@ def read_labels(path):
         return []
     with open(path, "r") as handle:
         return [line.strip() for line in handle.readlines() if line.strip()]
-
-
-def crop_from_obb(frame, poly, margin):
-    xs, ys = poly[:, 0], poly[:, 1]
-    x1, x2 = float(xs.min()), float(xs.max())
-    y1, y2 = float(ys.min()), float(ys.max())
-    bw, bh = x2 - x1, y2 - y1
-    if bw < 4 or bh < 4:
-        return None
-    h, w = frame.shape[:2]
-    x1 = max(0, int(x1 - bw * margin))
-    y1 = max(0, int(y1 - bh * margin))
-    x2 = min(w, int(x2 + bw * margin))
-    y2 = min(h, int(y2 + bh * margin))
-    crop = frame[y1:y2, x1:x2]
-    return crop if crop.size else None
-
-
-def classify_logits(logits, labels):
-    scores = np.asarray(logits, dtype=np.float64).reshape(-1)
-    # Softmax for numerical stability (Ultralytics classify postprocess)
-    scores = scores - scores.max()
-    exp = np.exp(scores)
-    probs = exp / (exp.sum() + 1e-12)
-    idx = int(probs.argmax())
-    raw = labels[idx].lower() if idx < len(labels) else str(idx)
-    if raw in ("bottle", "0", "pet"):
-        name = "pet"
-    elif raw in ("aluminum", "1", "can"):
-        name = "can"
-    else:
-        name = raw
-    conf = float(probs[idx])
-    return name, conf
 
 
 class ModelRunner(object):
@@ -105,7 +70,6 @@ class M1Pipeline(object):
         m1 = cfg["m1"]
         root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models", "labels")
         det_labels = read_labels(os.path.join(root, "m1_detector.txt"))
-        cls_labels = read_labels(os.path.join(root, "m1_classifier.txt"))
         self.det = ModelRunner(
             m1["detector"]["path"],
             m1["detector"]["engine"],
@@ -113,51 +77,30 @@ class M1Pipeline(object):
             int(m1["detector"]["imgsz"]),
             backend_mode,
         )
-        self.cls = ModelRunner(
-            m1["classifier"]["path"],
-            m1["classifier"]["engine"],
-            cls_labels,
-            int(m1["classifier"]["imgsz"]),
-            backend_mode,
-        )
         self.det_conf = float(m1["detector"].get("conf", 0.05))
         self.min_area_frac = float(m1.get("min_area_frac", 0.02))
-        self.crop_margin = float(m1.get("crop_margin", 0.10))
-        self.vote_frames = int(m1.get("vote_frames", 7))
-        self._votes = deque(maxlen=self.vote_frames)
+        self.visible_ids = set(int(value) for value in m1["detector"].get("visible_class_ids", [0, 1]))
 
     def reset_vote(self):
-        self._votes.clear()
+        return None
 
     def close(self):
         self.det.close()
-        self.cls.close()
 
     def run(self, frame, det_conf=None):
         conf = self.det_conf if det_conf is None else det_conf
         h, w = frame.shape[:2]
         blob, ratio, pad = blob_from_bgr(frame, self.det.imgsz)
         out = self.det.backend.run(blob)
-        dets = decode_obb(out, self.det.labels, conf, ratio, pad)
+        dets = decode_detect(out, self.det.labels, conf, ratio, pad, self.visible_ids)
         best = pick_top1_detector(dets, self.min_area_frac, h * w)
         if best is None:
-            self._votes.clear()
             return M1FrameResult()
         poly = best.polygon.astype(np.int32)
-        crop = crop_from_obb(frame, poly, self.crop_margin)
-        if crop is None:
-            self._votes.clear()
-            return M1FrameResult()
-        cls_blob = classifier_blob_from_bgr(crop, self.cls.imgsz)
-        cls_out = self.cls.backend.run(cls_blob)
-        cls_name, cls_cf = classify_logits(cls_out, self.cls.labels)
-        self._votes.append(cls_name)
-        voted = max(set(self._votes), key=self._votes.count)
-        label, color = DISPLAY.get(voted, (voted, (200, 200, 200)))
-        legend = "%s %.0f%% (det %.0f%%)" % (label, cls_cf * 100, best.confidence * 100)
-        if len(self._votes) > 1 and voted != cls_name:
-            legend += " vote=%s" % voted
-        return M1FrameResult(poly=poly, is_pet=(voted == "pet"), color=color, legend=legend)
+        verdict = "pet" if best.class_id == 1 else "can"
+        label, color = DISPLAY.get(verdict, (verdict, (200, 200, 200)))
+        legend = "%s %.0f%%" % (label, best.confidence * 100)
+        return M1FrameResult(poly=poly, is_pet=(verdict == "pet"), color=color, legend=legend)
 
 
 class M2Pipeline(object):

@@ -37,7 +37,7 @@ pipeline via source tooling).
 |---|---|
 | `setup.sh` | Idempotent env / manifest checks; optional ORT wheel |
 | `check_environment.py` | JetPack / OpenCV / NumPy / TensorRT / ORT probe |
-| `build_engines.sh` | Build three FP16 engines with `trtexec` + engine manifest |
+| `build_engines.sh` | Build two FP16 engines with `trtexec` + engine manifest |
 | `run.sh` | Launch `src/app.py` |
 
 Engines live in `models/engines/` (gitignored). Runtime refuses stale or foreign
@@ -45,8 +45,7 @@ engines (SHA-256 + source ONNX hash in `engine_manifest.json`).
 
 ## Models
 
-- `m1_detector_416.onnx`
-- `m1_classifier_224.onnx`
+- `m1_detect_416.onnx`
 - `m2_obb_416.onnx`
 
 ## Device validation checklist

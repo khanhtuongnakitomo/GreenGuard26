@@ -50,6 +50,8 @@ def pipelines():
 
 @pytest.mark.parametrize("fixture_name", ["m1_reference.jpg", "blank.jpg", "can_sample.jpg", "pet_sample.jpg"])
 def test_m1_parity(fixture_name, baseline, pipelines):
+    if baseline.get("m1_contract") != "hbb_dt3":
+        pytest.skip("legacy OBB/classifier baseline is not valid for imported HBB Model 1")
     if fixture_name not in baseline.get("fixtures", {}):
         pytest.skip("fixture not in baseline")
     m1_pipe, _ = pipelines

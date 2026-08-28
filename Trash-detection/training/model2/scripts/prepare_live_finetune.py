@@ -313,6 +313,63 @@ def canonicalize_sample(
     return sample, None
 
 
+def canonicalize_true_negative(
+    cfg: dict[str, Any],
+    image_path: Path,
+    dirs: dict[str, Path],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """Import a reviewed empty-machine frame without touching the source folder."""
+    image = cv2.imread(str(image_path))
+    if image is None:
+        return None, quarantine_sample(
+            cfg,
+            image_path.name,
+            image_path,
+            None,
+            "image_read_failed",
+            "OpenCV could not decode the reviewed true-negative image.",
+            dirs,
+        )
+    cfg_dataset = cfg["dataset"]
+    metrics = image_metrics(
+        image,
+        dark_max=float(cfg_dataset["lighting_thresholds"]["dark_max"]),
+        bright_min=float(cfg_dataset["lighting_thresholds"]["bright_min"]),
+        highlight_threshold=int(cfg_dataset["highlight_threshold"]),
+        moderate_min=float(cfg_dataset["highlight_buckets"]["moderate_min"]),
+        severe_min=float(cfg_dataset["highlight_buckets"]["severe_min"]),
+    )
+    sample = {
+        "image_name": image_path.name,
+        "image_stem": image_path.stem,
+        "source_image": str(image_path),
+        "source_label": None,
+        "effective_label": None,
+        "label_source": "reviewed_true_negative",
+        "width": int(image.shape[1]),
+        "height": int(image.shape[0]),
+        "image_sha256": sha256_file(image_path, upper=True),
+        "label_sha256": None,
+        "annotations": [],
+        "class_ids": [],
+        "class_presence": class_presence([], cfg["canonical_names"]),
+        "is_negative": True,
+        "reviewed_negative": True,
+        "timestamp": parse_capture_timestamp(image_path.stem).isoformat() if parse_capture_timestamp(image_path.stem) else None,
+        "metrics": metrics,
+        "phash": format(phash(image), "016x"),
+        "origin": "reviewed_true_negative",
+    }
+    sample["metrics"].update({"orientation_bucket": "unknown", "pose_bucket": "unknown", "angle_degrees": None})
+    canonical_image = dirs["canonical_images"] / ("tn_" + image_path.name)
+    canonical_label = dirs["canonical_labels"] / ("tn_" + image_path.stem + ".txt")
+    shutil.copy2(image_path, canonical_image)
+    write_label(canonical_label, [])
+    sample["canonical_image"] = str(canonical_image)
+    sample["canonical_label"] = str(canonical_label)
+    return sample, None
+
+
 def build_groups(samples: list[dict[str, Any]], gap_seconds: int) -> list[dict[str, Any]]:
     ordered = sorted(
         samples,
@@ -464,37 +521,22 @@ def score_buckets(
 
 def assign_splits(cfg: dict[str, Any], groups: list[dict[str, Any]]) -> dict[str, str]:
     ratios = {key: float(value) for key, value in cfg["dataset"]["split_ratios"].items()}
-    names = canonical_names(cfg)
-    attempts = 512
-    seed = int(cfg["training"]["seed"])
-    best_score = None
-    best_assignment = None
-
-    for offset in range(attempts):
-        rng = random.Random(seed + offset)
-        order = sorted(groups, key=lambda group: (-group["image_count"], rng.random(), group["group_id"]))
-        buckets = {split: empty_bucket() for split in ("train", "val", "holdout")}
-        assignment: dict[str, str] = {}
-        for group in order:
-            choice = None
-            choice_score = None
-            for split in ("train", "val", "holdout"):
-                trial = clone_buckets(buckets)
-                add_group(trial[split], group)
-                score = score_buckets(trial, groups, ratios, names)
-                if choice_score is None or score < choice_score:
-                    choice = split
-                    choice_score = score
-            assert choice is not None
-            assignment[group["group_id"]] = choice
-            add_group(buckets[choice], group)
-        final_score = score_buckets(buckets, groups, ratios, names)
-        if best_score is None or final_score < best_score:
-            best_score = final_score
-            best_assignment = assignment
-    if best_assignment is None:
-        raise RuntimeError("failed to assign live-machine splits")
-    return best_assignment
+    total_images = sum(group["image_count"] for group in groups)
+    assignment: dict[str, str] = {}
+    targets = {split: total_images * ratios[split] for split in ("train", "val", "holdout")}
+    counts = {split: 0 for split in targets}
+    # Sequence groups are indivisible. Fill the largest remaining quota first,
+    # which keeps the requested train/val/holdout proportions predictable even
+    # when the capture timestamps produce hundreds of small groups.
+    order = sorted(groups, key=lambda group: group["group_id"])
+    for group in order:
+        choice = max(
+            ("train", "val", "holdout"),
+            key=lambda split: (targets[split] - counts[split], split == "train"),
+        )
+        assignment[group["group_id"]] = choice
+        counts[choice] += group["image_count"]
+    return assignment
 
 
 def copy_sample_to_split(sample: dict[str, Any], image_dir: Path, label_dir: Path, prefix: str = "") -> dict[str, Any]:
@@ -646,6 +688,42 @@ def write_augmented_sample(
         return None
 
 
+def write_true_negative_variant(
+    cfg: dict[str, Any],
+    sample: dict[str, Any],
+    variant_id: int,
+    merged_image_dir: Path,
+    merged_label_dir: Path,
+) -> dict[str, Any] | None:
+    """Create photometric-only variants; geometry is fixed because the camera is fixed."""
+    rng = random.Random(f"{cfg['run_name']}::true-negative::{sample['image_name']}::{variant_id}")
+    image = cv2.imread(sample["canonical_image"])
+    if image is None:
+        return None
+    out = image.astype(np.float32)
+    gamma = 0.88 + (0.28 * rng.random())
+    gain = 0.94 + (0.16 * rng.random())
+    bias = -8.0 + (16.0 * rng.random())
+    out = np.power(np.clip(out / 255.0, 0.0, 1.0), gamma) * 255.0
+    out = np.clip((out * gain) + bias, 0.0, 255.0).astype(np.uint8)
+    image_name = f"{sample['image_stem']}_tn_aug{variant_id}.jpg"
+    label_name = f"{sample['image_stem']}_tn_aug{variant_id}.txt"
+    image_path = merged_image_dir / image_name
+    label_path = merged_label_dir / label_name
+    cv2.imwrite(str(image_path), out)
+    write_label(label_path, [])
+    return {
+        "image_name": image_name,
+        "label_name": label_name,
+        "origin": "reviewed_true_negative_augmented",
+        "parent_image_name": sample["image_name"],
+        "variant_id": variant_id,
+        "transforms": [{"type": "photometric", "gamma": round(gamma, 6), "gain": round(gain, 6), "bias": round(bias, 6)}],
+        "is_negative": True,
+        "class_presence": sample["class_presence"],
+    }
+
+
 def replay_records(legacy_train_root: Path, names: list[str]) -> list[dict[str, Any]]:
     image_dir = legacy_train_root / "images"
     label_dir = legacy_train_root / "labels"
@@ -792,6 +870,7 @@ def main() -> int:
     paths = workflow_paths(cfg)
     generated_root = paths["generated_root"]
     dataset_root = paths["incoming_live_dataset"]
+    true_negative_root = paths["incoming_true_negative_dataset"]
     write_status(cfg, "VALIDATING", step="prepare")
 
     baseline_ok, baseline_details = verify_baseline_checkpoint(cfg)
@@ -803,6 +882,9 @@ def main() -> int:
     if not (dataset_root / "image").is_dir() or not (dataset_root / "labels").is_dir():
         write_status(cfg, "CRASHED", step="prepare", detail="incoming live dataset is missing image/ or labels/")
         return 1
+    if not true_negative_root.is_dir():
+        write_status(cfg, "CRASHED", step="prepare", detail="incoming true-negative dataset is missing")
+        return 1
 
     reset_generated_root(generated_root)
     dirs = generated_dirs(generated_root)
@@ -810,7 +892,9 @@ def main() -> int:
     overrides = load_override_labels(cfg["_resolved"]["review"]["authoritative_overrides_dir"])
 
     live_images = list_images(dataset_root / "image")
+    true_negative_images = list_images(true_negative_root)
     live_files_for_hash = live_images + sorted((dataset_root / "labels").glob("*.txt")) + [dataset_root / "data.yaml"]
+    true_negative_files_for_hash = true_negative_images
 
     kept_samples = []
     quarantine = []
@@ -821,10 +905,47 @@ def main() -> int:
         if issue is not None:
             quarantine.append(issue)
 
+    true_negative_samples = []
+    true_negative_quarantine = []
+    for image_path in true_negative_images:
+        sample, issue = canonicalize_true_negative(cfg, image_path, dirs)
+        if sample is not None:
+            true_negative_samples.append(sample)
+        if issue is not None:
+            true_negative_quarantine.append(issue)
+
     if not kept_samples:
         write_json(report_path(cfg, "prepare_failure.json"), {"reason": "no_trainable_live_samples"})
         write_status(cfg, "CRASHED", step="prepare", detail="no trainable live samples remained after quarantine")
         return 1
+
+    negative_groups = build_groups(true_negative_samples, int(cfg["dataset"]["sequence_gap_seconds"]))
+    negative_assignment = {}
+    if negative_groups:
+        ordered_negative_groups = sorted(negative_groups, key=lambda group: group["group_id"])
+        holdout_group_id = ordered_negative_groups[0]["group_id"]
+        negative_assignment = {
+            group["group_id"]: ("holdout" if group["group_id"] == holdout_group_id else "train")
+            for group in ordered_negative_groups
+        }
+    true_negative_train_rows = []
+    true_negative_augmented_rows = []
+    for group in negative_groups:
+        split = negative_assignment[group["group_id"]]
+        for sample in group["samples"]:
+            sample["negative_split"] = split
+            if split == "holdout":
+                copy_sample_to_split(sample, dirs["clean_negative_images"], dirs["clean_negative_labels"], prefix="")
+            else:
+                true_negative_train_rows.append(
+                    copy_sample_to_split(sample, dirs["merged_train_images"], dirs["merged_train_labels"], prefix="tn_")
+                )
+                for variant_id in (1, 2):
+                    item = write_true_negative_variant(
+                        cfg, sample, variant_id, dirs["merged_train_images"], dirs["merged_train_labels"]
+                    )
+                    if item is not None:
+                        true_negative_augmented_rows.append(item)
 
     gap_seconds = int(cfg["dataset"]["sequence_gap_seconds"])
     groups = build_groups(kept_samples, gap_seconds)
@@ -900,6 +1021,11 @@ def main() -> int:
 
     kept_samples.sort(key=lambda item: item["image_name"])
     write_json(dirs["manifests"] / "live_samples.json", kept_samples)
+    write_json(dirs["manifests"] / "true_negative_samples.json", true_negative_samples)
+    write_json(dirs["manifests"] / "true_negative_groups.json", [
+        {"group_id": group["group_id"], "split": negative_assignment[group["group_id"]], "sample_names": group["sample_names"], "features": group["features"]}
+        for group in negative_groups
+    ])
     write_json(dirs["manifests"] / "quarantine.json", quarantine)
     write_json(dirs["manifests"] / "gate_sequences.json", gate_sequences)
     write_manifest_csv(
@@ -909,17 +1035,27 @@ def main() -> int:
             for sample in kept_samples
         ]
         + augmented_rows
+        + true_negative_train_rows
+        + true_negative_augmented_rows
         + replay_rows,
     )
 
     reviewed_negative_count = sum(1 for sample in kept_samples if sample["reviewed_negative"] and sample["is_negative"])
+    true_negative_count = len(true_negative_samples)
+    total_machine_negative_count = reviewed_negative_count + true_negative_count
     unresolved_labels = [item for item in quarantine if item["reason"] in {"missing_label", "empty_unreviewed_label"}]
     promotion_prereq_failures = []
     if unresolved_labels:
         promotion_prereq_failures.append("unresolved_live_annotations")
     min_neg = int(cfg["dataset"]["required_machine_negative_min"])
-    if reviewed_negative_count < min_neg:
+    if total_machine_negative_count < min_neg:
         promotion_prereq_failures.append("insufficient_reviewed_machine_negatives")
+    required_groups = int(cfg["dataset"].get("required_machine_negative_groups", 2))
+    if len(negative_groups) < required_groups:
+        promotion_prereq_failures.append("insufficient_true_negative_capture_groups")
+    lighting_buckets = Counter(sample["metrics"]["lighting_bucket"] for sample in true_negative_samples)
+    if "dark" not in lighting_buckets or not ({"bright", "normal"} & set(lighting_buckets)):
+        promotion_prereq_failures.append("true_negative_lighting_coverage_incomplete")
 
     report = {
         "run_name": cfg["run_name"],
@@ -928,6 +1064,7 @@ def main() -> int:
         "git_head": git_head(),
         "baseline_checkpoint": baseline_details,
         "dataset_source_hash": tree_hash(live_files_for_hash, root=dataset_root, upper=True),
+        "true_negative_source_hash": tree_hash(true_negative_files_for_hash, root=true_negative_root, upper=True),
         "ignored_inputs": ["train.txt", "GreenGuard.zip"],
         "live_dataset": {
             "source_root": str(dataset_root),
@@ -940,13 +1077,27 @@ def main() -> int:
             "sequence_gap_seconds": gap_seconds,
             "phash_similarity_warnings": phash_pairs,
         },
+        "true_negative_dataset": {
+            "source_root": str(true_negative_root),
+            "total_images": len(true_negative_images),
+            "kept_images": true_negative_count,
+            "quarantined_images": len(true_negative_quarantine),
+            "capture_group_count": len(negative_groups),
+            "lighting_buckets": dict(lighting_buckets),
+            "groups": [
+                {"group_id": group["group_id"], "split": negative_assignment[group["group_id"]], "sample_names": group["sample_names"]}
+                for group in negative_groups
+            ],
+            "holdout_policy": "earliest capture group is locked clean-negative holdout; later groups train",
+            "photometric_augmented_train_count": len(true_negative_augmented_rows),
+        },
         "train_surface": {
             "live_train_originals": len(train_samples),
             "live_train_augmented": len(augmented_rows),
             "legacy_replay_selected": len(replay_rows),
             "legacy_replay_target": replay_target,
         },
-        "quarantine": quarantine,
+        "quarantine": quarantine + true_negative_quarantine,
         "promotion_prereq_failures": promotion_prereq_failures,
         "promotion_ready_from_data": not promotion_prereq_failures,
         "generated_root": str(generated_root),

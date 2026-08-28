@@ -7,6 +7,7 @@ canonical_names:
 
 paths:
   incoming_live_dataset: dataset/incoming/live-dataset
+  incoming_true_negative_dataset: dataset/incoming/true-negative
   generated_root: dataset/generated/{run_name}
   legacy_replay_train: dataset/splits/train
   locked_test_root: dataset/test_locked
@@ -40,8 +41,9 @@ dataset:
   max_live_aug_variants_per_image: 2
   similarity_warning_hamming: 6
   legacy_replay_ratio: 1.0
-  required_machine_negative_min: 30
+  required_machine_negative_min: 5
   required_machine_negative_max: 50
+  required_machine_negative_groups: 2
   eval_frame_fps: 5.0
 
 known_issues:

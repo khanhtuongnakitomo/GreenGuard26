@@ -26,14 +26,13 @@ Confirm no imports escape this directory.
 
 ```bash
 ./build_engines.sh
-trtexec --loadEngine=models/engines/m1_detector_416.engine
-trtexec --loadEngine=models/engines/m1_classifier_224.engine
+trtexec --loadEngine=models/engines/m1_detect_416.engine
 trtexec --loadEngine=models/engines/m2_obb_416.engine
 ./run.sh --backend tensorrt --source 0 --headless --max-frames 30
 ```
 
 Record end-to-end FPS from the HUD after warmup. Target ≥ 5 FPS on worst-case PET
-(M1 + classifier + M2). If below target, record stage timings instead of lowering
+(M1 + M2). If below target, record stage timings instead of lowering
 image size or thresholds.
 
 ## Live camera matrix

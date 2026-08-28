@@ -15,10 +15,8 @@ intentionally; `scripts/package_models.py` keeps SHA-256 manifests in sync.
 
 ```text
 CameraFrame
-  → M1 OBB detector (416)
-  → top-1 by confidence (min area ≥ 2% of frame)
-  → axis-aligned OBB crop + 10% margin
-  → M1 classifier (224): pet | can
+  → M1 HBB detector (640 PC / 416 Jetson): metal_can | pet_bottle | pp_cup
+  → filter pp_cup, then top-1 visible class (min area ≥ 2% of frame)
   → can: display aluminum, skip M2
   → pet: M2 OBB on full frame
        → keep centers inside smoothed PET polygon

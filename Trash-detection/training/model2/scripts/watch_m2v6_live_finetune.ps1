@@ -50,6 +50,11 @@ function Get-RowCount {
     }
 }
 
+function Get-ResultsWriteTime {
+    if (-not (Test-Path $resultsCsv)) { return [datetime]::MinValue }
+    try { return (Get-Item -LiteralPath $resultsCsv).LastWriteTimeUtc } catch { return [datetime]::MinValue }
+}
+
 function Test-PidAlive {
     param([int]$TargetPid)
     if ($TargetPid -le 0) { return $false }
@@ -66,6 +71,7 @@ function Emit-State {
 }
 
 $lastRowCount = 0
+$lastResultsWriteTime = Get-ResultsWriteTime
 $lastProgress = Get-Date
 $stopSeen = 0
 Emit-State "STARTING" "watcher attached for run $RunName"
@@ -73,8 +79,10 @@ Emit-State "STARTING" "watcher attached for run $RunName"
 while ($true) {
     $payload = Get-StatusPayload
     $rowCount = Get-RowCount
-    if ($rowCount -gt $lastRowCount) {
+    $resultsWriteTime = Get-ResultsWriteTime
+    if (($rowCount -gt $lastRowCount) -or ($resultsWriteTime -gt $lastResultsWriteTime)) {
         $lastRowCount = $rowCount
+        $lastResultsWriteTime = $resultsWriteTime
         $lastProgress = Get-Date
     }
     $minsSince = ((Get-Date) - $lastProgress).TotalMinutes
