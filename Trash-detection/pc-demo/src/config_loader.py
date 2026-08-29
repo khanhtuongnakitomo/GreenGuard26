@@ -1,6 +1,7 @@
 """Load pc-demo configuration and resolve paths relative to runtime root."""
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -47,3 +48,8 @@ def validate_manifest(manifest: dict) -> None:
         path = ROOT / entry["path"]
         if not path.is_file():
             raise RuntimeError(f"missing packaged model: {path}")
+        expected = entry.get("sha256")
+        if expected:
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            if digest.lower() != str(expected).lower():
+                raise RuntimeError(f"sha256 mismatch for packaged model: {path}")

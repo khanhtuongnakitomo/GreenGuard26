@@ -58,7 +58,8 @@ class M1Pipeline:
         det_cfg = cfg["m1"]["detector"]
         self.det_path = resolve_path(det_cfg["path"])
         self.det_imgsz = onnx_imgsz(self.det_path) or int(det_cfg.get("imgsz", 416))
-        self.det_conf = float(det_cfg.get("conf", 0.05))
+        self.infer_conf = float(det_cfg.get("infer_conf", det_cfg.get("conf", 0.05)))
+        self.decision_conf = float(det_cfg.get("decision_conf", 0.0))
         self.min_area_frac = float(cfg["m1"].get("min_area_frac", 0.02))
         self.allowed_ids = {int(item) for item in det_cfg.get("visible_class_ids", [0, 1])}
         self.det = YOLO(str(self.det_path), task="detect")
@@ -67,7 +68,7 @@ class M1Pipeline:
         return None
 
     def run(self, frame: np.ndarray, det_conf: float | None = None) -> M1FrameResult:
-        conf = self.det_conf if det_conf is None else det_conf
+        conf = self.infer_conf if det_conf is None else det_conf
         h, w = frame.shape[:2]
         result = self.det.predict(frame, imgsz=self.det_imgsz, conf=conf, device=DEVICE, verbose=False)[0]
         if result.boxes is None or not len(result.boxes):
@@ -82,6 +83,8 @@ class M1Pipeline:
             return M1FrameResult()
 
         poly, det_cf, best_index = best
+        if det_cf < self.decision_conf:
+            return M1FrameResult()
         class_id = int(clss[best_index])
         verdict = "pet" if class_id == 1 else "can"
         label, color = DISPLAY[verdict]

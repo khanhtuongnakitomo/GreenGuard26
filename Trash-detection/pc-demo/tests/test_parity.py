@@ -48,12 +48,14 @@ def pipelines():
     return M1Pipeline(cfg), M2Pipeline(cfg)
 
 
-@pytest.mark.parametrize("fixture_name", ["m1_reference.jpg", "blank.jpg", "can_sample.jpg", "pet_sample.jpg"])
+@pytest.mark.parametrize(
+    "fixture_name",
+    ["m1_reference.jpg", "blank.jpg", "blank_like.jpg", "can_sample.jpg", "pet_sample.jpg", "m1_sample.jpg"],
+)
 def test_m1_parity(fixture_name, baseline, pipelines):
-    if baseline.get("m1_contract") != "hbb_dt3":
-        pytest.skip("legacy OBB/classifier baseline is not valid for imported HBB Model 1")
+    assert baseline.get("m1_contract") == "hbb_dt3_pc"
     if fixture_name not in baseline.get("fixtures", {}):
-        pytest.skip("fixture not in baseline")
+        pytest.fail(f"fixture missing from active baseline: {fixture_name}")
     m1_pipe, _ = pipelines
     img = cv2.imread(str(VALIDATION / "fixtures" / fixture_name))
     assert img is not None
@@ -63,5 +65,8 @@ def test_m1_parity(fixture_name, baseline, pipelines):
         assert result.poly is None
         return
     assert result.poly is not None
+    assert result.is_pet is (expected["class_name"] == "pet_bottle")
+    expected_legend = "PET bottle" if expected["class_name"] == "pet_bottle" else "Aluminum can"
+    assert expected_legend in result.legend
     exp_poly = np.array(expected["polygon"], dtype=np.float32)
     assert poly_iou(result.poly.astype(np.float32), exp_poly) >= 0.90

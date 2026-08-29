@@ -31,10 +31,13 @@ The supported launchers are at the `Trash-detection/` root:
 ```
 
 The `--mode` values are `model1`, `model2`, and `full`. Model 1 is a single
-three-class detector; PP cup is filtered and never shown.
+three-class detector; PP cup is filtered and never shown. Model 1 uses a low
+inference floor (`0.05`) to retain candidates, then requires `0.65` confidence
+after visibility and area filtering before the candidate enters the workflow.
 
 Useful flags: `--headless`, `--save <dir>`, `--max-frames N`, `--m1-conf`, `--m2-conf`,
-`--fps`.
+`--fps`. `--m1-conf` overrides the inference floor only; it does not lower the
+decision floor in the locked config.
 
 ## Layout
 

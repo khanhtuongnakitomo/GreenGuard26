@@ -7,7 +7,8 @@
       "classes": ["metal_can", "pet_bottle", "pp_cup"],
       "visible_class_ids": [0, 1],
       "ignored_class_ids": [2],
-      "conf": 0.05
+      "infer_conf": 0.05,
+      "decision_conf": 0.65
     },
     "min_area_frac": 0.02,
     "miss_hold": 3,

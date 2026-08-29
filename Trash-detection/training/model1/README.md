@@ -1,4 +1,17 @@
-# Model 1 rebuild — PET bottle vs aluminum can
+# Model 1 training tree and active PC contract
+
+The active Windows PC workflow uses the packaged three-class HBB detector at
+`pc-demo/models/m1_detect_640.onnx` (`metal_can`, `pet_bottle`, `pp_cup`). It
+filters `pp_cup`, applies the 2% area rule, and requires 0.65 confidence before
+publishing a Model 1 result. The live entrypoint is `full_demo.bat` at the
+`Trash-detection` root.
+
+The files below are retained as a legacy/research OBB detector plus crop
+classifier training tree. Do not promote these exports into the active PC
+package unless a new HBB-compatible dataset, evaluation, and parity report
+have been completed.
+
+## Legacy training layout
 
 YOLOv8n-OBB detector + **yolov8n-cls** crop classifier (Fix B).
 

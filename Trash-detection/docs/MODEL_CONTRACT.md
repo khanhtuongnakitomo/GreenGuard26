@@ -29,13 +29,19 @@ argmax. Angle is radians for polygon reconstruction.
 
 ## Preprocessing
 
-- **OBB:** Ultralytics letterbox fill 114, BGR→RGB, CHW float32, `/255`
+- **HBB and OBB:** Ultralytics letterbox fill 114, BGR→RGB, CHW float32, `/255`
+
+M1 keeps two confidence values deliberately: `infer_conf=0.05` is the
+candidate-generation floor, while `decision_conf=0.65` is the public workflow
+acceptance floor after class visibility and minimum-area filtering. A low-score
+candidate must not be shown, passed to the PET gate, or invoke Model 2.
 
 ## Gate defaults
 
 | Setting | Value |
 |---|---|
-| M1 det conf | 0.05 |
+| M1 inference floor | 0.05 |
+| M1 decision floor | 0.65 |
 | Min area fraction | 0.02 |
 | M2 infer conf | 0.10 |
 | M2 violation conf | 0.50 |
