@@ -109,18 +109,23 @@ No separate venv needed in `training/model2/`.
 
 ---
 
-## Demo — Model 2 only
+## Supported Live Demo Entry Points
+
+The repository has exactly three supported Windows live launchers. They all
+call the shared `pc-demo/src/app.py` runtime; training and validation scripts
+are internal tools and are not live entrypoints.
+
+From `Trash-detection/`:
 
 ```powershell
-cd GreenGuard26\Trash-detection\training/model2
-.\run_m2_demo.bat
+.\demo_model1.bat --source 0
+.\demo_model2.bat --source 0
+.\full_demo.bat --source 0
 ```
 
-```powershell
-.\run_m2_demo.bat --fps 10 --conf 0.4
-.\run_m2_demo.bat --source video.mp4 --save logs\m2_demo
-.\run_m2_demo.bat --source path\to\image.jpg
-```
+Use `demo_model2.bat` for the promoted Model 2 webcam test and `full_demo.bat`
+for the complete Model 1 to Model 2 gate. Do not use obsolete launcher names
+such as `run_m2_demo.bat` or `run_gate_demo.bat`.
 
 | Key | Action |
 |---|---|
@@ -135,16 +140,13 @@ Auto-picks model (first found):
 
 ---
 
-## Demo — Full gate (Model 1 + Model 2)
+## Full Gate Behavior
+
+Run `full_demo.bat` from `Trash-detection/` for the complete Model 1 plus Model
+2 flow:
 
 ```powershell
-cd GreenGuard26\Trash-detection\training/model2
-.\run_gate_demo.bat
-```
-
-```powershell
-.\run_gate_demo.bat --m1-conf 0.05 --m2-conf 0.5
-.\run_gate_demo.bat --save logs\gate_out --max-frames 30
+.\full_demo.bat --source 0 --m1-conf 0.05 --m2-conf 0.5
 ```
 
 **Logic:**
