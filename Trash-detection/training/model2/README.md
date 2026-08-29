@@ -21,6 +21,67 @@ dataloader reliability, and watches for stalls. Review the candidate against
 the locked test before any manual promotion. See `../../../DOCUMENTATION.md`
 for the project-wide documentation map.
 
+## Revamped Overnight Workflow
+
+The revamped workflow is isolated to branch `feat/model-2-revamped` and writes
+all generated data, checkpoints, exports, logs, and staged packages under the
+named run. It uses the machine-captured live dataset as the dominant source,
+keeps true negatives in the evaluation path, applies bounded live and
+machine-style replay augmentation, and preserves the active V6 model and
+locked test set.
+
+From `Trash-detection/training/model2/` on the GPU training machine:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_m2_revamped.ps1 -Smoke
+powershell -ExecutionPolicy Bypass -File scripts\run_m2_revamped.ps1 -Device 0 -Batch 24
+```
+
+The full run prepares a deterministic grouped train/validation/holdout split,
+runs Stage A (up to 60 epochs) and Stage B (up to 25 epochs with lower
+learning rate), evaluates cap/label/ring behavior on machine holdout, locked
+test, clean negatives, temporal gate replay, and lighting/noise stress
+surfaces, then exports candidate-only ONNX at 640 and 416. Reports are written
+to `logs/revamped/<run>/reports/`; candidate packages are written to
+`logs/revamped/<run>/candidate_package/`.
+
+Promotion is intentionally not part of this workflow. The evaluator must pass
+all configured cap/label, ring, temporal, negative, stress, locked-test, and
+annotation gates before a separate, explicitly authorized promotion step.
+The current checkpoint graph is reported by Ultralytics as YOLOv8n-OBB; the
+workflow preserves that verified checkpoint architecture rather than silently
+changing it during retraining.
+
+For a fixed-camera machine trial where the operator explicitly accepts the
+machine-specific candidate despite automated gate failures, use the explicit
+manual acceptance switch:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_m2_revamped.ps1 `
+  -Device 0 -Batch 24 -ManualMachineAcceptance `
+  -AcceptanceReason "Operator-approved fixed-camera machine trial"
+```
+
+This sets `production_ready=true` in the evaluation and export reports while
+retaining `automated_gates_passed`, the failed gate list, and the acceptance
+reason. It still writes only to the named candidate package; active production
+files are not changed by this switch.
+
+To replace the active PC and Jetson Model 2 paths after that explicit machine
+decision, run the existing backup-and-promote step with the same override:
+
+```powershell
+..\model1\.venv\Scripts\python.exe scripts\promote_m2_candidate.py `
+  --config config\m2_revamped.yaml `
+  --run m2revamped_20260829_seed42_n640 `
+  --weights runs\m2revamped_20260829_seed42_n640_stage_b\weights\best.pt `
+  --manual-machine-acceptance
+```
+
+Promotion creates a timestamped backup and invalidates the Jetson engine so it
+cannot be mistaken for the newly promoted ONNX model. The promotion report
+retains the automated blockers and the manual acceptance reason.
+
 Part detector for **PET bottles only**. Classes:
 
 | ID | Name | Color in demo |

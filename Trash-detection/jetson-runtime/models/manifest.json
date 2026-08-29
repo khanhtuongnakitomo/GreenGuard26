@@ -1,9 +1,14 @@
 {
   "target": "jetson",
-  "source_commit": "10a42d77aaec53bb34184a1da39fa5bbbfe060ac",
-  "packaged_at_utc": "2026-08-28T09:45:14Z",
-  "package_scope": "all",
-  "provenance": {},
+  "source_commit": "f1c5a70642bfdc38f20bc7cf39c2d1e82c3581c2",
+  "packaged_at_utc": "2026-08-29T00:53:06Z",
+  "package_scope": "m2",
+  "provenance": {
+    "run_name": "m2revamped_20260829_seed42_n640",
+    "dataset_source_hash": "E37529CB725BD893A37BF1F925DE327B4DBDF493F2E16BEE349093F749209D23",
+    "evaluation_report": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\logs\\revamped\\m2revamped_20260829_seed42_n640\\reports\\revamped_evaluation_report.json",
+    "promote_invoked_at": "2026-08-29T00:53:05Z"
+  },
   "models": [
     {
       "filename": "m1_detect_416.onnx",
@@ -11,7 +16,7 @@
       "family": "m1",
       "task": "detect",
       "source_path": "Trash-detection/training/model1/export/detect_416/model.onnx",
-      "source_commit": "10a42d77aaec53bb34184a1da39fa5bbbfe060ac",
+      "source_commit": "f1c5a70642bfdc38f20bc7cf39c2d1e82c3581c2",
       "source_sha256": "367bad246b324ce2add6357a556edec22afc6ede445c966881c7eda1bced657b",
       "source_bytes": 44651868,
       "sha256": "367bad246b324ce2add6357a556edec22afc6ede445c966881c7eda1bced657b",
@@ -40,12 +45,12 @@
       "path": "models/m2_obb_416.onnx",
       "family": "m2",
       "task": "obb",
-      "source_path": "Trash-detection/training/model2/export/onnx_416/model.onnx",
-      "source_commit": "10a42d77aaec53bb34184a1da39fa5bbbfe060ac",
-      "source_sha256": "3588ebd3f5d442a2b2aaf61988431b549fcc139e2a8c2d119322da998cbf6d8c",
-      "source_bytes": 12438811,
-      "sha256": "3588ebd3f5d442a2b2aaf61988431b549fcc139e2a8c2d119322da998cbf6d8c",
-      "bytes": 12438811,
+      "source_path": "Trash-detection/training/model2/export/candidates/m2revamped_20260829_seed42_n640/onnx_416/model.onnx",
+      "source_commit": "f1c5a70642bfdc38f20bc7cf39c2d1e82c3581c2",
+      "source_sha256": "fda4c7986adce3262686842dc751afbeae14bd6c059c794926e3a5872be62fa7",
+      "source_bytes": 12438854,
+      "sha256": "fda4c7986adce3262686842dc751afbeae14bd6c059c794926e3a5872be62fa7",
+      "bytes": 12438854,
       "input_name": "images",
       "input_shape": [
         1,
