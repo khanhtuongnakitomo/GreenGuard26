@@ -86,6 +86,22 @@ def main() -> int:
     write_status(cfg, "RUNNING", step=args.run, trainer_pid=__import__("os").getpid(), target_epochs=int(train_cfg["epochs"]))
 
     model = YOLO(str(start_weights))
+    augmentation = {
+        "degrees": 3.0,
+        "translate": 0.02,
+        "scale": 0.06,
+        "shear": 0.3,
+        "perspective": 0.0,
+        "fliplr": 0.10,
+        "flipud": 0.0,
+        "hsv_h": 0.006,
+        "hsv_s": 0.20,
+        "hsv_v": 0.20,
+        "mosaic": 0.15,
+        "mixup": 0.0,
+        "copy_paste": 0.0,
+    }
+    augmentation.update(cfg.get("augmentation", {}))
     train_kwargs = {
         "data": str(dataset_yaml),
         "project": str(Path(cfg["_resolved"]["model2_root"]) / "runs"),
@@ -104,25 +120,13 @@ def main() -> int:
         "deterministic": False,
         "multi_scale": False,
         "cos_lr": True,
-        "degrees": 3.0,
-        "translate": 0.02,
-        "scale": 0.06,
-        "shear": 0.3,
-        "perspective": 0.0,
-        "fliplr": 0.10,
-        "flipud": 0.0,
-        "hsv_h": 0.006,
-        "hsv_s": 0.20,
-        "hsv_v": 0.20,
-        "mosaic": 0.15,
         "close_mosaic": int(train_cfg["close_mosaic"]),
-        "mixup": 0.0,
-        "copy_paste": 0.0,
         "device": args.device,
         "exist_ok": True,
         "save": True,
         "plots": False,
     }
+    train_kwargs.update(augmentation)
     if args.resume:
         model = YOLO(str(run_dir / "weights" / "last.pt"))
         model.train(resume=True)

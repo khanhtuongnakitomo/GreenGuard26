@@ -1,0 +1,141 @@
+run_name: m2edgeft_20260830_seed42_n640_e30
+
+canonical_names:
+  - cap
+  - label
+  - ring
+
+paths:
+  incoming_live_dataset: dataset/staging/{run_name}/live
+  incoming_true_negative_dataset: dataset/incoming/true-negative
+  generated_root: dataset/generated/{run_name}
+  legacy_replay_train: dataset/splits/train
+  locked_test_root: dataset/test_locked
+  candidate_export_root: export/candidates/{run_name}
+  logs_root: logs/edge_finetune/{run_name}
+
+review:
+  reviewed_negative_list: dataset/staging/{run_name}/live/review/reviewed_machine_negatives.txt
+  authoritative_overrides_dir: dataset/staging/{run_name}/live/review/authoritative_annotations
+
+edge_sources:
+  - name: GG1
+    root: ../../../../Dump/new-edge-case-dataset/GG1
+    image_dir: images
+    label_dir: labels/train
+    data_yaml: data.yaml
+    raw_class_to_canonical:
+      0: 0
+      1: 1
+      2: 2
+  - name: GG2
+    root: ../../../../Dump/new-edge-case-dataset/GG2
+    image_dir: Images
+    label_dir: labels/train
+    data_yaml: data.yaml
+    raw_class_to_canonical:
+      0: 1
+      1: 0
+      2: 2
+
+dataset:
+  raw_class_to_canonical:
+    0: 0
+    1: 1
+    2: 2
+  sequence_gap_seconds: 45
+  split_strategy: balanced_search
+  split_ratios:
+    train: 0.70
+    val: 0.15
+    holdout: 0.15
+  lighting_thresholds:
+    dark_max: 105.0
+    bright_min: 130.0
+  highlight_threshold: 245
+  highlight_buckets:
+    moderate_min: 0.05
+    severe_min: 0.12
+  min_polygon_area_fraction: 0.00005
+  min_obb_area_fraction: 0.00003
+  min_side_pixels: 2.0
+  max_live_aug_variants_per_image: 3
+  live_aug_variants_by_class:
+    cap: 2
+    label: 2
+    ring: 3
+    default: 2
+  legacy_replay_ratio: 0.55
+  legacy_domain_variant_count: 0
+  similarity_warning_hamming: 6
+  required_machine_negative_min: 5
+  required_machine_negative_max: 50
+  required_machine_negative_groups: 2
+  eval_frame_fps: 5.0
+
+training:
+  baseline_checkpoint: runs/m2revamped_20260829_seed42_n640_stage_b/weights/best.pt
+  baseline_sha256: B0C423306DB044A935718DCFD083211C6A605834975309428FEE2F59718DDC30
+  model_id: yolo11s-obb
+  imgsz: 640
+  batch: 16
+  val_batch: 16
+  workers: 0
+  cache: disk
+  optimizer: AdamW
+  lr0: 0.00005
+  epochs: 30
+  patience: 8
+  fraction: 1.0
+  seed: 42
+  save_period: 1
+  close_mosaic: 5
+
+augmentation:
+  degrees: 1.5
+  translate: 0.01
+  scale: 0.03
+  shear: 0.1
+  perspective: 0.0
+  fliplr: 0.0
+  flipud: 0.0
+  hsv_h: 0.003
+  hsv_s: 0.12
+  hsv_v: 0.15
+  mosaic: 0.0
+  mixup: 0.0
+  copy_paste: 0.0
+
+runtime_contract:
+  infer_conf: 0.10
+  violation_conf: 0.50
+  vote_window: 7
+  vote_need: 4
+  warmup_seconds: 0.5
+  hold_seconds: 1.5
+
+evaluation:
+  previous_machine_val_yaml: dataset/generated/m2revamped_20260829_seed42_n640/live_val.yaml
+  previous_machine_holdout_yaml: dataset/generated/m2revamped_20260829_seed42_n640/live_holdout.yaml
+  parity_sample_limit: 24
+  locked_test_max_per_class_regression: 0.02
+  previous_machine_max_per_class_regression: 0.02
+  edge_macro_recall_improvement: 0.03
+  edge_ring_recall_improvement: 0.05
+  edge_max_per_class_recall_drop: 0.02
+  stress_recall_drop_max: 0.10
+  cpu_latency_regression_max: 0.10
+  pc_conf_tolerance: 0.0001
+  pc_polygon_iou_min: 0.90
+
+promotion:
+  pc_package_dir: pc-demo/models
+  jetson_package_dir: jetson-runtime/models
+  model2_training_exports:
+    onnx_640: training/model2/export/onnx_640
+    onnx_416: training/model2/export/onnx_416
+    onnx_768: training/model2/export/onnx_768
+  pc_manifest: pc-demo/models/manifest.json
+  jetson_manifest: jetson-runtime/models/manifest.json
+  jetson_engine: jetson-runtime/models/engines/m2_obb_416.engine
+  jetson_engine_manifest: jetson-runtime/models/engines/engine_manifest.json

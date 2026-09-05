@@ -34,6 +34,7 @@ Trash-detection/training/model2/dataset/audits/
 Trash-detection/training/model2/dataset/generated/
 Trash-detection/training/model2/dataset/staging/
 Trash-detection/training/model2/export/candidates/
+Trash-detection/pc-demo/config/edge_candidate.json
 
 # Legacy rebuild paths (if present locally)
 Trash-detection/model1-rebuild/dataset/incoming/

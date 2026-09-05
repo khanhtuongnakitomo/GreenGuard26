@@ -299,3 +299,36 @@ if class 2 ring is missing from any split) -> eval sets -> smoke -> fine-tune
 Data comes from `..\dataset\sources\` (shared folder at Trash-detection
 level). Verified ring data (owner-live) is mandatory before the rebuild passes
 stage 3.
+# Model 2 training
+
+## PC edge-case fine-tuning
+
+The guarded edge-case workflow runs on `feat/model-2-revamped` and keeps the
+accepted PC Model 2 package unchanged. It normalizes `Dump/new-edge-case-dataset`
+GG1/GG2 labels into the canonical `cap`, `label`, `ring` order, quarantines the
+eight GG1 records whose class 3 is absent from the modified source manifest,
+preserves sequence-based splits, adds bounded fixed-camera photometric stress,
+and replays the existing training set to protect generalization.
+
+From `Trash-detection/training/model2/`:
+
+```powershell
+.\scripts\run_m2_edge_finetune.ps1 -PreflightOnly
+.\scripts\run_m2_edge_finetune.ps1 -Smoke
+.\scripts\run_m2_edge_finetune.ps1
+```
+
+The full run evaluates the candidate against the edge holdout, previous-machine
+surfaces, locked test, reviewed clean negatives, temporal gate replay, and a
+photometric stress surface. It exports only `export/candidates/<run>/onnx_640/`
+and writes `pc-demo/config/edge_candidate.json` for webcam testing. The test
+window can be started from `Trash-detection` with:
+
+```powershell
+.\full_demo.bat --config edge_candidate --auto-start
+```
+
+No Jetson/Orin engine, manifest, runtime, or package is read for promotion or
+modified by this workflow. `production_ready` is true only when every automated
+evaluation and export gate passes; otherwise the candidate remains testable but
+is not promoted.
