@@ -42,7 +42,7 @@ SectionCard.displayName = 'SectionCard';
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.dashboardCard,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.dashboardBorder,
     shadowColor: '#000',
@@ -56,13 +56,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 12,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: Colors.dashboardBorder,
   },
-  title: { fontSize: 14, fontWeight: '700' as const, color: Colors.textPrimary },
+  title: { fontSize: 15, fontWeight: '700' as const, color: Colors.textPrimary, flexShrink: 1 },
   rightLabel: { fontSize: 13, fontWeight: '500' as const, color: Colors.primary },
-  body: { padding: 16 },
+  body: { padding: 18 },
 });

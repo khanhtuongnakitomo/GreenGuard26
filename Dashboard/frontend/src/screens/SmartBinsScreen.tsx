@@ -1,3 +1,4 @@
+import { DataStatus } from '@/components/DataStatus';
 /**
  * GreenGuard Dashboard — Page 3: Smart Bins
  */
@@ -171,6 +172,7 @@ export default function SmartBinsScreen({ onNavigate }: Props) {
       <View style={S.main}>
         <DashboardTopNav title="Smart Bins" subtitle="Welcome back, Mark" />
 
+        <DataStatus demo error={false} />
         <ScrollView style={S.scroll} contentContainerStyle={S.content} showsVerticalScrollIndicator={false}>
           {/* ── Top: Map + Right Panel ─────────────────────────────── */}
           <View style={S.topRow}>

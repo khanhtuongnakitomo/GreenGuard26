@@ -2,7 +2,7 @@
  * GreenGuard Dashboard — Page 2: Analytics
  * Connected with live Quality metrics & 3-Class material aggregates
  */
-import React, { memo, useEffect, useState } from 'react';
+import React, { memo } from 'react';
 import { View, Text, ScrollView, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BarChart, LineChart, PieChart } from 'react-native-gifted-charts';
@@ -13,7 +13,10 @@ import { KPICard } from '@/components/KPICard';
 import { SectionCard } from '@/components/SectionCard';
 import { Colors } from '@/theme/colors';
 import { DashboardRoute, KPICardData } from '@/types/dashboard.types';
-import { fetchOverview, fetchQuality, OverviewData, QualityData } from '@/services/api';
+import { DEMO_MODE } from '@/services/api';
+import { useQuery } from '@tanstack/react-query';
+import { analyticsQuery } from '@/services/dashboardQueries';
+import { DataStatus } from '@/components/DataStatus';
 
 const { width: SW } = Dimensions.get('window');
 const SIDEBAR_W = 240;
@@ -28,7 +31,7 @@ const WastePie = memo(({ waste }: { waste: { pet_clean: number; pet_bad: number;
   const total = Math.max(1, waste.pet_clean + waste.pet_bad + waste.aluminum);
   const cleanPct = Math.round((waste.pet_clean / total) * 100);
   const badPct = Math.round((waste.pet_bad / total) * 100);
-  const alumPct = Math.max(0, 100 - cleanPct - badPct);
+  const alumPct = waste.pet_clean + waste.pet_bad + waste.aluminum === 0 ? 0 : Math.max(0, 100 - cleanPct - badPct);
 
   const slices = [
     { label: 'PET Sạch', percentage: cleanPct, color: '#10B981' },
@@ -46,6 +49,7 @@ const WastePie = memo(({ waste }: { waste: { pet_clean: number; pet_bad: number;
   return (
     <View style={pieS.wrap}>
       <View style={pieS.chartWrap}>
+        {waste.pet_clean + waste.pet_bad + waste.aluminum > 0 ? (
         <PieChart
           donut
           innerRadius={32}
@@ -58,6 +62,7 @@ const WastePie = memo(({ waste }: { waste: { pet_clean: number; pet_bad: number;
             </View>
           )}
         />
+        ) : <Text style={{ color: Colors.textMuted, fontSize: 11 }}>Chưa có dữ liệu</Text>}
       </View>
       <View style={pieS.legend}>
         {slices.map((s) => (
@@ -86,29 +91,24 @@ const pieS = StyleSheet.create({
 });
 
 export default function AnalyticsScreen({ onNavigate }: Props) {
-  const [overview, setOverview] = useState<OverviewData | null>(null);
-  const [quality, setQuality] = useState<QualityData | null>(null);
-
-  useEffect(() => {
-    const load = async () => {
-      const [ov, ql] = await Promise.all([
-        fetchOverview('today').catch(() => null),
-        fetchQuality().catch(() => null),
-      ]);
-      if (ov) setOverview(ov);
-      if (ql) setQuality(ql);
-    };
-    load();
-    const interval = setInterval(load, 4000);
-    return () => clearInterval(interval);
-  }, []);
+  const snapshot = useQuery(analyticsQuery());
+  if (!snapshot.data) return (
+    <SafeAreaView style={S.safe} edges={['top', 'bottom']}>
+      <DashboardSidebar activeRoute="analytics" onNavigate={onNavigate} />
+      <View style={S.main}>
+        <DashboardTopNav title="Phân tích chuyên sâu (Analytics)" subtitle="Dữ liệu trực tiếp" />
+        <DataStatus demo={false} error={snapshot.isError} />
+      </View>
+    </SafeAreaView>
+  );
+  const { overview, quality } = snapshot.data;
 
   const kpis: KPICardData[] = [
     {
       id: 'ak1',
       label: 'Tổng nhận diện',
-      value: overview ? `${overview.todayDetections}` : '26',
-      subLabel: `${overview?.wasteBreakdown?.pet_clean ?? 21} PET Sạch`,
+      value: `${overview.todayDetections}`,
+      subLabel: `${overview?.wasteBreakdown?.pet_clean ?? 0} PET Sạch`,
       iconType: 'trash',
       iconColor: Colors.kpiGreen,
       iconBg: Colors.kpiGreenBg,
@@ -116,7 +116,7 @@ export default function AnalyticsScreen({ onNavigate }: Props) {
     {
       id: 'ak2',
       label: 'Độ chuẩn phân loại (Purity)',
-      value: overview ? `${overview.purityRate}%` : '87.5%',
+      value: overview.purityRate == null ? '—' : `${overview.purityRate}%`,
       subLabel: 'Mục tiêu: > 90%',
       iconType: 'accuracy',
       iconColor: Colors.kpiBlue,
@@ -125,7 +125,7 @@ export default function AnalyticsScreen({ onNavigate }: Props) {
     {
       id: 'ak3',
       label: 'Độ trễ P50 / P95',
-      value: quality ? `${quality.latencyP50}ms / ${quality.latencyP95}ms` : '35ms / 43ms',
+      value: `${quality.latencyP50 == null ? '—' : quality.latencyP50 + 'ms'} / ${quality.latencyP95 == null ? '—' : quality.latencyP95 + 'ms'}`,
       subLabel: 'Mục tiêu: < 50ms',
       iconType: 'weight',
       iconColor: Colors.kpiOrange,
@@ -134,32 +134,17 @@ export default function AnalyticsScreen({ onNavigate }: Props) {
     {
       id: 'ak4',
       label: 'AI FPS Trung bình',
-      value: overview ? `${overview.avgFps} FPS` : '30.2 FPS',
-      subLabel: 'Model: m2v4 (YOLOv11s)',
+      value: overview.avgFps == null ? '—' : `${overview.avgFps} FPS`,
+      subLabel: 'Hiệu năng từ dữ liệu nhận diện',
       iconType: 'wifi',
       iconColor: Colors.kpiGreen,
       iconBg: Colors.kpiGreenBg,
     },
   ];
 
-  const trendData = overview?.classificationTrend?.length
-    ? overview.classificationTrend.map((p) => ({ value: p.value, label: p.label, frontColor: Colors.chartBar }))
-    : [
-        { label: '00:50', value: 10 },
-        { label: '00:51', value: 21 },
-        { label: '00:52', value: 5 },
-      ].map((p) => ({ ...p, frontColor: Colors.chartBar }));
-
-  const confidenceHistData = quality?.confidenceHistogram?.length
-    ? quality.confidenceHistogram.map((b) => ({ value: b.count, label: b.bucket, frontColor: '#10B981' }))
-    : [
-        { label: '0.6-0.7', value: 2, frontColor: '#10B981' },
-        { label: '0.7-0.8', value: 7, frontColor: '#10B981' },
-        { label: '0.8-0.9', value: 8, frontColor: '#10B981' },
-        { label: '0.9-1.0', value: 9, frontColor: '#10B981' },
-      ];
-
-  const waste = overview?.wasteBreakdown ?? { pet_clean: 21, pet_bad: 3, aluminum: 1 };
+  const trendData = overview.classificationTrend.map(p => ({ ...p, frontColor: Colors.chartBar }));
+  const confidenceHistData = quality.confidenceHistogram.map(b => ({ value: b.count, label: b.bucket, frontColor: '#10B981' }));
+  const waste = overview.wasteBreakdown;
   const halfW = (CONTENT_W - 16 * 3) / 2;
 
   return (
@@ -168,6 +153,7 @@ export default function AnalyticsScreen({ onNavigate }: Props) {
       <View style={S.main}>
         <DashboardTopNav title="Phân tích chuyên sâu (Analytics)" subtitle="Hiệu năng Model AI & Chỉ số nguyên vật liệu" />
 
+        <DataStatus demo={DEMO_MODE} error={snapshot.isError} updatedAt={snapshot.dataUpdatedAt} />
         <ScrollView style={S.scroll} contentContainerStyle={S.content} showsVerticalScrollIndicator={false}>
           {/* KPI Row */}
           <View style={S.kpiRow}>

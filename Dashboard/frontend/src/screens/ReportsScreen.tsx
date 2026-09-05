@@ -1,3 +1,4 @@
+import { DataStatus } from '@/components/DataStatus';
 /**
  * GreenGuard Dashboard — Page 4: Reports
  */
@@ -113,6 +114,7 @@ export default function ReportsScreen({ onNavigate }: Props) {
       <View style={S.main}>
         <DashboardTopNav title="Reports" subtitle="Welcome back, Mark" />
 
+        <DataStatus demo error={false} />
         <ScrollView style={S.scroll} contentContainerStyle={S.content} showsVerticalScrollIndicator={false}>
           {/* ── Quick Report ────────────────────────────────────────── */}
           <SectionCard

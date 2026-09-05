@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "test": "node --require ./tests/register.cjs --test tests/*.test.cjs"
   },
   "dependencies": {
     "@types/cors": "^2.8.17",

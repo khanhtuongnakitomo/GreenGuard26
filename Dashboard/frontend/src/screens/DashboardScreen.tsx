@@ -2,27 +2,26 @@
  * GreenGuard Dashboard — Page 1: Dashboard
  * Dynamic 3-Class System & Real-Time Live Feed Binding
  */
-import React, { memo, useEffect, useState } from 'react';
+import React, { memo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Dimensions, ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BarChart, PieChart } from 'react-native-gifted-charts';
 import { AlertTriangle, WifiOff, Wrench, Activity, Zap, CheckCircle2 } from 'lucide-react-native';
 
-import { DashboardSidebar } from '@/components/DashboardSidebar';
+import { DashboardSidebar, SIDEBAR_WIDTH } from '@/components/DashboardSidebar';
 import { DashboardTopNav } from '@/components/DashboardTopNav';
 import { KPICard } from '@/components/KPICard';
 import { SectionCard } from '@/components/SectionCard';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Colors } from '@/theme/colors';
 import { DashboardRoute, KPICardData } from '@/types/dashboard.types';
-import { fetchOverview, fetchLiveFeed, fetchMachines, OverviewData, LiveFeedItem } from '@/services/api';
-
-const { width: SW } = Dimensions.get('window');
-const SIDEBAR_W = 240;
-const CONTENT_W = SW - SIDEBAR_W;
+import { DEMO_MODE } from '@/services/api';
+import { useQuery } from '@tanstack/react-query';
+import { dashboardQuery } from '@/services/dashboardQueries';
+import { DataStatus } from '@/components/DataStatus';
 
 interface Props {
   onNavigate: (route: DashboardRoute) => void;
@@ -33,7 +32,7 @@ const WastePie = memo(({ waste }: { waste: { pet_clean: number; pet_bad: number;
   const total = Math.max(1, waste.pet_clean + waste.pet_bad + waste.aluminum);
   const cleanPct = Math.round((waste.pet_clean / total) * 100);
   const badPct = Math.round((waste.pet_bad / total) * 100);
-  const alumPct = Math.max(0, 100 - cleanPct - badPct);
+  const alumPct = waste.pet_clean + waste.pet_bad + waste.aluminum === 0 ? 0 : Math.max(0, 100 - cleanPct - badPct);
 
   const slices = [
     { label: 'PET Sạch', percentage: cleanPct, count: waste.pet_clean, color: '#10B981' },
@@ -51,6 +50,7 @@ const WastePie = memo(({ waste }: { waste: { pet_clean: number; pet_bad: number;
   return (
     <View style={pieStyles.wrap}>
       <View style={pieStyles.chartWrap}>
+        {waste.pet_clean + waste.pet_bad + waste.aluminum > 0 ? (
         <PieChart
           donut
           innerRadius={32}
@@ -63,6 +63,7 @@ const WastePie = memo(({ waste }: { waste: { pet_clean: number; pet_bad: number;
             </View>
           )}
         />
+        ) : <Text style={{ color: Colors.textMuted, fontSize: 11 }}>Chưa có dữ liệu</Text>}
       </View>
       {/* Legend */}
       <View style={pieStyles.legend}>
@@ -126,37 +127,30 @@ const fillStyles = StyleSheet.create({
 
 // ─── Main Dashboard Screen ────────────────────────────────────────────────────
 export default function DashboardScreen({ onNavigate }: Props) {
-  const [overview, setOverview] = useState<OverviewData | null>(null);
-  const [liveFeed, setLiveFeed] = useState<LiveFeedItem[]>([]);
-  const [machines, setMachines] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const loadData = async () => {
-    try {
-      const [ov, lf, mc] = await Promise.all([
-        fetchOverview('today').catch(() => null),
-        fetchLiveFeed(30).catch(() => []),
-        fetchMachines().catch(() => [])
-      ]);
-      if (ov) setOverview(ov);
-      if (lf) setLiveFeed(lf);
-      if (mc) setMachines(mc);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 3500);
-    return () => clearInterval(interval);
-  }, []);
+  const { width: windowWidth } = useWindowDimensions();
+  const isCompact = windowWidth < 900;
+  const contentPadding = isCompact ? 14 : 22;
+  const contentWidth = Math.max(240, windowWidth - SIDEBAR_WIDTH - contentPadding * 2);
+  const chartWidth = isCompact
+    ? Math.max(220, contentWidth - 36)
+    : Math.max(360, Math.round(contentWidth * 0.64 - 90));
+  const snapshot = useQuery(dashboardQuery());
+  if (!snapshot.data) return (
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <DashboardSidebar activeRoute="dashboard" onNavigate={onNavigate} />
+      <View style={styles.main}>
+        <DashboardTopNav title="GreenGuard AI Dashboard" subtitle="Dữ liệu trực tiếp" />
+        <DataStatus demo={false} error={snapshot.isError} />
+      </View>
+    </SafeAreaView>
+  );
+  const { overview, liveFeed, machines } = snapshot.data;
 
   const kpis: KPICardData[] = [
     {
       id: 'k1',
       label: 'Tổng thu nhận hôm nay',
-      value: overview ? `${overview.todayDetections}` : '26',
+      value: `${overview.todayDetections}`,
       unit: 'items',
       subLabel: `${overview?.wasteBreakdown?.pet_clean ?? 0} sạch, ${overview?.wasteBreakdown?.pet_bad ?? 0} nắp/nhãn`,
       trend: 'up',
@@ -167,9 +161,9 @@ export default function DashboardScreen({ onNavigate }: Props) {
     {
       id: 'k2',
       label: 'Độ chuẩn phân loại (Purity)',
-      value: overview ? `${overview.purityRate}%` : '88.5%',
+      value: overview.purityRate == null ? '—' : `${overview.purityRate}%`,
       subLabel: 'Mục tiêu: > 90% PET sạch',
-      trend: overview && overview.purityRate >= 90 ? 'up' : 'down',
+      trend: overview.purityRate == null ? undefined : overview.purityRate >= 90 ? 'up' : 'down',
       iconType: 'accuracy',
       iconColor: '#10B981',
       iconBg: '#ECFDF5',
@@ -177,7 +171,7 @@ export default function DashboardScreen({ onNavigate }: Props) {
     {
       id: 'k3',
       label: 'Smart Bins Online',
-      value: overview ? overview.binsOnline : '1/1',
+      value: overview.binsOnline,
       subLabel: `${machines.length} máy cấu hình`,
       iconType: 'wifi',
       iconColor: Colors.kpiGreen,
@@ -186,8 +180,8 @@ export default function DashboardScreen({ onNavigate }: Props) {
     {
       id: 'k4',
       label: 'AI FPS & Latency',
-      value: overview ? `${overview.avgFps} FPS` : '30.2 FPS',
-      subLabel: 'Độ trễ ~35ms (RTX Jetson)',
+      value: overview.avgFps == null ? '—' : `${overview.avgFps} FPS`,
+      subLabel: DEMO_MODE ? 'Độ trễ ~35ms (RTX Jetson)' : 'Độ trễ: xem trang Analytics',
       trend: 'up',
       iconType: 'bar',
       iconColor: Colors.kpiBlue,
@@ -195,18 +189,9 @@ export default function DashboardScreen({ onNavigate }: Props) {
     },
   ];
 
-  const trendData = overview?.classificationTrend?.length
-    ? overview.classificationTrend.map((p) => ({ value: p.value, label: p.label, frontColor: Colors.chartBar }))
-    : [
-        { label: '08:00', value: 12 },
-        { label: '10:00', value: 24 },
-        { label: '12:00', value: 38 },
-        { label: '14:00', value: 28 },
-        { label: '16:00', value: 45 },
-        { label: '18:00', value: 50 },
-      ].map((p) => ({ ...p, frontColor: Colors.chartBar }));
+  const trendData = overview.classificationTrend.map((p) => ({ value: p.value, label: p.label, frontColor: Colors.chartBar }));
 
-  const waste = overview?.wasteBreakdown ?? { pet_clean: 21, pet_bad: 3, aluminum: 1 };
+  const waste = overview.wasteBreakdown;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -214,22 +199,31 @@ export default function DashboardScreen({ onNavigate }: Props) {
 
       {/* Content area */}
       <View style={styles.main}>
-        <DashboardTopNav title="GreenGuard AI Dashboard" subtitle="Hệ thống giám sát trạm tái chế thông minh (3-Class Telemetry)" />
+        <DashboardTopNav
+          title="GreenGuard AI Dashboard"
+          subtitle={`Hệ thống giám sát trạm tái chế thông minh (3-Class Telemetry)${DEMO_MODE ? ' · PRESENTATION MODE' : ''}`}
+        />
 
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {!DEMO_MODE && <DataStatus demo={false} error={snapshot.isError} updatedAt={snapshot.dataUpdatedAt} />}
+
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[styles.content, isCompact && styles.contentCompact]}
+          showsVerticalScrollIndicator={false}
+        >
           {/* ── KPI Row ───────────────────────────────────────────────── */}
-          <View style={styles.kpiRow}>
+          <View style={[styles.kpiRow, isCompact && styles.kpiRowCompact]}>
             {kpis.map((kpi) => (
-              <KPICard key={kpi.id} data={kpi} />
+              <KPICard key={kpi.id} data={kpi} style={isCompact ? styles.kpiCardCompact : undefined} />
             ))}
           </View>
 
           {/* ── Row 2: Classification Trend + Waste Breakdown ─────────── */}
-          <View style={styles.row2}>
+          <View style={[styles.row2, isCompact && styles.rowStacked]}>
             {/* Classification Trend */}
             <SectionCard
               title="Xu hướng nhận diện hôm nay"
-              style={styles.trendCard}
+              style={[styles.trendCard, isCompact && styles.compactCard]}
               rightElement={
                 <View style={styles.filterRow}>
                   <TouchableOpacity style={styles.filterBtnActive}>
@@ -251,39 +245,39 @@ export default function DashboardScreen({ onNavigate }: Props) {
                 yAxisTextStyle={styles.axisText}
                 xAxisLabelTextStyle={styles.axisText}
                 noOfSections={4}
-                height={120}
+                height={160}
                 barBorderRadius={3}
                 hideRules={false}
                 rulesColor={Colors.dashboardBorder}
                 rulesThickness={1}
                 initialSpacing={10}
                 endSpacing={10}
-                width={CONTENT_W - 30 - 28 - CONTENT_W * 0.36 - 32}
+                width={chartWidth}
               />
             </SectionCard>
 
             {/* Right column: Compartment + Waste Pie */}
-            <View style={styles.rightCol}>
-              <SectionCard title="Dung lượng ngăn chứa (Bins)" style={styles.compartmentCard}>
+            <View style={[styles.rightCol, isCompact && styles.rightColCompact]}>
+              <SectionCard title={DEMO_MODE ? "Dung lượng ngăn chứa (Bins)" : "Số lượng hôm nay / mốc 30 items"} style={[styles.compartmentCard, isCompact && styles.compactCard]}>
                 <CompartmentBar label="PET Sạch (10đ)" value={Math.min(100, Math.round((waste.pet_clean / 30) * 100))} color="#10B981" />
                 <CompartmentBar label="PET Có nắp (5đ)" value={Math.min(100, Math.round((waste.pet_bad / 30) * 100))} color="#F59E0B" />
                 <CompartmentBar label="Lon nhôm (8đ)" value={Math.min(100, Math.round((waste.aluminum / 30) * 100))} color="#06B6D4" />
               </SectionCard>
 
-              <SectionCard title="Phân bổ vật liệu 3 lớp" style={styles.pieCard}>
+              <SectionCard title="Phân bổ vật liệu 3 lớp" style={[styles.pieCard, isCompact && styles.compactCard]}>
                 <WastePie waste={waste} />
               </SectionCard>
             </View>
           </View>
 
           {/* ── Row 3: Live Telemetry Feed + Smart Bins ──────── */}
-          <View style={styles.row3}>
+          <View style={[styles.row3, isCompact && styles.rowStacked]}>
             {/* Live Feed */}
-            <SectionCard title="Luồng sự kiện AI trực tiếp (Live Stream)" style={styles.tableCard} noPadding>
+            <SectionCard title="Luồng sự kiện AI trực tiếp (Live Stream)" style={[styles.tableCard, isCompact && styles.compactCard]} noPadding>
               {/* Table header */}
               <View style={[styles.tableRow, styles.tableHeader]}>
-                {['Loại sự kiện', 'Vật thể / Người dùng', 'Thời gian', 'Độ tin cậy / Điểm'].map((h) => (
-                  <Text key={h} style={[styles.tableCell, styles.tableHeaderText]}>
+                {(isCompact ? ['Sự kiện', 'Đối tượng · giờ', 'Tin cậy'] : ['Sự kiện', 'Đối tượng', 'Giờ', 'Tin cậy / Điểm']).map((h) => (
+                  <Text key={h} style={[styles.tableCell, styles.tableHeaderText, isCompact && styles.tableHeaderCompact]}>
                     {h}
                   </Text>
                 ))}
@@ -315,18 +309,29 @@ export default function DashboardScreen({ onNavigate }: Props) {
                       </Text>
                     </View>
 
-                    <Text style={[styles.tableCell, styles.tableCellText]}>
-                      {isClaim ? `${feed.userName}` : `Trạm ${feed.machineCode}`}
-                    </Text>
-
-                    <Text style={[styles.tableCell, styles.tableCellText, styles.textSm]}>
-                      {timeStr}
-                    </Text>
+                    {isCompact ? (
+                      <View style={[styles.tableCell, styles.compactObjectCell]}>
+                        <Text style={[styles.tableCellText, styles.compactObjectText]} numberOfLines={1}>
+                          {isClaim ? `${feed.userName}` : `Trạm ${feed.machineCode}`}
+                        </Text>
+                        <Text style={styles.textSm}>{timeStr}</Text>
+                      </View>
+                    ) : (
+                      <>
+                        <Text style={[styles.tableCell, styles.tableCellText]}>
+                          {isClaim ? `${feed.userName}` : `Trạm ${feed.machineCode}`}
+                        </Text>
+                        <Text style={[styles.tableCell, styles.tableCellText, styles.textSm]}>
+                          {timeStr}
+                        </Text>
+                      </>
+                    )}
 
                     <Text
                       style={[
                         styles.tableCell,
                         styles.tableCellBold,
+                        isCompact && styles.compactConfidence,
                         { color: isClaim ? '#8B5CF6' : feed.confidence && feed.confidence >= 0.85 ? '#10B981' : '#F59E0B' },
                       ]}
                     >
@@ -338,7 +343,7 @@ export default function DashboardScreen({ onNavigate }: Props) {
             </SectionCard>
 
             {/* Smart Bin Status */}
-            <SectionCard title="Trạng thái máy phân loại (Smart Bins)" style={styles.binCard} noPadding>
+            <SectionCard title="Trạng thái máy phân loại (Smart Bins)" style={[styles.binCard, isCompact && styles.compactCard]} noPadding>
               {machines.map((m, i) => (
                 <View key={m._id || i} style={[styles.tableRow, i % 2 === 1 && styles.tableRowAlt]}>
                   <Text style={[styles.tableCell, styles.tableCellBold, { flex: 0.9 }]}>{m.machineCode || '0001'}</Text>
@@ -346,10 +351,10 @@ export default function DashboardScreen({ onNavigate }: Props) {
                     <StatusBadge status={m.status === 'online' ? 'Online' : 'Offline'} />
                   </View>
                   <View style={[styles.tableCell, styles.row, { flex: 1.3, gap: 5 }]}>
-                    <FillBar value={m.bins?.[0]?.capacityPercent ?? 45} />
+                    {m.bins?.[0]?.capacityPercent != null || DEMO_MODE ? <FillBar value={m.bins?.[0]?.capacityPercent ?? 45} /> : <Text style={styles.textSm}>—</Text>}
                   </View>
                   <Text style={[styles.tableCell, styles.tableCellText, { flex: 0.8, textAlign: 'right' }]}>
-                    {m.lastSeenAt ? 'Vừa xong' : 'Online'}
+                    {DEMO_MODE ? (m.lastSeenAt ? 'Vừa xong' : 'Online') : m.lastHeartbeatAt ? new Date(m.lastHeartbeatAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '—'}
                   </Text>
                 </View>
               ))}
@@ -365,22 +370,28 @@ export default function DashboardScreen({ onNavigate }: Props) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.dashboardBg },
-  main: { flex: 1, marginLeft: SIDEBAR_W },
+  main: { flex: 1, marginLeft: SIDEBAR_WIDTH },
   scroll: { flex: 1 },
-  content: { padding: 16, gap: 12 },
+  content: { padding: 22, gap: 16 },
+  contentCompact: { padding: 14, gap: 12 },
 
   // KPI
-  kpiRow: { flexDirection: 'row', gap: 10 },
+  kpiRow: { flexDirection: 'row', gap: 14 },
+  kpiRowCompact: { flexWrap: 'wrap', gap: 10 },
+  kpiCardCompact: { flexBasis: '48%', maxWidth: '48%' },
 
   // Row 2
-  row2: { flexDirection: 'row', gap: 10 },
+  row2: { flexDirection: 'row', gap: 14 },
+  rowStacked: { flexDirection: 'column', gap: 12 },
   trendCard: { flex: 1.6 },
-  rightCol: { flex: 1, gap: 10 },
+  compactCard: { width: '100%', flexGrow: 0, flexShrink: 1, flexBasis: 'auto' },
+  rightCol: { flex: 1, gap: 14 },
+  rightColCompact: { width: '100%', flexGrow: 0, flexShrink: 1, flexBasis: 'auto', gap: 12 },
   compartmentCard: { flex: 1 },
   pieCard: {},
 
   // Row 3
-  row3: { flexDirection: 'row', gap: 10 },
+  row3: { flexDirection: 'row', gap: 14 },
   tableCard: { flex: 1.3 },
   binCard: { flex: 1 },
 
@@ -388,23 +399,27 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
     borderBottomWidth: 1,
     borderBottomColor: Colors.tableBorder,
   },
   tableHeader: { backgroundColor: Colors.tableHeader },
   tableRowAlt: { backgroundColor: Colors.tableRowAlt },
   tableCell: { flex: 1 },
-  tableHeaderText: { fontSize: 11, fontWeight: '600' as const, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
-  tableCellText: { fontSize: 11, color: Colors.textSecondary },
-  tableCellBold: { fontSize: 11, fontWeight: '600' as const, color: Colors.textPrimary },
-  textSm: { fontSize: 10, color: Colors.textMuted },
+  tableHeaderText: { fontSize: 11, fontWeight: '600' as const, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, flexShrink: 1 },
+  tableHeaderCompact: { fontSize: 10, letterSpacing: 0.3 },
+  tableCellText: { fontSize: 12, color: Colors.textSecondary, flexShrink: 1 },
+  tableCellBold: { fontSize: 12, fontWeight: '600' as const, color: Colors.textPrimary, flexShrink: 1 },
+  compactObjectCell: { flex: 1.25, minWidth: 0 },
+  compactObjectText: { maxWidth: '100%' },
+  compactConfidence: { flex: 0.75 },
+  textSm: { fontSize: 11, color: Colors.textMuted },
   typeDot: { width: 7, height: 7, borderRadius: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 
   // Charts
-  axisText: { fontSize: 10, color: Colors.textMuted },
+  axisText: { fontSize: 11, color: Colors.textMuted },
 
   // Misc
   filterRow: { flexDirection: 'row', gap: 4 },
