@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -60,6 +60,14 @@ def _split_groups(records: list[dict[str, Any]], seed: int, fractions: tuple[flo
     groups = sorted({str(record["source_group"]) for record in records})
     if len(groups) < 3:
         raise ValueError("at least three independent source groups are required for grouped train/val/test")
+    group_classes: dict[str, set[int]] = defaultdict(set)
+    group_sizes: dict[str, int] = defaultdict(int)
+    group_class_counts: dict[str, Counter] = defaultdict(Counter)
+    for record in records:
+        group = str(record["source_group"])
+        group_classes[group].add(int(record["class_id"]))
+        group_sizes[group] += 1
+        group_class_counts[group][int(record["class_id"])] += 1
     rng = seed_everything(seed)
     rng.shuffle(groups)
     train_fraction, val_fraction, _ = fractions
@@ -68,13 +76,60 @@ def _split_groups(records: list[dict[str, Any]], seed: int, fractions: tuple[flo
     if train_count + val_count >= len(groups):
         val_count = 1
         train_count = len(groups) - 2
-    result = {}
-    for group in groups[:train_count]:
-        result[group] = "train"
-    for group in groups[train_count:train_count + val_count]:
-        result[group] = "val"
-    for group in groups[train_count + val_count:]:
-        result[group] = "test"
+    result: dict[str, str] = {}
+
+    # Put the largest independent can groups into train/validation/test in that
+    # order. This prevents a single can-heavy legacy source from landing only
+    # in validation and leaving training with almost no can examples.
+    can_groups = sorted((group for group in groups if 0 in group_classes[group]), key=lambda group: group_sizes[group], reverse=True)
+    forced = min(3, len(can_groups))
+    for split, group in zip(("train", "val", "test"), can_groups[:forced]):
+        result[group] = split
+    pet_only_groups = sorted(
+        (group for group in groups if 1 in group_classes[group] and group not in result),
+        key=lambda group: group_sizes[group],
+        reverse=True,
+    )
+    test_pet_count = sum(group_class_counts[group][1] for group, split in result.items() if split == "test")
+    val_pet_count = sum(group_class_counts[group][1] for group, split in result.items() if split == "val")
+    if pet_only_groups and test_pet_count < 20:
+        result[pet_only_groups.pop(0)] = "test"
+    if pet_only_groups and val_pet_count < 20:
+        result[pet_only_groups.pop(0)] = "val"
+    remaining = [group for group in groups if group not in result]
+    rng.shuffle(remaining)
+    for group in remaining:
+        train_now = sum(split == "train" for split in result.values())
+        val_now = sum(split == "val" for split in result.values())
+        if train_now < train_count:
+            result[group] = "train"
+        elif val_now < val_count:
+            result[group] = "val"
+        else:
+            result[group] = "test"
+
+    # Repair the assignment so every split contains both target classes when
+    # the source groups make that possible.
+    for target_split in ("train", "val", "test"):
+        for class_id in (0, 1):
+            present = {group for group, split in result.items() if split == target_split and class_id in group_classes[group]}
+            if present:
+                continue
+            candidates = sorted(
+                (group for group in groups if class_id in group_classes[group] and result[group] != target_split),
+                key=lambda group: group_sizes[group],
+            )
+            moved = False
+            for candidate in candidates:
+                donor = result[candidate]
+                donor_groups = [group for group, split in result.items() if split == donor and group != candidate]
+                donor_still_has_class = any(class_id in group_classes[group] for group in donor_groups)
+                if donor_still_has_class or len(donor_groups) == 0:
+                    result[candidate] = target_split
+                    moved = True
+                    break
+            if not moved:
+                raise ValueError(f"unable to balance class {class_id} into {target_split} without breaking grouped split")
     return result
 
 
@@ -129,9 +184,11 @@ def _write_sample(out_root: Path, split: str, stem: str, image_path: Path, label
     atomic_text_dump(label_out, "\n".join(lines) + "\n")
 
 
-def prepare(config: dict, run_name: str) -> dict[str, Any]:
+def prepare(config: dict, run_name: str, reuse_existing: bool = False) -> dict[str, Any]:
     root = model_root()
-    manifest_path = root / config["source"]["reviewed_annotations"]
+    reviewed_path = root / config["source"]["reviewed_annotations"]
+    derived_path = root / config["source"].get("auto_derived_manifest", "dataset/annotations/m1_rvm_derived.jsonl")
+    manifest_path = reviewed_path if reviewed_path.exists() else derived_path
     output_root = root / config["data"]["generated_root"] / run_name
     report_root = root / "logs" / "rvm" / run_name
     report_root.mkdir(parents=True, exist_ok=True)
@@ -139,15 +196,17 @@ def prepare(config: dict, run_name: str) -> dict[str, Any]:
     records = _read_review_manifest(manifest_path)
     if not records:
         report["blocking_reasons"] = [
-            f"Reviewer manifest is missing or empty: {manifest_path}",
-            "Do not infer whole-object boxes from Model 2 cap/label/ring/can OBB labels.",
+            f"No prepared two-class manifest is available: {manifest_path}",
+            "Run derive_m1_rvm_annotations.py first; it preserves source labels and records derivation provenance.",
         ]
         atomic_json_dump(report_root / "prepare_report.json", report)
         return report
 
     class_groups = defaultdict(set)
+    class_records = defaultdict(int)
     for record in records:
         class_groups[int(record["class_id"])].add(str(record["source_group"]))
+        class_records[int(record["class_id"])] += 1
     min_groups = int(config["data"]["minimum_independent_groups_per_class"])
     underrepresented = {CLASS_NAMES[class_id]: len(groups) for class_id, groups in class_groups.items() if len(groups) < min_groups}
     if underrepresented:
@@ -170,7 +229,13 @@ def prepare(config: dict, run_name: str) -> dict[str, Any]:
     for record in records:
         grouped[str(record["image"])].append(record)
     if output_root.exists():
-        raise RuntimeError(f"refusing to overwrite existing generated dataset: {output_root}")
+        if not reuse_existing or not (output_root / "dataset.yaml").exists():
+            raise RuntimeError(f"refusing to overwrite existing generated dataset: {output_root}")
+        existing_report = report_root / "prepare_report.json"
+        report = json.loads(existing_report.read_text(encoding="utf-8")) if existing_report.exists() else {"status": "READY"}
+        report.update({"run_id": run_name, "status": "READY", "reused": True, "generated_root": str(output_root)})
+        atomic_json_dump(existing_report, report)
+        return report
     output_root.mkdir(parents=True)
     max_variants = int(config["data"]["max_direct_variants_per_original"])
     counts = {"train": 0, "val": 0, "test": 0}
@@ -183,7 +248,14 @@ def prepare(config: dict, run_name: str) -> dict[str, Any]:
         _write_sample(output_root, split, stem, image_path, labels, 0, int(config["run"]["seed"]))
         counts[split] += 1
         if split == "train":
-            for variant in range(1, max_variants + 1):
+            dataset_kind = str(labels[0].get("dataset_kind", "machine"))
+            if dataset_kind == "machine":
+                variant_limit = max_variants
+            elif any(int(record["class_id"]) == 0 for record in labels):
+                variant_limit = int(config["data"].get("max_legacy_can_variants_per_original", 8))
+            else:
+                variant_limit = int(config["data"].get("max_legacy_variants_per_original", 2))
+            for variant in range(1, variant_limit + 1):
                 _write_sample(output_root, split, f"{stem}_aug{variant:02d}", image_path, labels, variant, int(config["augmentation"]["seed"]))
                 counts[split] += 1
 
@@ -200,7 +272,8 @@ def prepare(config: dict, run_name: str) -> dict[str, Any]:
         "reviewed_manifest": str(manifest_path),
         "group_split": group_split,
         "image_counts": counts,
-        "class_counts": {CLASS_NAMES[class_id]: len(items) for class_id, items in class_groups.items()},
+        "class_counts": {CLASS_NAMES[class_id]: class_records[class_id] for class_id in sorted(class_records)},
+        "independent_groups_by_class": {CLASS_NAMES[class_id]: len(groups) for class_id, groups in class_groups.items()},
         "generated_root": str(output_root),
         "augmentation_policy": "photometric-only, direct variants only, no val/test augmentation",
     })
@@ -212,10 +285,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path)
     parser.add_argument("--run-id")
+    parser.add_argument("--reuse-existing", action="store_true")
     args = parser.parse_args()
     config = load_config(args.config)
     name = args.run_id or run_id(config)
-    report = prepare(config, name)
+    report = prepare(config, name, reuse_existing=args.reuse_existing)
     print(f"PREPARE_STATUS={report['status']}")
     print(f"PREPARE_REPORT={model_root() / 'logs' / 'rvm' / name / 'prepare_report.json'}")
     return 0 if report["status"] == "READY" else 3

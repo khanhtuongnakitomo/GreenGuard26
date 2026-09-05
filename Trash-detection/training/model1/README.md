@@ -1,9 +1,9 @@
 # Model 1 training tree and active PC contract
 
-The active Windows PC workflow uses the packaged three-class HBB detector at
-`pc-demo/models/m1_detect_640.onnx` (`metal_can`, `pet_bottle`, `pp_cup`). It
-filters `pp_cup`, applies the 2% area rule, and requires 0.65 confidence before
-publishing a Model 1 result. The live entrypoint is `full_demo.bat` at the
+The active Windows PC workflow uses the packaged HBB detector at
+`pc-demo/models/m1_detect_640.onnx`. The public workflow exposes only
+`metal_can` and `pet_bottle`; PP cups are never forwarded to Model 2 or the
+machine-control path. The live entrypoint is `full_demo.bat` at the
 `Trash-detection` root.
 
 The files below are retained as a legacy/research OBB detector plus crop
@@ -142,16 +142,19 @@ Pipeline steps:
 
 The guarded RVM workflow is defined in
 `docs/MODEL1_RVM_FINETUNE_PLAN.md`. It is separate from the legacy OBB trainer
-above and starts from `imported/bki_dt3_three_class/best.pt`. The class contract
-is exactly `metal_can`, `pet_bottle`, `pp_cup` with YOLO HBB labels.
+above and starts from `imported/bki_dt3_three_class/best.pt`. The candidate
+head is rebuilt for exactly two YOLO HBB classes: `metal_can` (ID 0) and
+`pet_bottle` (ID 1). PP cups are excluded from candidate labels and outputs.
 
 The live-machine folder is treated as immutable evidence. Its current labels
-are Model 2 OBB part labels (9 fields, including cap/label/ring/can rows), so
-the preparation gate intentionally refuses to train until a reviewer creates
-whole-object HBB annotations. Do not convert those rows by guessing or by
-unioning parts. The required reviewer manifest is
-`dataset/annotations/m1_rvm_reviewed.jsonl`; its schema and class mapping are
-documented in the plan.
+are Model 2 OBB part labels (9 fields, including cap/label/ring/can rows).
+The workflow derives conservative candidate HBB boxes without editing those
+source labels: can OBBs are converted directly, PET part boxes are unioned
+only when there is enough evidence, and an existing two-class detector may
+provide a high-confidence fallback. Every derived row records provenance in
+`dataset/annotations/m1_rvm_derived.jsonl`; it remains subject to holdout and
+manual-review gates. A reviewer manifest at
+`dataset/annotations/m1_rvm_reviewed.jsonl` overrides the derived manifest.
 
 Run the stages in this order after reviewed annotations exist:
 

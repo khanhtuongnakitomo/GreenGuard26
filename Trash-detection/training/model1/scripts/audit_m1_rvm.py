@@ -95,7 +95,7 @@ def audit(config: dict, run_name: str) -> dict:
             archives.append({"path": relative_to_model(archive), "sha256": sha256_file(archive), "error": "bad_zip"})
 
     groups = sorted({item["source_group"] for item in inventory})
-    status = "READY_FOR_REVIEW" if valid_hbb else "NEEDS_DATA"
+    status = "READY_FOR_REVIEW" if valid_hbb else ("READY_FOR_DERIVATION" if images else "NEEDS_DATA")
     report = {
         "schema": "m1-rvm-audit-v1",
         "run_id": run_name,
@@ -112,9 +112,9 @@ def audit(config: dict, run_name: str) -> dict:
         "archives": archives,
         "inventory": inventory,
         "blocking_reasons": [] if valid_hbb else [
-            "No reviewed Model 1 whole-object HBB annotations were found.",
-            "The live labels are expected to be Model 2 OBB part labels and must not be reused as whole-object boxes.",
-            "Add reviewer-approved annotations with class IDs 0=metal_can, 1=pet_bottle, 2=pp_cup before preparation.",
+            "The live labels are OBB part annotations rather than the final two-class HBB contract.",
+            "Run the provenance-preserving derivation stage; it may use can OBBs, conservative PET-part unions, and high-confidence fallback boxes.",
+            "Derived boxes remain candidate evidence and must pass holdout/manual review before promotion.",
         ],
     }
     atomic_json_dump(output_root / "audit_report.json", report)

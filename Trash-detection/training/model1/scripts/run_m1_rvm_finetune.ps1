@@ -24,7 +24,8 @@ function Invoke-Stage([string]$Script, [string[]]$Arguments) {
 Invoke-Stage 'audit_m1_rvm.py' @()
 if ($AuditOnly) { exit 0 }
 
-Invoke-Stage 'prepare_m1_rvm.py' @()
+Invoke-Stage 'derive_m1_rvm_annotations.py' @()
+Invoke-Stage 'prepare_m1_rvm.py' @('--reuse-existing')
 if ($PrepareOnly) { exit 0 }
 
 if (-not ($Smoke -or $Overnight)) { throw 'Choose -AuditOnly, -PrepareOnly, -Smoke, or -Overnight.' }
@@ -36,7 +37,9 @@ if ($Overnight) {
     $Stdout = Join-Path $ModelRoot "logs\rvm\$RunId\train.stdout.log"
     $Stderr = Join-Path $ModelRoot "logs\rvm\$RunId\train.stderr.log"
     New-Item -ItemType Directory -Force -Path (Split-Path $Stdout) | Out-Null
-    $Train = Start-Process -FilePath $Python -ArgumentList @((Join-Path $PSScriptRoot 'train_m1_rvm.py'), '--config', $Config, '--run-id', $RunId) + $TrainArguments -PassThru -RedirectStandardOutput $Stdout -RedirectStandardError $Stderr
+    $TrainArgList = @((Join-Path $PSScriptRoot 'train_m1_rvm.py'), '--config', $Config, '--run-id', $RunId)
+    $TrainArgList += $TrainArguments
+    $Train = Start-Process -FilePath $Python -ArgumentList $TrainArgList -PassThru -RedirectStandardOutput $Stdout -RedirectStandardError $Stderr
     $WatcherArguments = @((Join-Path $PSScriptRoot 'watch_m1_rvm.py'), '--config', $Config, '--run-id', $RunId, '--pid', [string]$Train.Id, '--max-hours', [string]$MaxHours)
     if ($KillOnHang) { $WatcherArguments += '--kill-on-hang' }
     & $Python @WatcherArguments

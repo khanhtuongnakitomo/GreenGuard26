@@ -15,7 +15,7 @@ import yaml
 
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp"}
-CLASS_NAMES = {0: "metal_can", 1: "pet_bottle", 2: "pp_cup"}
+CLASS_NAMES = {0: "metal_can", 1: "pet_bottle"}
 
 
 def repo_root() -> Path:
@@ -41,7 +41,8 @@ def run_id(config: dict[str, Any]) -> str:
     from datetime import datetime
 
     run = config["run"]
-    return f"{run['id_prefix']}_{datetime.now().strftime(run['date_format'])}_seed{run['seed']}_n640"
+    suffix = f"_{run['id_suffix']}" if run.get("id_suffix") else ""
+    return f"{run['id_prefix']}_{datetime.now().strftime(run['date_format'])}_seed{run['seed']}_n640{suffix}"
 
 
 def sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:

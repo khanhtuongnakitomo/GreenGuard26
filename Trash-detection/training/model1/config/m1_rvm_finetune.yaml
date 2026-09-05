@@ -1,5 +1,6 @@
 run:
   id_prefix: m1rvm
+  id_suffix: two_class_v7
   date_format: "%Y%m%d"
   seed: 42
   image_size: 640
@@ -10,13 +11,13 @@ classes:
   names:
     0: metal_can
     1: pet_bottle
-    2: pp_cup
 
 source:
   live_root: dataset/incoming/live-machine-dataset
   legacy_roots:
     - dataset
   reviewed_annotations: dataset/annotations/m1_rvm_reviewed.jsonl
+  auto_derived_manifest: dataset/annotations/m1_rvm_derived.jsonl
   image_extensions: [.jpg, .jpeg, .png, .bmp]
   label_extensions: [.txt]
   required_label_format: hbb_yolo_5
@@ -27,10 +28,13 @@ data:
   train_fraction: 0.70
   validation_fraction: 0.15
   test_fraction: 0.15
-  max_direct_variants_per_original: 6
+  max_direct_variants_per_original: 10
+  max_legacy_variants_per_original: 2
+  max_legacy_can_variants_per_original: 8
   machine_sampling_fraction: 0.70
   legacy_sampling_fraction: 0.30
-  minimum_independent_groups_per_class: 3
+  max_legacy_images: 600
+  minimum_independent_groups_per_class: 2
   minimum_bright_dim_groups: 2
   empty_machine_frames: 100
 

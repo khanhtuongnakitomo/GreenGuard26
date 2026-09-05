@@ -35,7 +35,7 @@ def test_review_manifest_requires_labeled_boxes() -> None:
 
 
 def test_grouped_split_never_splits_a_source_group() -> None:
-    records = [{"source_group": f"g{i}"} for i in range(9)]
+    records = [{"source_group": f"g{i}", "class_id": i % 2} for i in range(9)]
     split = _split_groups(records, seed=42, fractions=(0.7, 0.15, 0.15))
     assert set(split) == {f"g{i}" for i in range(9)}
     assert len(set(split.values())) == 3
@@ -53,7 +53,7 @@ def test_photometric_augmentation_is_deterministic_and_keeps_shape() -> None:
 def test_audit_current_live_source_stops_before_training() -> None:
     config = load_config()
     report = audit(config, "pytest_m1_rvm_audit")
-    assert report["status"] == "NEEDS_DATA"
+    assert report["status"] == "READY_FOR_DERIVATION"
     assert report["images_with_valid_hbb_labels"] == 0
     assert "obb_yolo_9" in report["format_counts"]
 
@@ -61,11 +61,11 @@ def test_audit_current_live_source_stops_before_training() -> None:
 def test_evaluation_is_fail_closed_without_all_rvm_gates() -> None:
     config = load_config()
     baseline = {
-        "per_class": {name: {"precision": 0.90, "recall": 0.90} for name in ("metal_can", "pet_bottle", "pp_cup")},
+        "per_class": {name: {"precision": 0.90, "recall": 0.90} for name in ("metal_can", "pet_bottle")},
         "macro": {"f1": 0.90},
     }
     candidate = {
-        "per_class": {name: {"precision": 0.96, "recall": 0.96} for name in ("metal_can", "pet_bottle", "pp_cup")},
+        "per_class": {name: {"precision": 0.96, "recall": 0.96} for name in ("metal_can", "pet_bottle")},
         "macro": {"f1": 0.96},
         "gates": {},
     }
