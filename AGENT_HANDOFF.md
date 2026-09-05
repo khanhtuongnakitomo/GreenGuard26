@@ -16,16 +16,24 @@
 
 Root wrappers: `Trash-detection/setup.ps1`, `Trash-detection/run_demo.bat` → `pc-demo/`.
 
-## Locked product behavior (6dbd33a)
+## Current runtime behavior (verified from source/configuration, September 2026)
 
 ```text
-frame → M1 det@416 → top-1 (min area 0.02) → crop+10% → cls@224
-  → can: show aluminum, skip M2
-  → pet: M2 full frame → centers in PET poly → one per class
+frame → single-stage M1 HBB detector → ignore pp_cup → top-1 visible object
+  → can: display aluminum, skip M2
+  → pet: M2 full frame → centers inside PET polygon → one per class
          warmup 0.5s → vote 4/7 → hold 1.5s → ACCEPT/REJECT
 ```
 
-No QR, points, backend, counting, or online learning in either runtime.
+PC uses M1 640 with a 0.05 candidate floor and a separate 0.65 decision floor.
+The inspected Nano B01 runtime uses M1 416 and a 0.05 inference floor; it does
+not yet implement the PC decision-floor check. Treat this as an unresolved
+cross-runtime difference, not proof of device parity. See
+`Trash-detection/docs/MODEL_CONTRACT.md` before changing thresholds.
+
+Neither runtime includes the older crop/classifier stage. No QR, points,
+backend, counting, or online learning is implemented in these two runtimes.
+Separate workflow bundles outside this repository have their own contracts.
 
 ---
 
@@ -70,8 +78,8 @@ in-machine domain** instead of generic augmentation:
 
 Packaged by `Trash-detection/scripts/package_models.py`:
 
-- PC (`pc-demo/models`): M1 det 416, cls 224, **M2 v6 640** (`m2_obb_640.onnx`)
-- Jetson (`jetson-runtime/models`): M1 det 416, cls 224, **M2 v6 416** (`m2_obb_416.onnx`)
+- PC (`pc-demo/models`): M1 HBB det 640, **M2 v6 640** (`m2_obb_640.onnx`)
+- Jetson (`jetson-runtime/models`): M1 HBB det 416, **M2 v6 416** (`m2_obb_416.onnx`)
 - Training exports: `training/model2/export/onnx_{640,416,768}/model.onnx` (v6)
 
 OBB layout: `[cx,cy,w,h, class_probs..., angle]` — do not double-sigmoid.

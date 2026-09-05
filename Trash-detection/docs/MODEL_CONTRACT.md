@@ -31,12 +31,22 @@ argmax. Angle is radians for polygon reconstruction.
 
 - **HBB and OBB:** Ultralytics letterbox fill 114, BGR→RGB, CHW float32, `/255`
 
-M1 keeps two confidence values deliberately: `infer_conf=0.05` is the
+The PC M1 pipeline keeps two confidence values deliberately: `infer_conf=0.05` is the
 candidate-generation floor, while `decision_conf=0.65` is the public workflow
 acceptance floor after class visibility and minimum-area filtering. A low-score
 candidate must not be shown, passed to the PET gate, or invoke Model 2.
 
-## Gate defaults
+## Nano B01 confidence difference
+
+The inspected `jetson-runtime/config/default.json` and `src/pipeline.py` use
+`conf=0.05` without the PC's separate decision floor. The runtime tests record
+this existing behavior with synthetic low-confidence detections. Do not treat
+passing host decoder tests as PC/Jetson decision parity. Aligning this behavior
+requires a separate change, blank/low-confidence/PP regression fixtures, and
+on-device smoke and soak checks; the September web refactor changes no models,
+thresholds, or detection code.
+
+## Gate defaults (PC decision floor; other values shared)
 
 | Setting | Value |
 |---|---|
