@@ -40,6 +40,11 @@ dataset/splits/
 dataset/test_locked/
 dataset/audits/duplicates/
 dataset/audits/flagged_caps/
+dataset/generated/
+dataset/annotations/
+logs/rvm/
+export/candidates/
+logs/rvm_finetune/
 export/colab_kit/calib200/
 export/colab_kit/calib200.zip
 

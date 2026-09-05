@@ -1,0 +1,95 @@
+run:
+  id_prefix: m1rvm
+  date_format: "%Y%m%d"
+  seed: 42
+  image_size: 640
+  max_hours: 8
+  max_restarts: 2
+
+classes:
+  names:
+    0: metal_can
+    1: pet_bottle
+    2: pp_cup
+
+source:
+  live_root: dataset/incoming/live-machine-dataset
+  legacy_roots:
+    - dataset
+  reviewed_annotations: dataset/annotations/m1_rvm_reviewed.jsonl
+  image_extensions: [.jpg, .jpeg, .png, .bmp]
+  label_extensions: [.txt]
+  required_label_format: hbb_yolo_5
+  forbid_source_mutation: true
+
+data:
+  generated_root: dataset/generated
+  train_fraction: 0.70
+  validation_fraction: 0.15
+  test_fraction: 0.15
+  max_direct_variants_per_original: 6
+  machine_sampling_fraction: 0.70
+  legacy_sampling_fraction: 0.30
+  minimum_independent_groups_per_class: 3
+  minimum_bright_dim_groups: 2
+  empty_machine_frames: 100
+
+augmentation:
+  seed: 42
+  allow_horizontal_flip: false
+  allow_vertical_flip: false
+  allow_mosaic: false
+  allow_mixup: false
+  allow_copy_paste: false
+  operations:
+    - name: exposure
+      values: [-0.20, 0.20]
+    - name: gamma
+      values: [0.75, 1.25]
+    - name: contrast
+      values: [0.80, 1.20]
+    - name: glare
+      values: [0.15, 0.30]
+    - name: shadow
+      values: [0.15, 0.30]
+    - name: blur
+      values: [0.60, 1.00]
+    - name: noise
+      values: [0.01, 0.02]
+    - name: rotate
+      values: [-4.0, 4.0]
+
+training:
+  checkpoint: imported/bki_dt3_three_class/best.pt
+  task: detect
+  epochs: 60
+  patience: 12
+  batch: 8
+  fallback_batches: [4, 2]
+  workers: 0
+  cache: disk
+  optimizer: AdamW
+  lr0: 0.0001
+  lrf: 0.01
+  weight_decay: 0.0005
+  warmup_epochs: 3
+  amp: true
+  device: 0
+  pretrained: true
+  close_mosaic: 60
+
+evaluation:
+  confidence: 0.25
+  iou: 0.50
+  minimum_per_class_precision: 0.90
+  minimum_per_class_recall: 0.90
+  minimum_macro_improvement: 0.05
+  maximum_class_regression: 0.02
+  maximum_cross_confusion: 0.02
+
+export:
+  imgsz: [640, 416]
+  format: onnx
+  opset: 17
+  half: false
+  simplify: true

@@ -138,6 +138,38 @@ Pipeline steps:
 
 ---
 
+## RVM machine-specific Model 1 fine-tune (candidate-only)
+
+The guarded RVM workflow is defined in
+`docs/MODEL1_RVM_FINETUNE_PLAN.md`. It is separate from the legacy OBB trainer
+above and starts from `imported/bki_dt3_three_class/best.pt`. The class contract
+is exactly `metal_can`, `pet_bottle`, `pp_cup` with YOLO HBB labels.
+
+The live-machine folder is treated as immutable evidence. Its current labels
+are Model 2 OBB part labels (9 fields, including cap/label/ring/can rows), so
+the preparation gate intentionally refuses to train until a reviewer creates
+whole-object HBB annotations. Do not convert those rows by guessing or by
+unioning parts. The required reviewer manifest is
+`dataset/annotations/m1_rvm_reviewed.jsonl`; its schema and class mapping are
+documented in the plan.
+
+Run the stages in this order after reviewed annotations exist:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_m1_rvm_finetune.ps1 -AuditOnly
+powershell -ExecutionPolicy Bypass -File scripts\run_m1_rvm_finetune.ps1 -PrepareOnly
+powershell -ExecutionPolicy Bypass -File scripts\run_m1_rvm_finetune.ps1 -Smoke
+powershell -ExecutionPolicy Bypass -File scripts\run_m1_rvm_finetune.ps1 -Overnight -MaxHours 8
+```
+
+Training, exports, and logs stay under run-specific candidate directories.
+The watcher is report-only by default; `-KillOnHang` is an explicit opt-in and
+never promotes or overwrites the production package. Run the workflow tests
+with `python -m pytest tests\test_m1_rvm_workflow.py -q` before starting a long
+run.
+
+---
+
 ## Troubleshooting
 
 | Problem | Fix |
