@@ -32,6 +32,7 @@ Trash-detection/training/model2/dataset/test_locked/
 Trash-detection/training/model2/dataset/test_custom/
 Trash-detection/training/model2/dataset/audits/
 Trash-detection/training/model2/dataset/generated/
+Trash-detection/training/model2/dataset/staging/
 Trash-detection/training/model2/export/candidates/
 
 # Legacy rebuild paths (if present locally)

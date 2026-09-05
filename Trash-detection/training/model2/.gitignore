@@ -24,6 +24,7 @@ export/candidates/
 dataset/incoming/
 dataset/normalized/
 dataset/splits/
+dataset/staging/
 dataset/audits/
 dataset/test_locked/
 dataset/test_custom/
