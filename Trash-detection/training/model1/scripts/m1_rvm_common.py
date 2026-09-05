@@ -93,8 +93,9 @@ def image_files(root: Path) -> list[Path]:
 
 def label_for_image(image: Path) -> Path:
     parts = list(image.parts)
-    if "images" in parts:
-        parts[parts.index("images")] = "labels"
+    image_component = next((index for index, component in enumerate(parts) if component.lower() == "images"), None)
+    if image_component is not None:
+        parts[image_component] = "labels"
         direct = Path(*parts).with_suffix(".txt")
         if direct.exists():
             return direct
