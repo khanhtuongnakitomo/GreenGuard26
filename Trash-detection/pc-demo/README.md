@@ -36,6 +36,17 @@ three-class detector; PP cup is filtered and never shown.
 Useful flags: `--headless`, `--save <dir>`, `--max-frames N`, `--m1-conf`, `--m2-conf`,
 `--fps`.
 
+`m1-conf` is the candidate-generation floor. The public M1 decision floor is
+configured independently as `m1.detector.decision_conf` (0.65 on the main
+baseline). PP and unknown classes are filtered before top-1 selection.
+
+For camera-only RVM evidence, run the repository launcher
+`..\diagnose_model1_rvm.bat`. It refuses serial arguments, writes immutable
+session directories under `validation/rvm-sessions/` (when requested), and
+records raw detections, rejection reasons, camera metadata, model/config hashes,
+and separate original/overlay frames. Use `src\analyze_m1_rvm.py` to sweep
+thresholds; the analyzer never rewrites production configuration.
+
 ## Layout
 
 - `config/default.json` — locked gate defaults
