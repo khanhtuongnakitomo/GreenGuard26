@@ -1,0 +1,42 @@
+{
+  "candidate_status": "FAILED_ACCEPTANCE",
+  "production_ready": false,
+  "candidate_run": "m1rvm_20260906_seed42_n640_two_class_v7",
+  "warning": "Exploratory two-class candidate. Do not use for production routing until the acceptance gates pass.",
+  "m1": {
+    "detector": {
+      "path": "models/m1_rvm_candidate_640.onnx",
+      "imgsz": 640,
+      "task": "detect",
+      "classes": ["metal_can", "pet_bottle"],
+      "visible_class_ids": [0, 1],
+      "ignored_class_ids": [],
+      "infer_conf": 0.05,
+      "decision_conf": 0.65
+    },
+    "min_area_frac": 0.02,
+    "miss_hold": 3,
+    "box_smooth": 0.35
+  },
+  "m2": {
+    "path": "models/m2_obb_640.onnx",
+    "imgsz": 640,
+    "infer_conf": 0.1,
+    "violation_conf": 0.5,
+    "classes": ["cap", "label", "ring"]
+  },
+  "gate": {
+    "warmup_s": 0.5,
+    "verdict_hold_s": 1.5,
+    "vote_window": 7,
+    "vote_need": 4
+  },
+  "runtime": {
+    "target_fps": 5.0,
+    "device": "cpu"
+  },
+  "ui": {
+    "window_title": "GreenGuard — Model 1 RVM Candidate",
+    "display_scale": 1.5
+  }
+}

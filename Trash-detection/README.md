@@ -66,6 +66,29 @@ python scripts\package_models.py --target all
 python scripts\package_models.py --target all --check
 ```
 
+## Model 1 RVM candidate on this branch
+
+This branch also carries an explicitly separate two-class candidate package
+from the RVM fine-tune run. It is not the default package and is marked
+`production_ready=false` because its acceptance report failed. After pulling
+this branch and installing the existing PC environment, test the candidate with
+the real camera using:
+
+```powershell
+.\demo_model1_candidate.bat --source 0 --auto-start
+```
+
+For the complete candidate M1 → existing M2 flow:
+
+```powershell
+.\full_demo_candidate.bat --source 0 --auto-start
+```
+
+The normal `demo_model1.bat` and `full_demo.bat` continue to use the active
+production package. Switching back to `main` restores those default files.
+Stop the running camera process before changing branches, and keep the working
+tree clean so ignored local training outputs cannot mask branch differences.
+
 ## Docs
 
 - [../DOCUMENTATION.md](../DOCUMENTATION.md) - reading order and document authority
@@ -76,5 +99,6 @@ python scripts\package_models.py --target all --check
 - [training/README.md](training/README.md)
 - [validation/README.md](validation/README.md)
 
-The three root BAT files are the only supported Windows live launchers. Training
-and validation scripts remain internal tools and are not live entrypoints.
+The production root BAT files are the supported Windows live launchers; the two
+candidate BAT files above are branch-local test launchers only. Training and
+validation scripts remain internal tools and are not live entrypoints.
