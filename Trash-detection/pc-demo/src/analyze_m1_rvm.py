@@ -127,9 +127,14 @@ def evaluate_threshold(records: list[dict[str, Any]], threshold: float) -> dict[
     empty_false_positives = 0
     accepted = 0
     rejected = 0
+    confidence_by_class: dict[str, list[float]] = {name: [] for name in (*POSITIVE, "pp_cup", "unknown")}
     for row in records:
         label = row["_report_label"]
         reason_counts[row.get("final_reason", "UNKNOWN")] += 1
+        for raw in row.get("raw_detections", []):
+            class_name = raw.get("class_name", "unknown")
+            bucket = class_name if class_name in confidence_by_class else "unknown"
+            confidence_by_class[bucket].append(float(raw.get("confidence", 0.0)))
         candidate = _candidate(row, threshold)
         predicted = candidate.get("class_name") if candidate else None
         if predicted:
@@ -160,6 +165,15 @@ def evaluate_threshold(records: list[dict[str, Any]], threshold: float) -> dict[
         metrics[cls] = {"tp": tp, "fp": fp, "fn": fn, "precision": precision, "recall": recall}
         precisions.append(precision)
         recalls.append(recall)
+    confidence_distribution = {
+        name: {
+            "count": len(values),
+            "min": min(values) if values else None,
+            "max": max(values) if values else None,
+            "mean": sum(values) / len(values) if values else None,
+        }
+        for name, values in confidence_by_class.items()
+    }
     return {
         "decision_conf": round(float(threshold), 2),
         "infer_conf": INFER_CONF,
@@ -180,6 +194,7 @@ def evaluate_threshold(records: list[dict[str, Any]], threshold: float) -> dict[
         "frame_denominator": len(records),
         "trial_denominator": len({(r.get("session_id"), r.get("trial_id")) for r in records}),
         "rejection_reason_distribution": dict(sorted(reason_counts.items())),
+        "confidence_distributions": confidence_distribution,
     }
 
 
@@ -195,10 +210,14 @@ def select_threshold(results: list[dict[str, Any]]) -> dict[str, Any] | None:
     return max(safe, key=lambda result: (result["macro_recall"], result["decision_conf"]))
 
 
-def analyze(paths: list[Path]) -> dict[str, Any]:
+def analyze(paths: list[Path], untouched_paths: list[Path] | None = None) -> dict[str, Any]:
     records = load_sessions(paths)
     results = [evaluate_threshold(records, threshold) for threshold in threshold_grid()]
     selected = select_threshold(results)
+    untouched = None
+    if untouched_paths:
+        untouched_records = load_sessions(untouched_paths)
+        untouched = evaluate_threshold(untouched_records, selected["decision_conf"]) if selected else None
     return {
         "schema_version": "m1-rvm-threshold-analysis-v1",
         "status": "SAFE_THRESHOLD" if selected else "NO_SAFE_THRESHOLD",
@@ -206,6 +225,7 @@ def analyze(paths: list[Path]) -> dict[str, Any]:
         "records": len(records),
         "thresholds": results,
         "selected": selected,
+        "untouched_validation": untouched,
         "production_config_modified": False,
     }
 
@@ -213,9 +233,10 @@ def analyze(paths: list[Path]) -> dict[str, Any]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Analyze camera-only M1 diagnostic sessions")
     parser.add_argument("--sessions", nargs="+", type=Path, required=True)
+    parser.add_argument("--untouched-sessions", nargs="*", type=Path, default=[])
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    result = analyze([path.resolve() for path in args.sessions])
+    result = analyze([path.resolve() for path in args.sessions], [path.resolve() for path in args.untouched_sessions])
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, sort_keys=True), encoding="utf-8")
     print(json.dumps({"status": result["status"], "selected": result["selected"]}, indent=2))
