@@ -8,6 +8,7 @@ Shared fixtures and Ultralytics baseline contracts for PC and Jetson parity.
 validation/
   fixtures/                 # JPEG images
   contracts/baseline.json   # Ultralytics reference outputs
+  reports/                  # Baseline, parity, preservation and promotion evidence
   generate_reference.py
   tests/test_gate.py        # Synthetic gate unit tests
 ```
@@ -34,3 +35,8 @@ cd Trash-detection
 
 Images from `training/model1/dataset/audits/qa_render_20/` and related audits.
 Add M2-positive live captures when available.
+
+`reports/promotion_status.json` intentionally remains
+`M1_RVM_LIVE_VALIDATION_REQUIRED` until the owner completes camera-only
+capture and sign-off. The reports do not promote a model or alter production
+configuration.

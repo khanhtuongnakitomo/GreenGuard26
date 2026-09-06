@@ -1,0 +1,9 @@
+{
+  "schema_version": "greenguard-promotion-status-v1",
+  "status": "M1_RVM_LIVE_VALIDATION_REQUIRED",
+  "active_model": "main-original-m1-onnx",
+  "decision_conf": 0.65,
+  "serial_enabled": false,
+  "second_push_allowed": false,
+  "reason": "The safe baseline and evidence tools are implemented, but owner camera-only validation and reviewed strict two-class labels are not present in this checkout."
+}

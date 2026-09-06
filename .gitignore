@@ -71,6 +71,10 @@ __pycache__/
 *.npy
 rebuild_pt.py
 
+# Reproducible Windows demo output (source and builder are tracked)
+Trash-detection/dist/
+Trash-detection/validation/rvm-sessions/
+
 # Model weights (keep only release artifacts below)
 *.pt
 *.tflite

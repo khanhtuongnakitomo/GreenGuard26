@@ -1,0 +1,11 @@
+{
+  "schema_version": "greenguard-m2-preservation-v1",
+  "status": "PROVEN_UNCHANGED_ON_BRANCH",
+  "base_commit": "f1c5a70642bfdc38f20bc7cf39c2d1e82c3581c2",
+  "main_model2": {
+    "path": "Trash-detection/pc-demo/models/m2_obb_640.onnx",
+    "sha256": "d4c5f235fbb78e3a8451de695480400a916ffec235a518af47fd5b448c6eb999",
+    "bytes": 12497101
+  },
+  "recovery_rules": ["No merge from plan/model1-rvm-finetune", "No cherry-pick of 5a7f8a06", "No coworker 2DF4... Model 2 artifact"]
+}

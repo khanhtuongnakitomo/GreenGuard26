@@ -1,0 +1,16 @@
+{
+  "schema_version": "greenguard-m1-parity-report-v1",
+  "status": "BASELINE_CONVERSION_NOT_ROOT_CAUSE",
+  "source": "pre-existing 111-frame live-machine comparison",
+  "comparison": {
+    "frames": 111,
+    "pytorch_visible_predictions": 83,
+    "onnx_visible_predictions": 84,
+    "same_top_class_on_shared_predictions": 80,
+    "shared_prediction_denominator": 83,
+    "pytorch_runtime_eligible_at_decision_conf_0_65": {"total": 37, "metal_can": 16, "pet_bottle": 21},
+    "onnx_runtime_eligible_at_decision_conf_0_65": {"total": 35, "metal_can": 16, "pet_bottle": 19}
+  },
+  "interpretation": "The original checkpoint and its PC ONNX export make substantially the same class decisions on the saved RVM frames. The recovery work therefore keeps the known-good export and instruments the runtime rather than replacing Model 2 or assuming conversion failure.",
+  "limits": ["This is not the owner camera-only acceptance set.", "It does not authorize threshold calibration or model promotion."]
+}

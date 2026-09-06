@@ -1,0 +1,9 @@
+{
+  "schema_version": "greenguard-rollback-manifest-v1",
+  "rollback_set": "m1-main-baseline-5069bfae",
+  "m1_sha256": "5069bfae324db8c1aef1fbce4b68aaad217a80a95a6f6b83eacfa60cdb620038",
+  "m2_sha256": "d4c5f235fbb78e3a8451de695480400a916ffec235a518af47fd5b448c6eb999",
+  "config_sha256": "5a3611ca8f68302f14e719f15c6d96e5000e84f8e2b8483dc5929ce792188200",
+  "labels": ["metal_can", "pet_bottle", "pp_cup"],
+  "restore_together": ["models/m1_detect_640.onnx", "models/labels/m1_detector.txt", "config/default.json", "models/manifest.json", "validation/contracts/baseline.json"]
+}

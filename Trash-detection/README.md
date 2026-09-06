@@ -16,6 +16,8 @@ Trash-detection/
   training/model1|model2       # Research / training trees
   validation/                  # Fixtures + baseline contracts
   scripts/package_models.py    # Deterministic ONNX packaging
+  scripts/build_windows_rvm_demo.py # Main-based reproducible Windows bundle
+  windows-rvm-demo/             # Windows-specific workflow source
   docs/                        # Architecture + model contract
 ```
 
@@ -57,6 +59,41 @@ on-device and never committed.
 3. Aluminum can → display aluminum and skip M2
 4. PET bottle → M2 OBB on the full frame; keep centers inside the PET polygon; one box per class
 5. Gate: 0.5s warmup, 4-of-7 vote, 1.5s verdict hold, miss hold 3 frames
+
+The PC runtime now separates Model 1 candidate generation (`infer_conf=0.05`)
+from public acceptance (`decision_conf=0.65`). Unknown and PP classes are
+ignored before area/confidence gating. The first recovery validation is
+camera-only and records evidence without importing or opening the serial
+controller:
+
+```powershell
+.\diagnose_model1_rvm.bat --source 0 --session-id bright-01 --label metal_can --item-id can-01 --lighting bright --duration 10
+```
+
+Analyze one or more completed sessions without changing production settings:
+
+```powershell
+cd pc-demo
+.\.venv\Scripts\python.exe src\analyze_m1_rvm.py --sessions ..\validation\rvm-sessions\bright-01 --output ..\validation\threshold-report.json
+```
+
+Build the Windows bundle from main's locked Model 1 and Model 2. The output is
+ignored and may be regenerated:
+
+```powershell
+python scripts\build_windows_rvm_demo.py build
+python scripts\build_windows_rvm_demo.py check
+python scripts\build_windows_rvm_demo.py headless-smoke
+```
+
+The bundle defaults to serial disabled. Do not use `--enable-serial` until the
+owner signs off the camera-only capture set.
+
+The strict two-class replacement is guarded by
+`training/model1/strict_two_class_config.json` and
+`scripts/train_m1_strict.py`. With no reviewer-approved grouped manifest it
+stops with `NEEDS_REVIEWED_DATA`; the derived v7 labels are never consumed and
+the active runtime models are never overwritten.
 
 ## Packaging models after retrain
 
