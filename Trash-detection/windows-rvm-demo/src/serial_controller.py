@@ -16,10 +16,11 @@ class RVMSerialController:
         if not self.enabled:
             return False
         import serial
+        from serial.tools import list_ports
 
         port = self.port
         if port == "auto":
-            port = next((p.device for p in serial.tools.list_ports.comports()), None)
+            port = next((p.device for p in list_ports.comports()), None)
         if not port:
             return False
         self._serial = serial.Serial(port, self.baud, timeout=0.2)
