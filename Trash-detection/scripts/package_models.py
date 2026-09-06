@@ -25,6 +25,7 @@ LABEL_SOURCES = {
     "m1_detector.txt": TRAINING / "model1" / "export" / "detect_640" / "labels.txt",
     "m2_obb.txt": TRAINING / "model2" / "export" / "onnx_640" / "labels.txt",
 }
+REJECTED_MODELS_PATH = ROOT / "validation" / "contracts" / "rejected_models.json"
 
 MODEL_SPECS = {
     "pc": {
@@ -50,6 +51,24 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1 << 20), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def rejected_hashes() -> set[str]:
+    if not REJECTED_MODELS_PATH.is_file():
+        return set()
+    payload = json.loads(REJECTED_MODELS_PATH.read_text(encoding="utf-8"))
+    return {
+        str(value).strip().lower()
+        for model in payload.get("models", [])
+        for value in model.get("sha256", [])
+        if str(value).strip()
+    }
+
+
+def ensure_not_rejected(path: Path) -> None:
+    digest = sha256(path).lower()
+    if digest in rejected_hashes():
+        raise RuntimeError(f"refusing rejected model artifact: {path} ({digest})")
 
 
 def git_commit() -> str | None:
@@ -121,6 +140,7 @@ def copy_selected_files(target: str, output_dir: Path, source_map: dict[str, Pat
         dst = output_dir / spec["filename"]
         if not src.is_file():
             raise FileNotFoundError(f"missing source model for {target}: {src}")
+        ensure_not_rejected(src)
         if not same_file(src, dst):
             shutil.copy2(src, dst)
         label_src = source_map[spec["labels"]]
@@ -144,6 +164,7 @@ def build_manifest(
             continue
         src = source_map[spec["filename"]]
         label_src = source_map[spec["labels"]]
+        ensure_not_rejected(packaged)
         meta = onnx_meta(packaged)
         source_path = str(src)
         if src.exists():
