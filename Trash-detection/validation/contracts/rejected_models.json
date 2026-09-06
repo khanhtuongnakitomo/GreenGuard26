@@ -1,0 +1,15 @@
+{
+  "schema": "greenguard-rejected-models-v1",
+  "models": [
+    {
+      "run_id": "m1rvm_20260906_seed42_n640_two_class_v7",
+      "status": "FAILED_ACCEPTANCE",
+      "reason": "Two-class RVM candidate collapsed toward pet_bottle and failed can precision/recall gates.",
+      "sha256": [
+        "6f519367def2ef7d78ba7e77c947f18f7c5df795a743f5df1800a2123f6e66db",
+        "2485795bced1e0696fad523bc11ec3c92f2ffe5d353e94ca8d951dedc4307cc8",
+        "223033d49809b870eebdb66f5885ac547a7c850ca1d4a4c995ac87f2fa927701"
+      ]
+    }
+  ]
+}
