@@ -95,7 +95,16 @@ def main() -> int:
     is_camera = isinstance(src, int)
     cam_idx = src if is_camera else 0
 
-    cap = cv2.VideoCapture(src)
+    # On Windows, MSMF can report a camera as opened but then block or return
+    # no frames for secondary camera indices. DirectShow is the backend used by
+    # the camera-switch path and is more reliable for the initial camera too.
+    if is_camera:
+        cap = cv2.VideoCapture(src, cv2.CAP_DSHOW)
+        if not cap.isOpened():
+            cap.release()
+            cap = cv2.VideoCapture(src)
+    else:
+        cap = cv2.VideoCapture(src)
     if not cap.isOpened():
         print(f"ERROR: cannot open source {src!r}")
         return 1
