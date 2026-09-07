@@ -1,0 +1,71 @@
+{
+  "candidate_validation": {
+    "active_model2_sha256": "d4c5f235fbb78e3a8451de695480400a916ffec235a518af47fd5b448c6eb999",
+    "manifest": "../training/model1/export/candidates/m1rebuild_20260907_seed42_yolo11s_v4/candidate_manifest.json",
+    "status": "FAILED_ACCEPTANCE"
+  },
+  "decision_contract": {
+    "clear_frames_to_rearm": 8,
+    "quorum": 4,
+    "signals": {
+      "ALUMINUM_CAN": 0,
+      "PET_CLEAN": 1,
+      "PET_REJECT": 2
+    },
+    "version": "seven-observation-v1",
+    "window_size": 7
+  },
+  "gate": {
+    "verdict_hold_s": 1.5,
+    "vote_need": 4,
+    "vote_window": 7,
+    "warmup_s": 0.5
+  },
+  "m1": {
+    "box_smooth": 0.35,
+    "detector": {
+      "candidate_only": true,
+      "candidate_run": "m1rebuild_20260907_seed42_yolo11s_v4",
+      "candidate_sha256": "cf7baf1c4a917c7f8ecbd1e30bf92ca5e3a38869b99ccbfb6b94a0b95111eb24",
+      "classes": [
+        "metal_can",
+        "pet_bottle"
+      ],
+      "decision_conf": 0.84,
+      "ignored_class_ids": [],
+      "imgsz": 640,
+      "infer_conf": 0.05,
+      "path": "../training/model1/export/candidates/m1rebuild_20260907_seed42_yolo11s_v4/m1_rebuild_640.onnx",
+      "task": "detect",
+      "visible_class_ids": [
+        0,
+        1
+      ]
+    },
+    "min_area_frac": 0.02,
+    "miss_hold": 3
+  },
+  "m2": {
+    "classes": [
+      "cap",
+      "label",
+      "ring"
+    ],
+    "imgsz": 640,
+    "infer_conf": 0.1,
+    "path": "models/m2_obb_640.onnx",
+    "violation_conf": 0.5
+  },
+  "runtime": {
+    "clear_frames": 8,
+    "decision_quorum": 4,
+    "decision_window": 7,
+    "device": "cpu",
+    "result_hold_s": 1.5,
+    "target_fps": 5.0
+  },
+  "ui": {
+    "display_scale": 1.5,
+    "window_title": "GreenGuard Detection Demo"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "bytes": 37929497,
+  "candidate_status": "FAILED_ACCEPTANCE",
+  "checkpoint": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\runs\\m1rebuild_20260907_seed42_yolo11s_v4_batch16\\weights\\best.pt",
+  "checkpoint_sha256": "5c29271a4e7393e522d11344f9c6ff51a7d052d8234c6394a64d8765a0a60dc7",
+  "classes": {
+    "0": "metal_can",
+    "1": "pet_bottle"
+  },
+  "onnx": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\export\\candidates\\m1rebuild_20260907_seed42_yolo11s_v4\\m1_rebuild_640.onnx",
+  "onnx_sha256": "cf7baf1c4a917c7f8ecbd1e30bf92ca5e3a38869b99ccbfb6b94a0b95111eb24",
+  "production_touched": false,
+  "run_id": "m1rebuild_20260907_seed42_yolo11s_v4",
+  "runtime_config": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\pc-demo\\config\\m1_rebuild_m1rebuild_20260907_seed42_yolo11s_v4.json",
+  "schema": "greenguard-m1-rebuild-export-v2",
+  "status": "EXPORTED"
+}

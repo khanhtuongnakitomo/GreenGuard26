@@ -1,0 +1,144 @@
+{
+  "checks": {
+    "active_m1": {
+      "path": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\pc-demo\\models\\m1_detect_640.onnx",
+      "sha256": "5069bfae324db8c1aef1fbce4b68aaad217a80a95a6f6b83eacfa60cdb620038"
+    },
+    "active_m2": {
+      "path": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\pc-demo\\models\\m2_obb_640.onnx",
+      "sha256": "d4c5f235fbb78e3a8451de695480400a916ffec235a518af47fd5b448c6eb999"
+    },
+    "benchmark": {
+      "full_workflow_fps": 13.324432612308172,
+      "full_workflow_median_ms": 75.05010000022594,
+      "full_workflow_status": "MEASURED",
+      "m1_fps": 13.300012368699251,
+      "median_inference_ms": 75.18790000176523,
+      "p95_inference_ms": 80.51483000526785,
+      "runs": 10,
+      "status": "MEASURED",
+      "target_fps": 5.0,
+      "target_fps_met": true
+    },
+    "candidate_exists": true,
+    "candidate_sha256": "cf7baf1c4a917c7f8ecbd1e30bf92ca5e3a38869b99ccbfb6b94a0b95111eb24",
+    "class_metadata": {
+      "expected": {
+        "0": "metal_can",
+        "1": "pet_bottle"
+      },
+      "labels_file": [
+        "metal_can",
+        "pet_bottle"
+      ],
+      "pass": true
+    },
+    "expected_layout": true,
+    "onnxruntime": {
+      "inputs": [
+        [
+          1,
+          3,
+          640,
+          640
+        ]
+      ],
+      "outputs": [
+        [
+          1,
+          6,
+          8400
+        ]
+      ]
+    },
+    "parity": {
+      "cases": [
+        {
+          "case": "normal",
+          "images": 3,
+          "results": [
+            {
+              "image": "Trash-detection/training/model1/dataset/generated/m1rebuild_20260907_seed42_yolo11s_v4/images/holdout/001396_10015_60_s_22_jpg.rf.82ff0104a10c49937d261fedf1a3a936.jpg",
+              "max_confidence_delta": 0.0,
+              "min_iou": 0.9999996708481577,
+              "unmatched": 0
+            },
+            {
+              "image": "Trash-detection/training/model1/dataset/generated/m1rebuild_20260907_seed42_yolo11s_v4/images/holdout/000002_000103_jpg.rf.b0a7ea8df30f8bbd2f81b5aca323f837.jpg",
+              "max_confidence_delta": 5.364418029785156e-07,
+              "min_iou": 0.9999995353072998,
+              "unmatched": 0
+            },
+            {
+              "image": "Trash-detection/training/model1/dataset/generated/m1rebuild_20260907_seed42_yolo11s_v4/images/holdout/007059_WIN_20260828_14_17_40_Pro.jpg",
+              "max_confidence_delta": 0.07236826419830322,
+              "min_iou": 0.7291991938262768,
+              "unmatched": 22
+            }
+          ]
+        },
+        {
+          "case": "dim_exposure_0.25",
+          "images": 3,
+          "results": [
+            {
+              "image": "Trash-detection/training/model1/dataset/generated/m1rebuild_20260907_seed42_yolo11s_v4/images/holdout/001396_10015_60_s_22_jpg.rf.82ff0104a10c49937d261fedf1a3a936.jpg",
+              "max_confidence_delta": 1.1920928955078125e-07,
+              "min_iou": 0.9999997606059459,
+              "unmatched": 0
+            },
+            {
+              "image": "Trash-detection/training/model1/dataset/generated/m1rebuild_20260907_seed42_yolo11s_v4/images/holdout/000002_000103_jpg.rf.b0a7ea8df30f8bbd2f81b5aca323f837.jpg",
+              "max_confidence_delta": 1.1920928955078125e-07,
+              "min_iou": 0.9999986475086563,
+              "unmatched": 0
+            },
+            {
+              "image": "Trash-detection/training/model1/dataset/generated/m1rebuild_20260907_seed42_yolo11s_v4/images/holdout/007059_WIN_20260828_14_17_40_Pro.jpg",
+              "max_confidence_delta": 0.0351723488420248,
+              "min_iou": 0.923696831941969,
+              "unmatched": 3
+            }
+          ]
+        },
+        {
+          "case": "bright_exposure_2.0",
+          "images": 3,
+          "results": [
+            {
+              "image": "Trash-detection/training/model1/dataset/generated/m1rebuild_20260907_seed42_yolo11s_v4/images/holdout/001396_10015_60_s_22_jpg.rf.82ff0104a10c49937d261fedf1a3a936.jpg",
+              "max_confidence_delta": 1.7881393432617188e-07,
+              "min_iou": 0.9999999032365067,
+              "unmatched": 0
+            },
+            {
+              "image": "Trash-detection/training/model1/dataset/generated/m1rebuild_20260907_seed42_yolo11s_v4/images/holdout/000002_000103_jpg.rf.b0a7ea8df30f8bbd2f81b5aca323f837.jpg",
+              "max_confidence_delta": 3.0547380447387695e-07,
+              "min_iou": 0.9999981282781749,
+              "unmatched": 0
+            },
+            {
+              "image": "Trash-detection/training/model1/dataset/generated/m1rebuild_20260907_seed42_yolo11s_v4/images/holdout/007059_WIN_20260828_14_17_40_Pro.jpg",
+              "max_confidence_delta": 0.00854543223977089,
+              "min_iou": 0.0,
+              "unmatched": 13
+            }
+          ]
+        }
+      ],
+      "status": "FAIL",
+      "thresholds": {
+        "box_iou": 0.95,
+        "confidence_delta": 0.001
+      }
+    },
+    "rejected_hash_protection": {
+      "candidate_is_rejected": false,
+      "pass": true
+    }
+  },
+  "production_touched": false,
+  "run_id": "m1rebuild_20260907_seed42_yolo11s_v4",
+  "schema": "greenguard-m1-rebuild-verify-v2",
+  "status": "FAIL"
+}

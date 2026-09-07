@@ -1,0 +1,2 @@
+metal_can
+pet_bottle

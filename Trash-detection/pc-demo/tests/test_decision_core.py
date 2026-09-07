@@ -46,9 +46,11 @@ class FakeM1:
 class FakeM2:
     def __init__(self, hits=None):
         self.hits = hits or []
+        self.calls = 0
 
     def run(self, frame, poly):
         del frame, poly
+        self.calls += 1
         return list(self.hits)
 
 
@@ -86,11 +88,21 @@ def test_exact_window_does_not_resolve_early():
 
 
 def test_m1_four_of_seven_can_emits_signal_zero():
-    engine = CanonicalWorkflow(cfg(), FakeM1([can(), can(), can(), can(), missing(), missing(), missing()]), FakeM2())
+    m2 = FakeM2()
+    engine = CanonicalWorkflow(cfg(), FakeM1([can(), can(), can(), can(), missing(), missing(), missing()]), m2)
     steps = advance(engine, range(7))
     assert steps[-1].signal == SIGNAL_ALUMINUM
     assert steps[-1].phase == "RESULT"
     assert engine.result == "ALUMINUM_CAN"
+    assert m2.calls == 0
+
+
+def test_m1_abstentions_do_not_invoke_m2():
+    m2 = FakeM2()
+    engine = CanonicalWorkflow(cfg(), FakeM1([missing()] * 7), m2)
+    steps = advance(engine, range(7))
+    assert steps[-1].signal is None
+    assert m2.calls == 0
 
 
 def test_m1_four_of_seven_pet_enters_m2_then_good_emits_one():

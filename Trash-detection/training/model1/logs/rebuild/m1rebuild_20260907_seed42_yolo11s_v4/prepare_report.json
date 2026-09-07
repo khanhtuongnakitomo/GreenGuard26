@@ -1,0 +1,16 @@
+{
+  "base_records": 7064,
+  "class_instance_counts": {
+    "metal_can": 3248,
+    "pet_bottle": 7865
+  },
+  "generated_root": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\dataset\\generated\\m1rebuild_20260907_seed42_yolo11s_v4",
+  "manifest": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\dataset\\generated\\m1rebuild_20260907_seed42_yolo11s_v4\\manifest.json",
+  "split_counts": {
+    "holdout": 1362,
+    "train": 3656,
+    "val": 2046
+  },
+  "status": "READY",
+  "train_selection_mode": "deterministic_equal_class_sampling"
+}

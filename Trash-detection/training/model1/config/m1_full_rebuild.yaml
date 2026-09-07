@@ -1,0 +1,116 @@
+schema: greenguard-m1-rebuild-v1
+
+classes:
+  names:
+    0: metal_can
+    1: pet_bottle
+  can_definition: aluminum beverage cans; exclude food tins and ambiguous metal objects
+
+run:
+  id_prefix: m1rebuild
+  seed: 42
+  image_size: 640
+  max_hours: 10
+  max_restarts: 2
+
+sources:
+  model1_root: dataset/incoming
+  model2_root: ../model2/dataset/incoming
+  image_extensions: [.jpg, .jpeg, .png, .bmp, .webp]
+  include_model1:
+    - dataset-1
+    - dataset-3
+    - dataset-4
+    - dataset-5
+    - dataset-6
+    - dataset-live
+    - true-negative
+  include_model2:
+    - bottle-defect-detection
+    - bottle-label-detection
+    - bottle-label-inspection
+  exclude_part_only:
+    - dataset-2
+    - live-machine-dataset
+    - cap-label
+    - PET-bottle-with-cap-and-label
+    - ring-dataset
+
+data:
+  generated_root: dataset/generated
+  report_root: logs/rebuild
+  train_fraction: 0.75
+  validation_fraction: 0.15
+  holdout_fraction: 0.10
+  calibration_fraction_of_validation: 0.50
+  max_training_originals: 13000
+  max_variants_per_original: 0
+  max_machine_oversample: 3
+  minimum_independent_groups_per_class: 3
+  require_class_in_each_split: true
+  include_only_reviewed_source_mappings: true
+
+workflow:
+  min_area_frac: 0.02
+  observation_window: 7
+  quorum: 4
+  clear_frames_to_rearm: 8
+
+augmentation:
+  seed: 42
+  jpeg_quality: [45, 95]
+  exposure_multiplier: [0.45, 1.60]
+  gamma: [0.65, 1.60]
+  contrast: [0.75, 1.25]
+  white_balance_gain: [0.85, 1.15]
+  noise_std: [0.0, 8.0]
+  blur_kernel: [3, 7]
+  glare_strength: [0.0, 0.28]
+  offline_modes: [dim, bright, optics]
+  train_native:
+    mosaic: 0.0
+    mixup: 0.0
+    copy_paste: 0.0
+    fliplr: 0.0
+    flipud: 0.0
+    degrees: 10.0
+    translate: 0.05
+    scale: 0.10
+    shear: 0.0
+    perspective: 0.0
+    hsv_h: 0.0
+    hsv_s: 0.10
+    hsv_v: 0.10
+
+training:
+  pretrained_model: yolo11s.pt
+  task: detect
+  epochs: 100
+  patience: 20
+  batches: [16, 8, 4]
+  workers: 0
+  cache: disk
+  optimizer: AdamW
+  lr0: 0.001
+  lrf: 0.01
+  weight_decay: 0.0005
+  warmup_epochs: 3
+  amp: true
+  device: 0
+  close_mosaic: 100
+
+evaluation:
+  iou: 0.50
+  calibration_confidences: [0.50, 0.51, 0.52, 0.53, 0.54, 0.55, 0.56, 0.57, 0.58, 0.59, 0.60, 0.61, 0.62, 0.63, 0.64, 0.65, 0.66, 0.67, 0.68, 0.69, 0.70, 0.71, 0.72, 0.73, 0.74, 0.75, 0.76, 0.77, 0.78, 0.79, 0.80, 0.81, 0.82, 0.83, 0.84, 0.85, 0.86, 0.87, 0.88, 0.89, 0.90, 0.91, 0.92, 0.93, 0.94, 0.95]
+  minimum_precision: 0.98
+  minimum_recall: 0.90
+  maximum_recall_regression: 0.02
+  minimum_empty_scene_precision: 1.0
+  stress_exposures: [0.25, 0.45, 1.0, 1.60, 2.0]
+
+export:
+  format: onnx
+  opset: 17
+  half: false
+  dynamic: false
+  simplify: true

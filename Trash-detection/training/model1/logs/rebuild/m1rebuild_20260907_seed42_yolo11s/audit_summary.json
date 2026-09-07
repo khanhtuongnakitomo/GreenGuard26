@@ -1,0 +1,85 @@
+{
+  "class_instance_counts": {
+    "metal_can": 3248,
+    "pet_bottle": 18763
+  },
+  "counts_by_disposition": {
+    "approved_negative": 5,
+    "eligible": 13771,
+    "exclude_duplicate": 1,
+    "exclude_non_target_or_ambiguous": 8152,
+    "exclude_part_only_machine_label": 111,
+    "quarantine_conflicting_duplicate": 192,
+    "quarantine_empty_unreviewed": 436,
+    "quarantine_invalid_label": 960
+  },
+  "created_at": "2026-09-07T13:33:14.173995+00:00",
+  "duplicates": {
+    "conflicting_duplicate_images": 192,
+    "distinct_image_hashes": 23382,
+    "distinct_pixel_hashes": 23382,
+    "exact_or_pixel_duplicate_images": 150,
+    "near_duplicate_comparisons": 690843,
+    "near_duplicate_group_proposals": 2088
+  },
+  "eligible_image_count": 13776,
+  "image_count": 23628,
+  "note": "The full per-image audit_report.json is intentionally local-only; this summary is the compact publication artifact.",
+  "run_id": "m1rebuild_20260907_seed42_yolo11s",
+  "schema": "greenguard-m1-rebuild-audit-summary-v1",
+  "source_counts": {
+    "bottle-defect-detection": {
+      "eligible": 487,
+      "exclude_non_target_or_ambiguous": 129,
+      "quarantine_invalid_label": 12
+    },
+    "bottle-label-detection": {
+      "eligible": 1263,
+      "quarantine_invalid_label": 366
+    },
+    "bottle-label-inspection": {
+      "eligible": 268,
+      "quarantine_invalid_label": 37
+    },
+    "dataset-1": {
+      "exclude_non_target_or_ambiguous": 3298,
+      "quarantine_empty_unreviewed": 8
+    },
+    "dataset-3": {
+      "eligible": 1173,
+      "exclude_non_target_or_ambiguous": 21,
+      "quarantine_empty_unreviewed": 14,
+      "quarantine_invalid_label": 424
+    },
+    "dataset-4": {
+      "eligible": 5591,
+      "exclude_duplicate": 1,
+      "quarantine_empty_unreviewed": 386,
+      "quarantine_invalid_label": 81
+    },
+    "dataset-5": {
+      "eligible": 684,
+      "exclude_non_target_or_ambiguous": 1,
+      "quarantine_empty_unreviewed": 8,
+      "quarantine_invalid_label": 29
+    },
+    "dataset-6": {
+      "eligible": 4289,
+      "exclude_non_target_or_ambiguous": 4703,
+      "quarantine_conflicting_duplicate": 192,
+      "quarantine_empty_unreviewed": 20,
+      "quarantine_invalid_label": 11
+    },
+    "dataset-live": {
+      "eligible": 16
+    },
+    "live-machine-dataset": {
+      "exclude_part_only_machine_label": 111
+    },
+    "true-negative": {
+      "approved_negative": 5
+    }
+  },
+  "source_roots_missing": [],
+  "true_negative_distinct_images": 5
+}

@@ -1,0 +1,26 @@
+{
+  "batch": 16,
+  "best_checkpoint": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\runs\\m1rebuild_20260907_seed42_yolo11s_v4_smoke_seed42\\weights\\best.pt",
+  "best_sha256": "ef8e235b05f3d87b072456aa487afd7587da08471286ef7d505c6d58b04680a0",
+  "completed_epochs": 1,
+  "dataset_yaml": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\dataset\\generated\\m1rebuild_20260907_seed42_yolo11s_v4\\dataset.yaml",
+  "dynamic_augmentation": true,
+  "elapsed_seconds": 253.7705545425415,
+  "environment": {
+    "cuda": "12.6",
+    "cuda_available": true,
+    "gpu": "NVIDIA GeForce RTX 3060",
+    "platform": "win32",
+    "python": "3.11.15 (main, Jun 11 2026, 04:59:07) [MSC v.1944 64 bit (AMD64)]",
+    "torch": "2.13.0+cu126",
+    "ultralytics": "8.4.126"
+  },
+  "pretrained_model": "yolo11s.pt",
+  "pretrained_weight": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\yolo11s.pt",
+  "pretrained_weight_sha256": "85a76fe86dd8afe384648546b56a7a78580c7cb7b404fc595f97969322d502d5",
+  "resumed_from": null,
+  "run_id": "m1rebuild_20260907_seed42_yolo11s_v4",
+  "schema": "greenguard-m1-rebuild-train-v1",
+  "smoke": true,
+  "status": "COMPLETED"
+}
