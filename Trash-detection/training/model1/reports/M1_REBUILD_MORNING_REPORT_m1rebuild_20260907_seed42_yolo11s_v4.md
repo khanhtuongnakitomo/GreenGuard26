@@ -73,7 +73,7 @@ The candidate configuration is intentionally available for diagnostics but remai
 ## Publication
 
 - Verified pushed commit: `NOT_PUSHED — origin/main advanced to f8810a8265e8b6b1a37156b2c9b8a8333bf23adf; no force-push or implicit merge was performed`
-- Local publication commit: `c184f5c4b2a75b6f5f6ddf9ddc98f0c23d02bff4`
+- Local publication commit: `e8d963f2277f4655fc82324e2c553a1f50b6f790`
 - Source reports: `Trash-detection/training/model1/logs/rebuild/m1rebuild_20260907_seed42_yolo11s_v4/`
 - Frozen manifest: `Trash-detection/training/model1/dataset/generated/m1rebuild_20260907_seed42_yolo11s_v4/manifest.json` (local evidence; bulk generated data is not intended for Git)
 - Local checkpoint: `Trash-detection/training/model1/runs/m1rebuild_20260907_seed42_yolo11s_v4_batch16/weights/best.pt`, SHA-256 `5c29271a4e7393e522d11344f9c6ff51a7d052d8234c6394a64d8765a0a60dc7`
