@@ -1,6 +1,8 @@
 {
   "schema_version": "greenguard-m2-preservation-v1",
-  "status": "PROVEN_UNCHANGED_ON_BRANCH",
+  "status": "HISTORICAL_PRE_REVAMP_MERGE_BASELINE",
+  "scope": "Documents the recovery branch before feat/model-2-revamped was integrated into main.",
+  "superseded_by": "feat/model-2-revamped integration into main",
   "base_commit": "f1c5a70642bfdc38f20bc7cf39c2d1e82c3581c2",
   "main_model2": {
     "path": "Trash-detection/pc-demo/models/m2_obb_640.onnx",

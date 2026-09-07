@@ -38,7 +38,9 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "test": "node --require ./tests/register.cjs --test tests/*.test.cjs"
   },
   "private": true
 }

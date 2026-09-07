@@ -3,7 +3,7 @@ import DetectionEventModel from '../models/DetectionEvent';
 import MachineModel from '../models/Machine';
 import ContributionSessionModel from '../models/ContributionSession';
 import UserModel from '../models/User';
-import { IMPACT_FACTORS } from '../config/impactFactors';
+import { calculateImpact, materialType, type ImpactSession } from '../services/impact';
 
 function getRangeDate(range?: string): Date {
   const now = new Date();
@@ -15,7 +15,7 @@ function getRangeDate(range?: string): Date {
   }
   // Default: today (start of day)
   const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
+  start.setUTCHours(0, 0, 0, 0);
   return start;
 }
 
@@ -26,11 +26,12 @@ export async function getOverview(req: Request, res: Response) {
   // 1. Detection aggregates
   const detections = await DetectionEventModel.find({
     capturedAt: { $gte: since }
-  });
+  }).sort({ capturedAt: 1 }).lean();
 
   const totalDetections = detections.length;
   let nonRejects = 0;
   let totalConf = 0;
+  let confidenceCount = 0;
   let totalFps = 0;
   let fpsCount = 0;
   const wasteBreakdown = {
@@ -40,8 +41,11 @@ export async function getOverview(req: Request, res: Response) {
   };
 
   for (const d of detections) {
-    totalConf += d.confidence || 0;
-    if (d.fps) {
+    if (typeof d.confidence === 'number' && Number.isFinite(d.confidence)) {
+      totalConf += d.confidence;
+      confidenceCount++;
+    }
+    if (typeof d.fps === 'number' && Number.isFinite(d.fps) && d.fps >= 0) {
       totalFps += d.fps;
       fpsCount++;
     }
@@ -53,12 +57,12 @@ export async function getOverview(req: Request, res: Response) {
     }
   }
 
-  const acceptRate = totalDetections > 0 ? Number(((nonRejects / totalDetections) * 100).toFixed(1)) : 100;
-  const avgConfidence = totalDetections > 0 ? Number((totalConf / totalDetections).toFixed(2)) : 0.88;
-  const avgFps = fpsCount > 0 ? Number((totalFps / fpsCount).toFixed(1)) : 30.0;
+  const acceptRate = totalDetections > 0 ? Number(((nonRejects / totalDetections) * 100).toFixed(1)) : null;
+  const avgConfidence = confidenceCount > 0 ? Number((totalConf / confidenceCount).toFixed(2)) : null;
+  const avgFps = fpsCount > 0 ? Number((totalFps / fpsCount).toFixed(1)) : null;
 
   const totalPet = wasteBreakdown.pet_clean + wasteBreakdown.pet_bad;
-  const purityRate = totalPet > 0 ? Number(((wasteBreakdown.pet_clean / totalPet) * 100).toFixed(1)) : 100;
+  const purityRate = totalPet > 0 ? Number(((wasteBreakdown.pet_clean / totalPet) * 100).toFixed(1)) : null;
 
   // 2. Machines online status
   const machines = await MachineModel.find();
@@ -66,21 +70,21 @@ export async function getOverview(req: Request, res: Response) {
   const onlineCount = machines.filter(
     (m) => m.status === 'online' || (m.lastHeartbeatAt && nowTime - new Date(m.lastHeartbeatAt).getTime() < 60000)
   ).length;
-  const binsOnline = `${onlineCount}/${machines.length || 1}`;
+  const binsOnline = `${onlineCount}/${machines.length}`;
 
-  // 3. Pending sync (unclaimed sessions)
-  const pendingSync = await ContributionSessionModel.countDocuments({ status: 'unclaimed' });
+  // 3. Claim status is independent of device synchronization.
+  const unclaimedSessions = await ContributionSessionModel.countDocuments({ status: 'unclaimed' });
 
   // 4. Classification trend
   const trendMap: Record<string, number> = {};
   for (const d of detections) {
-    const timeKey = new Date(d.capturedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const timeKey = new Date(d.capturedAt).toISOString().slice(0, 16);
     trendMap[timeKey] = (trendMap[timeKey] || 0) + 1;
   }
 
   const classificationTrend = Object.entries(trendMap)
     .slice(-12)
-    .map(([label, value]) => ({ label, value }));
+    .map(([label, value]) => ({ label: range === 'today' ? label.slice(11) : label.replace('T', ' '), value }));
 
   res.json({
     todayDetections: totalDetections,
@@ -88,7 +92,8 @@ export async function getOverview(req: Request, res: Response) {
     avgConfidence,
     binsOnline,
     avgFps,
-    pendingSync,
+    pendingSync: null, // Legacy field: no device queue telemetry exists here.
+    unclaimedSessions,
     purityRate,
     wasteBreakdown,
     classificationTrend
@@ -164,14 +169,14 @@ export async function getQualityMetrics(_req: Request, res: Response) {
   const fpsSeries: Array<{ time: string; fps: number }> = [];
 
   for (const d of detections) {
-    const conf = d.confidence ?? 0.8;
+    const conf = d.confidence;
     for (const b of buckets) {
       if (conf >= b.min && conf < b.max) {
         b.count++;
         break;
       }
     }
-    if (typeof d.latencyMs === 'number') {
+    if (typeof d.latencyMs === 'number' && Number.isFinite(d.latencyMs) && d.latencyMs >= 0) {
       latencies.push(d.latencyMs);
     }
     if (typeof d.fps === 'number' && fpsSeries.length < 20) {
@@ -183,8 +188,8 @@ export async function getQualityMetrics(_req: Request, res: Response) {
   }
 
   latencies.sort((a, b) => a - b);
-  const latencyP50 = latencies.length > 0 ? latencies[Math.floor(latencies.length * 0.5)] : 32;
-  const latencyP95 = latencies.length > 0 ? latencies[Math.floor(latencies.length * 0.95)] : 44;
+  const latencyP50 = latencies.length > 0 ? latencies[Math.floor(latencies.length * 0.5)] : null;
+  const latencyP95 = latencies.length > 0 ? latencies[Math.floor(latencies.length * 0.95)] : null;
 
   res.json({
     confidenceHistogram: buckets.map((b) => ({ bucket: b.bucket, count: b.count })),
@@ -220,14 +225,13 @@ export async function getMachineLifetime(req: Request, res: Response) {
       totalPointsAwarded += s.totalPoints;
     }
     for (const i of s.items) {
-      if (i.itemType in totalItems) {
-        totalItems[i.itemType as keyof typeof totalItems] += i.quantity;
-      }
+      const type = materialType(i.itemType);
+      if (type) totalItems[type] += i.quantity;
     }
   }
 
   const totalPet = totalItems.pet_clean + totalItems.pet_bad;
-  const purityRate = totalPet > 0 ? Number(((totalItems.pet_clean / totalPet) * 100).toFixed(1)) : 100;
+  const purityRate = totalPet > 0 ? Number(((totalItems.pet_clean / totalPet) * 100).toFixed(1)) : null;
 
   res.json({
     machine,
@@ -235,7 +239,7 @@ export async function getMachineLifetime(req: Request, res: Response) {
     totalItems,
     totalPointsAwarded,
     purityRate,
-    uptimePct: 99.2,
+    uptimePct: null, // Requires uptime history; current status cannot measure it.
     recentSessions: sessions.slice(0, 15)
   });
 }
@@ -256,7 +260,7 @@ export async function getUserLifetime(req: Request, res: Response) {
 
   const totals = user.totals || { pet_clean: 0, pet_bad: 0, aluminum: 0, points: 0 };
   const totalPet = (totals.pet_clean ?? 0) + (totals.pet_bad ?? 0);
-  const cleanRatio = totalPet > 0 ? Number((((totals.pet_clean ?? 0) / totalPet) * 100).toFixed(1)) : 100;
+  const cleanRatio = totalPet > 0 ? Number((((totals.pet_clean ?? 0) / totalPet) * 100).toFixed(1)) : null;
 
   res.json({
     user,
@@ -267,62 +271,9 @@ export async function getUserLifetime(req: Request, res: Response) {
 }
 
 export async function getImpactMetrics(_req: Request, res: Response) {
-  const claimedSessions = await ContributionSessionModel.find({ status: 'claimed' });
-
-  let totalPetClean = 0;
-  let totalPetBad = 0;
-  let totalAluminum = 0;
-
-  for (const s of claimedSessions) {
-    for (const i of s.items) {
-      if (i.itemType === 'pet_clean') totalPetClean += i.quantity;
-      else if (i.itemType === 'pet_bad') totalPetBad += i.quantity;
-      else if (i.itemType === 'aluminum') totalAluminum += i.quantity;
-    }
-  }
-
-  const co2SavedKg = Number(
-    (
-      totalPetClean * IMPACT_FACTORS.co2Kg.pet_clean +
-      totalPetBad * IMPACT_FACTORS.co2Kg.pet_bad +
-      totalAluminum * IMPACT_FACTORS.co2Kg.aluminum
-    ).toFixed(2)
-  );
-
-  const waterSavedL = Number(
-    (
-      totalPetClean * IMPACT_FACTORS.waterLiters.pet_clean +
-      totalPetBad * IMPACT_FACTORS.waterLiters.pet_bad +
-      totalAluminum * IMPACT_FACTORS.waterLiters.aluminum
-    ).toFixed(1)
-  );
-
-  const electricityKwh = Number(
-    (
-      totalPetClean * IMPACT_FACTORS.electricityKwh.pet_clean +
-      totalPetBad * IMPACT_FACTORS.electricityKwh.pet_bad +
-      totalAluminum * IMPACT_FACTORS.electricityKwh.aluminum
-    ).toFixed(2)
-  );
-
-  const byMonth = [
-    {
-      month: '2026-08',
-      items: totalPetClean + totalPetBad + totalAluminum,
-      kgPerType: {
-        pet_clean: Number((totalPetClean * IMPACT_FACTORS.weightKg.pet_clean).toFixed(2)),
-        pet_bad: Number((totalPetBad * IMPACT_FACTORS.weightKg.pet_bad).toFixed(2)),
-        aluminum: Number((totalAluminum * IMPACT_FACTORS.weightKg.aluminum).toFixed(2))
-      }
-    }
-  ];
-
-  res.json({
-    byMonth,
-    co2SavedKg,
-    waterSavedL,
-    electricityKwh
-  });
+  const claimedSessions = await ContributionSessionModel.find({ status: 'claimed' })
+    .select('createdAt items').lean<ImpactSession[]>();
+  res.json(calculateImpact(claimedSessions));
 }
 
 export function streamDashboardEvents(req: Request, res: Response) {

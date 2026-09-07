@@ -15,10 +15,12 @@ ignored before top-1 selection and is never shown or sent to Model 2.
 
 ## Windows detection contract
 
-The Windows PC recovery branch keeps the known-good main artifacts. Model 1
-SHA-256 is `5069BFAE324DB8C1AEF1FBCE4B68AAAD217A80A95A6F6B83EACFA60CDB620038`;
-main PC Model 2 remains
-`D4C5F235FBB78E3A8451DE695480400A916FFEC235A518AF47FD5B448C6EB999`.
+The integrated Windows PC line keeps the known-good Model 1 artifact. Model 1
+SHA-256 is `5069BFAE324DB8C1AEF1FBCE4B68AAAD217A80A95A6F6B83EACFA60CDB620038`.
+The promoted revamped Model 2 package is `2DF4F8F9F7D941998029E65809EB53BBF401199EB4D0A8489E7B259503AD1449`
+on PC and `FDA4C7986ADCE3262686842DC751AFBEAE14BD6C059C794926E3A5872BE62FA7`
+on Jetson. The original Model 2 hash remains available in the rollback
+manifest as the known-good pre-revamp baseline.
 
 Model 1 has two confidence floors:
 
@@ -48,9 +50,24 @@ argmax. Angle is radians for polygon reconstruction.
 
 ## Preprocessing
 
-- **OBB:** Ultralytics letterbox fill 114, BGR→RGB, CHW float32, `/255`
+- **HBB and OBB:** Ultralytics letterbox fill 114, BGR→RGB, CHW float32, `/255`
 
-## Gate defaults
+The PC M1 pipeline keeps two confidence values deliberately: `infer_conf=0.05` is the
+candidate-generation floor, while `decision_conf=0.65` is the public workflow
+acceptance floor after class visibility and minimum-area filtering. A low-score
+candidate must not be shown, passed to the PET gate, or invoke Model 2.
+
+## Nano B01 confidence difference
+
+The inspected `jetson-runtime/config/default.json` and `src/pipeline.py` use
+`conf=0.05` without the PC's separate decision floor. The runtime tests record
+this existing behavior with synthetic low-confidence detections. Do not treat
+passing host decoder tests as PC/Jetson decision parity. Aligning this behavior
+requires a separate change, blank/low-confidence/PP regression fixtures, and
+on-device smoke and soak checks; the September web refactor changes no models,
+thresholds, or detection code.
+
+## Gate defaults (PC decision floor; other values shared)
 
 | Setting | Value |
 |---|---|

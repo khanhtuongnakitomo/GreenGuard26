@@ -1,6 +1,6 @@
 /**
  * DashboardSidebar — Dark green sidebar matching Figma exactly.
- * Width: 220px, bg: #1C2B1C
+ * Compact presentation sidebar, bg: #1C2B1C
  */
 import React, { memo } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView } from 'react-native';
@@ -37,6 +37,8 @@ interface Props {
   onNavigate: (route: DashboardRoute) => void;
 }
 
+export const SIDEBAR_WIDTH = 176;
+
 export const DashboardSidebar = memo<Props>(({ activeRoute, onNavigate }) => {
   const insets = useSafeAreaInsets();
 
@@ -54,7 +56,7 @@ export const DashboardSidebar = memo<Props>(({ activeRoute, onNavigate }) => {
           strokeWidth={isActive ? 2.2 : 1.8}
           color={isActive ? Colors.sidebarActiveText : Colors.sidebarText}
         />
-        <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
+        <Text style={[styles.navLabel, isActive && styles.navLabelActive]} numberOfLines={1}>
           {item.label}
         </Text>
       </TouchableOpacity>
@@ -107,7 +109,7 @@ DashboardSidebar.displayName = 'DashboardSidebar';
 
 const styles = StyleSheet.create({
   sidebar: {
-    width: 240,
+    width: SIDEBAR_WIDTH,
     backgroundColor: Colors.sidebarBg,
     position: 'absolute',
     top: 0, bottom: 0, left: 0,
@@ -116,37 +118,38 @@ const styles = StyleSheet.create({
     borderRightColor: Colors.sidebarBorder,
   },
   logoWrap: {
-    paddingHorizontal: 10,
-    paddingBottom: 20,
-    paddingTop: 20,
+    paddingHorizontal: 8,
+    paddingBottom: 14,
+    paddingTop: 16,
     alignItems: 'center',
   },
-  logo: { width: 210, height: 65, transform: [{ scale: 1.4 }] },
-  scroll: { flex: 1, paddingHorizontal: 12 },
+  logo: { width: 156, height: 50, transform: [{ scale: 1.08 }] },
+  scroll: { flex: 1, paddingHorizontal: 8 },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '600' as const,
     color: Colors.sidebarText,
     letterSpacing: 1.4,
-    marginBottom: 6,
+    marginBottom: 5,
     marginTop: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     opacity: 0.6,
   },
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 11,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 9,
     borderRadius: 8,
     marginBottom: 4,
-    gap: 12,
+    gap: 9,
   },
   navItemActive: { backgroundColor: Colors.sidebarActiveBg },
   navLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500' as const,
     color: Colors.sidebarText,
+    flexShrink: 1,
   },
   navLabelActive: {
     color: Colors.sidebarActiveText,
@@ -158,7 +161,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     marginHorizontal: 8,
   },
-  profile: { paddingHorizontal: 10 },
+  profile: { paddingHorizontal: 8 },
   profileDivider: {
     height: 1,
     backgroundColor: Colors.sidebarDivider,
@@ -167,13 +170,13 @@ const styles = StyleSheet.create({
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 7,
     paddingBottom: 4,
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: Colors.sidebarActiveBg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -182,6 +185,6 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: 14, fontWeight: '700' as const, color: Colors.sidebarActiveText },
   profileMeta: { flex: 1 },
-  profileName: { fontSize: 14, fontWeight: '600' as const, color: '#FFFFFF' },
+  profileName: { fontSize: 13, fontWeight: '600' as const, color: '#FFFFFF' },
   profileRole: { fontSize: 12, color: Colors.sidebarText, marginTop: 1 },
 });

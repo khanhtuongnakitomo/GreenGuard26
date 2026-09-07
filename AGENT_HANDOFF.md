@@ -1,38 +1,50 @@
 # GreenGuard26 — Agent Handoff
 
 **Repo:** `https://github.com/khanhtuongnakitomo/GreenGuard26`
-**Latest Model 2 line:** v6 in-machine domain (current best). See "Model 2 versions" below.
+**Latest Model 2 line:** revamped machine-specific package is now integrated into `main`; edge fine-tuning remains candidate-only. See "Model 2 versions" below.
 **Do not push/commit unless the owner asks.**
 
 ## What to run today
 
 | Goal | Path |
 |---|---|
-| Windows detection demo | `Trash-detection/windows-demo/` (`run_demo.bat`) |
-| Quick Model 2-only webcam test | `Trash-detection/training/model2/run_m2_demo.bat` |
+| Windows Model 1 demo | `Trash-detection/demo_model1.bat` |
+| Windows Model 2-only webcam test | `Trash-detection/demo_model2.bat` |
+| Windows full workflow | `Trash-detection/full_demo.bat` |
 | Jetson Nano B01 deploy | Copy **only** `Trash-detection/jetson-runtime/` to Ubuntu |
 | Retrain / export | `Trash-detection/training/model1` and `training/model2` |
 | Parity fixtures | `Trash-detection/validation/` |
 
 Root wrappers: `Trash-detection/setup.ps1` prepares the PC environment;
-`Trash-detection/full_demo.bat` delegates to `windows-demo/run_demo.bat`.
+the three root BAT files are the supported Windows live launchers.
 
-## Locked product behavior (current)
+## Current runtime behavior (verified from source/configuration, September 2026)
 
 ```text
-frame → M1 detector → exactly 7 observations → 4/7 aluminum => signal 0
-  → 4/7 PET => M2 warmup → exactly 7 good/bad/abstain observations
-  → 4/7 good => signal 1; 4/7 bad => signal 2
-  → no quorum => no signal; one signal/item; 8 clear frames re-arm
+frame → M1 HBB detector → ignore pp_cup → top-1 visible object
+  → exactly 7 M1 observations
+       → ≥4 aluminum: signal 0; Model 2 is skipped
+       → ≥4 PET: 0.5s warmup → M2 full frame
+              → centers inside the tracked PET polygon → one per class
+              → exactly 7 good/bad/abstain observations
+                   → ≥4 good: signal 1; ≥4 bad: signal 2
+                   → no quorum: no signal; 8 clear frames re-arm
 ```
 
-The Windows demo is detection-only. It writes exactly one flushed ASCII stdout
-line (`0`, `1`, or `2`) per completed item; diagnostics go to stderr. It has no
-machine transport, firmware, acknowledgements, emergency controls, reset, or
-motor sequencing. Pausing or turning the system off invalidates an in-progress
-vote and requires clear frames before processing resumes.
+PC uses M1 640 with a 0.05 candidate floor and a separate 0.65 decision floor.
+The inspected Nano B01 runtime uses M1 416 and a 0.05 inference floor; it does
+not yet implement the PC decision-floor check. Treat this as an unresolved
+cross-runtime difference, not proof of device parity. See
+`Trash-detection/docs/MODEL_CONTRACT.md` before changing thresholds.
 
-No QR, points, backend, counting, or online learning in either runtime.
+Neither runtime includes the older crop/classifier stage. No QR, points,
+backend, counting, or online learning is implemented in these two runtimes.
+Separate workflow bundles outside this repository have their own contracts.
+
+The Windows demo is detection-only. It has no machine transport, firmware,
+acknowledgements, emergency controls, reset, or motor sequencing. Pausing or
+turning the system off invalidates an in-progress vote and requires clear
+frames before processing resumes.
 
 ---
 
@@ -43,6 +55,7 @@ No QR, points, backend, counting, or online learning in either runtime.
 | v4 | (merged) | `m2v4_caplabel_seed42_n640` | 640 | 0.778 / 0.923 / 0.752 (val) | old baseline |
 | v5 | `feature/m2v5-allangle` | `m2v5_allangle_seed42_n768` | 768 | 0.842 / 0.821 / 0.554 | all-angle/all-light, 150 ep / 6.6h |
 | **v6** | `feature/m2v6-inmachine-domain` | `m2v6_inmachine_seed42_n640` | 640 | **0.919 / 0.831 / 0.583** | in-machine domain, 25 ep / 2.1h cap |
+| revamped | `feat/model-2-revamped` → `main` | `m2revamped_20260829_seed42_n640` | 640 | candidate package promoted | machine-specific package |
 
 Locked test = 222 images, identical for v5 vs v6 (comparison of record). **v6 beats
 v5 on every metric in ~1/3 the training time.** v4 backup at
@@ -73,21 +86,23 @@ in-machine domain** instead of generic augmentation:
 - `watch_training.py` — 5-min reports + crash/hang/stall watchdog (vs the v5 hang).
 - `run_m2_v6_training.ps1` — one-command pipeline (`-Smoke` for sanity).
 
-### Models (current production = v6)
+### Models (current production = revamped machine-specific package)
 
 Packaged by `Trash-detection/scripts/package_models.py`:
 
-- PC (`pc-demo/models`): M1 det 416, cls 224, **M2 v6 640** (`m2_obb_640.onnx`)
-- Jetson (`jetson-runtime/models`): M1 det 416, cls 224, **M2 v6 416** (`m2_obb_416.onnx`)
-- Training exports: `training/model2/export/onnx_{640,416,768}/model.onnx` (v6)
+- PC (`pc-demo/models`): M1 HBB det 640, **revamped M2 640** (`m2_obb_640.onnx`)
+- Jetson (`jetson-runtime/models`): M1 HBB det 416, **revamped M2 416** (`m2_obb_416.onnx`)
+- Training exports: `training/model2/export/onnx_{640,416,768}/model.onnx`
 
 OBB layout: `[cx,cy,w,h, class_probs..., angle]` — do not double-sigmoid.
 Do not use `training/model2/jetson/infer_obb_onnx.py` (wrong channel order / AABB NMS).
 
 ## Branches
 
-V6 is merged into `main`. Check `git status` and `git branch -vv` for current
-branch state; do not infer active or existing branches from this handoff.
+The revamped Model 2 line is merged into `main`. The guarded edge fine-tuning
+workflow remains candidate-only until its evaluation gates pass. Check `git
+status` and `git branch -vv` for current branch state; do not infer active or
+existing branches from this handoff.
 
 ## Jetson constraints
 

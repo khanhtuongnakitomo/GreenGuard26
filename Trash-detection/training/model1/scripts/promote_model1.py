@@ -44,13 +44,15 @@ def remove_old_classifier(package_dir: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--target", choices=("pc", "jetson", "all"), default="pc")
     args = parser.parse_args()
 
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     stage_root = ROOT / "training" / "model1" / "logs" / "promotion_stage" / stamp
     backup_root = BACKUP_ROOT / stamp
     staged = {}
-    for target in ("pc", "jetson"):
+    targets = ("pc", "jetson") if args.target == "all" else (args.target,)
+    for target in targets:
         code, info = package_target(target, scope="m1", stage_root=stage_root, provenance={"model1_source": "Dump/new-model-1"})
         if code:
             print(json.dumps(info, indent=2))

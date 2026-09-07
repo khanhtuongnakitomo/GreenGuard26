@@ -25,7 +25,7 @@ DEFAULT_OUTPUT = DIST / "GreenGuard-Windows-Detection-Demo"
 PORTABLE_STAGE = SOURCE / "portable-runtime"
 LOCKED = {
     "m1_detect_640.onnx": "5069bfae324db8c1aef1fbce4b68aaad217a80a95a6f6b83eacfa60cdb620038",
-    "m2_obb_640.onnx": "d4c5f235fbb78e3a8451de695480400a916ffec235a518af47fd5b448c6eb999",
+    "m2_obb_640.onnx": "2df4f8f9f7d941998029e65809eb53bbf401199eb4d0a8489e7b259503ad1449",
 }
 RUNTIME_FILES = ("config_loader.py", "decision_core.py", "gate.py", "pipeline.py", "ui.py")
 WINDOW_FILES = ("app.py", "decisions.py", "kiosk_ui.py", "signal_sink.py", "workflow.py")

@@ -1,3 +1,4 @@
+import { materialType } from '../services/impact';
 import { Request, Response } from 'express';
 import ContributionSessionModel from '../models/ContributionSession';
 import UserModel from '../models/User';
@@ -75,13 +76,10 @@ export const getSummary = async (req: Request, res: Response): Promise<void> => 
         ]);
 
         itemsAggs.forEach(agg => {
-            if (agg._id === 'pet_clean') byType.pet_clean = agg.total;
-            else if (agg._id === 'pet_bad') byType.pet_bad = agg.total;
-            else if (agg._id === 'aluminum') byType.aluminum = agg.total;
-            else if (agg._id === 'plastic_bottle') byType.pet_clean = (byType.pet_clean || 0) + agg.total;
-            else if (agg._id === 'can') byType.aluminum = (byType.aluminum || 0) + agg.total;
+          const type = materialType(agg._id);
+          if (type) byType[type] = (byType[type] || 0) + agg.total;
         });
-        
+
         totalItems = (byType.pet_clean || 0) + (byType.pet_bad || 0) + (byType.aluminum || 0);
 
         const [pointsAgg] = await ContributionSessionModel.aggregate([

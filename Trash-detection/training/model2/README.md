@@ -21,6 +21,67 @@ dataloader reliability, and watches for stalls. Review the candidate against
 the locked test before any manual promotion. See `../../../DOCUMENTATION.md`
 for the project-wide documentation map.
 
+## Revamped Overnight Workflow
+
+The revamped workflow is isolated to branch `feat/model-2-revamped` and writes
+all generated data, checkpoints, exports, logs, and staged packages under the
+named run. It uses the machine-captured live dataset as the dominant source,
+keeps true negatives in the evaluation path, applies bounded live and
+machine-style replay augmentation, and preserves the active V6 model and
+locked test set.
+
+From `Trash-detection/training/model2/` on the GPU training machine:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_m2_revamped.ps1 -Smoke
+powershell -ExecutionPolicy Bypass -File scripts\run_m2_revamped.ps1 -Device 0 -Batch 24
+```
+
+The full run prepares a deterministic grouped train/validation/holdout split,
+runs Stage A (up to 60 epochs) and Stage B (up to 25 epochs with lower
+learning rate), evaluates cap/label/ring behavior on machine holdout, locked
+test, clean negatives, temporal gate replay, and lighting/noise stress
+surfaces, then exports candidate-only ONNX at 640 and 416. Reports are written
+to `logs/revamped/<run>/reports/`; candidate packages are written to
+`logs/revamped/<run>/candidate_package/`.
+
+Promotion is intentionally not part of this workflow. The evaluator must pass
+all configured cap/label, ring, temporal, negative, stress, locked-test, and
+annotation gates before a separate, explicitly authorized promotion step.
+The current checkpoint graph is reported by Ultralytics as YOLOv8n-OBB; the
+workflow preserves that verified checkpoint architecture rather than silently
+changing it during retraining.
+
+For a fixed-camera machine trial where the operator explicitly accepts the
+machine-specific candidate despite automated gate failures, use the explicit
+manual acceptance switch:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_m2_revamped.ps1 `
+  -Device 0 -Batch 24 -ManualMachineAcceptance `
+  -AcceptanceReason "Operator-approved fixed-camera machine trial"
+```
+
+This sets `production_ready=true` in the evaluation and export reports while
+retaining `automated_gates_passed`, the failed gate list, and the acceptance
+reason. It still writes only to the named candidate package; active production
+files are not changed by this switch.
+
+To replace the active PC and Jetson Model 2 paths after that explicit machine
+decision, run the existing backup-and-promote step with the same override:
+
+```powershell
+..\model1\.venv\Scripts\python.exe scripts\promote_m2_candidate.py `
+  --config config\m2_revamped.yaml `
+  --run m2revamped_20260829_seed42_n640 `
+  --weights runs\m2revamped_20260829_seed42_n640_stage_b\weights\best.pt `
+  --manual-machine-acceptance
+```
+
+Promotion creates a timestamped backup and invalidates the Jetson engine so it
+cannot be mistaken for the newly promoted ONNX model. The promotion report
+retains the automated blockers and the manual acceptance reason.
+
 Part detector for **PET bottles only**. Classes:
 
 | ID | Name | Color in demo |
@@ -48,18 +109,23 @@ No separate venv needed in `training/model2/`.
 
 ---
 
-## Demo — Model 2 only
+## Supported Live Demo Entry Points
+
+The repository has exactly three supported Windows live launchers. They all
+call the shared `pc-demo/src/app.py` runtime; training and validation scripts
+are internal tools and are not live entrypoints.
+
+From `Trash-detection/`:
 
 ```powershell
-cd GreenGuard26\Trash-detection\training/model2
-.\run_m2_demo.bat
+.\demo_model1.bat --source 0
+.\demo_model2.bat --source 0
+.\full_demo.bat --source 0
 ```
 
-```powershell
-.\run_m2_demo.bat --fps 10 --conf 0.4
-.\run_m2_demo.bat --source video.mp4 --save logs\m2_demo
-.\run_m2_demo.bat --source path\to\image.jpg
-```
+Use `demo_model2.bat` for the promoted Model 2 webcam test and `full_demo.bat`
+for the complete Model 1 to Model 2 gate. Do not use obsolete launcher names
+such as `run_m2_demo.bat` or `run_gate_demo.bat`.
 
 | Key | Action |
 |---|---|
@@ -74,16 +140,13 @@ Auto-picks model (first found):
 
 ---
 
-## Demo — Full gate (Model 1 + Model 2)
+## Full Gate Behavior
+
+Run `full_demo.bat` from `Trash-detection/` for the complete Model 1 plus Model
+2 flow:
 
 ```powershell
-cd GreenGuard26\Trash-detection\training/model2
-.\run_gate_demo.bat
-```
-
-```powershell
-.\run_gate_demo.bat --m1-conf 0.05 --m2-conf 0.5
-.\run_gate_demo.bat --save logs\gate_out --max-frames 30
+.\full_demo.bat --source 0 --m1-conf 0.05 --m2-conf 0.5
 ```
 
 **Logic:**
@@ -236,3 +299,36 @@ if class 2 ring is missing from any split) -> eval sets -> smoke -> fine-tune
 Data comes from `..\dataset\sources\` (shared folder at Trash-detection
 level). Verified ring data (owner-live) is mandatory before the rebuild passes
 stage 3.
+# Model 2 training
+
+## PC edge-case fine-tuning
+
+The guarded edge-case workflow runs on `feat/model-2-revamped` and keeps the
+accepted PC Model 2 package unchanged. It normalizes `Dump/new-edge-case-dataset`
+GG1/GG2 labels into the canonical `cap`, `label`, `ring` order, quarantines the
+eight GG1 records whose class 3 is absent from the modified source manifest,
+preserves sequence-based splits, adds bounded fixed-camera photometric stress,
+and replays the existing training set to protect generalization.
+
+From `Trash-detection/training/model2/`:
+
+```powershell
+.\scripts\run_m2_edge_finetune.ps1 -PreflightOnly
+.\scripts\run_m2_edge_finetune.ps1 -Smoke
+.\scripts\run_m2_edge_finetune.ps1
+```
+
+The full run evaluates the candidate against the edge holdout, previous-machine
+surfaces, locked test, reviewed clean negatives, temporal gate replay, and a
+photometric stress surface. It exports only `export/candidates/<run>/onnx_640/`
+and writes `pc-demo/config/edge_candidate.json` for webcam testing. The test
+window can be started from `Trash-detection` with:
+
+```powershell
+.\full_demo.bat --config edge_candidate --auto-start
+```
+
+No Jetson/Orin engine, manifest, runtime, or package is read for promotion or
+modified by this workflow. `production_ready` is true only when every automated
+evaluation and export gate passes; otherwise the candidate remains testable but
+is not promoted.

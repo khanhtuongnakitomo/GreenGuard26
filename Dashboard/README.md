@@ -1,208 +1,87 @@
-# GreenGuard Dashboard — Kiến trúc thư mục
+# GreenGuard Dashboard
 
-> **Robot:** BK_BIN_01 · Smart Recycling Robot  
-> **Stack:** React + Vite + TypeScript · Express + TypeScript · MongoDB Atlas
+Operator dashboard: Expo 57 / React Native Web / TypeScript frontend and an
+Express / TypeScript / Mongoose backend. `frontend/App.tsx` selects Dashboard,
+Analytics, Smart Bins and Reports using local navigation state.
 
----
+## Start locally
 
-## Tổng quan cấu trúc
+Use the package manager matching the checked-in lockfile for each folder.
+With dependencies installed, run `npm run dev` in `backend` and `npm run web`
+in `frontend`. Copy each `.env.example` to `.env` only when `.env` does not
+already exist. Set the backend's MONGODB_URI to the authorized database.
 
-```
-Dashboard/
-├── backend/       # Express + TypeScript API server (port 3001)
-├── frontend/      # React + Vite + TypeScript dashboard (port 5173)
-└── docs/          # Tài liệu kiến trúc và feature
-```
+Backend PORT falls back to 3001 when omitted; `.env.example` sets 3003 to match
+the frontend's default API URL. Expo prints its frontend URL on startup.
+Public frontend environment variables are bundled at build time; restart or
+re-export after changing them.
 
----
+## Presentation and live data
 
-## `backend/` — Express + TypeScript API
+- EXPO_PUBLIC_DEMO_MODE=true (also the default when unset) keeps presentation
+  data populated without a backend. Dashboard and Analytics do not poll in
+  this mode. Presentation data is labelled.
+- EXPO_PUBLIC_DEMO_MODE=false uses EXPO_PUBLIC_API_URL (default
+  http://localhost:3003). Dashboard polls every 3.5 seconds and Analytics every
+  4 seconds. Requests have a 15-second timeout and support cancellation.
+- Failed live refreshes retain the last complete snapshot and show a stale-data
+  message with its last successful update time. Initial failure displays
+  unavailable data. Partial failure never combines live and sample responses.
+- Smart Bins and Reports remain presentation pages, labelled even in live mode.
+  Their displayed actions do not establish fleet-management/report-export support.
 
-```
-backend/
-├── .env.example               # Template biến môi trường (copy → .env)
-├── package.json               # Dependencies: express, mongoose, cors, dotenv
-├── tsconfig.json              # TS config: target ES2020, outDir dist/
-│
-└── src/
-    ├── server.ts              # Entry point: load .env → connectDB() → app.listen()
-    ├── app.ts                 # Express app: middleware + mount routes + health check
-    │
-    ├── config/
-    │   └── db.ts              # Kết nối MongoDB Atlas qua mongoose
-    │
-    ├── types/
-    │   └── index.ts           # Shared TypeScript types/interfaces:
-    │                          #   DetectedType, TargetBin, SortCommand, SortingStatus,
-    │                          #   MachineState, CreateDetectionDto, HeartbeatDto,
-    │                          #   SummaryResponse, PaginatedResponse, ApiSuccess, ApiError
-    │
-    ├── models/
-    │   ├── Detection.ts       # Mongoose model: 1 document = 1 lượt phân loại rác
-    │   │                      #   eventId (unique) · machineId · detectedType · confidence
-    │   │                      #   targetBin · sortCommand · sortingStatus · createdAt
-    │   │                      #   Index: eventId (unique), machineId, {machineId, createdAt}
-    │   ├── Machine.ts         # Mongoose model: trạng thái hiện tại của robot
-    │   │                      #   machineId (unique) · currentState · lastSeenAt · lastEventId
-    │   └── MachineHeartbeat.ts# Mongoose model: lịch sử heartbeat (append-only)
-    │                          #   machineId · state · lastEventId · createdAt
-    │
-    ├── controllers/
-    │   ├── detection.controller.ts   # POST /api/detections (upsert idempotent qua eventId)
-    │   │                             # GET  /api/detections  (filter + pagination)
-    │   │                             # GET  /api/detections/latest
-    │   ├── machine.controller.ts     # POST /api/machines/heartbeat (upsert + append log)
-    │   │                             # GET  /api/machines/:machineId (+ recentHeartbeats)
-    │   └── stats.controller.ts       # GET  /api/stats/summary (MongoDB aggregation)
-    │
-    └── routes/
-        ├── detection.routes.ts  # /api/detections → detection.controller
-        ├── machine.routes.ts    # /api/machines   → machine.controller
-        └── stats.routes.ts      # /api/stats      → stats.controller
-```
+`frontend/src/services/dashboardQueries.ts` owns polling/cache behavior;
+`api.ts` owns HTTP requests and `demoData.ts` holds examples.
 
-### API Endpoints
+## Backend ownership
 
-| Method | Path | Caller | Mô tả |
-|--------|------|--------|-------|
-| `POST` | `/api/detections` | Jetson | Gửi detection event (idempotent) |
-| `GET`  | `/api/detections` | Dashboard | Lịch sử phân loại (filter + pagination) |
-| `GET`  | `/api/detections/latest` | Dashboard | Event gần nhất |
-| `POST` | `/api/machines/heartbeat` | Jetson | Heartbeat định kỳ |
-| `GET`  | `/api/machines/:machineId` | Dashboard | Trạng thái machine + log |
-| `GET`  | `/api/stats/summary` | Dashboard | Thống kê tổng quan |
-| `GET`  | `/health` | Monitoring | Health check |
+This is a read-oriented backend. Models are schema mirrors: GreenPoint-Backend
+owns their contracts and database writes. Do not add local telemetry ingestion
+or change mirrored schema structure here.
 
-### Chạy backend
+Routes mounted in `backend/src/app.ts`:
 
-```bash
-cd backend
-cp .env.example .env       # Điền MONGODB_URI
-npm install
-npm run dev                # tsx watch → hot reload, port 3001
+- /api/dashboard: overview, live feed, quality, impact, machine/user lifetime,
+  and event stream.
+- /api/machines, /api/sessions, /api/stats: fleet/session/statistic reads.
+- /health: process health, not full telemetry-ingestion readiness.
+
+## Metric definitions
+
+- Impact includes claimed sessions, grouped by creation time in UTC, representing
+  recycling time rather than reward-claim time. Responses declare timeZone and
+  periodBasis. Undated records contribute to lifetime impact and undatedItems,
+  never an invented month.
+- Legacy plastic_bottle maps to pet_clean; can maps to aluminum. Existing
+  conversion factors remain unchanged and are estimates.
+- unclaimedSessions counts unclaimed rewards. Legacy pendingSync is null:
+  the database cannot establish a device's unsynchronized queue.
+- Missing confidence/FPS/latency/purity samples return null, rendered as
+  unavailable. Machine uptimePct is null until uptime history is available.
+- Overview's today boundary and trend labels use UTC. Longer ranges include
+  dates so identical clock times on different days are not merged.
+
+Consumers must handle nullable measurements. In-repository consumers have been
+updated; review external consumers before deploying this backend change.
+
+## Verification
+
+Run in both frontend and backend:
+
+```powershell
+npm run typecheck
+npm test
 ```
 
----
+Frontend web build:
 
-## `frontend/` — React + Vite + TypeScript + Tailwind CSS
-
-```
-frontend/
-├── .env.example               # VITE_API_BASE_URL, VITE_MACHINE_ID
-├── index.html                 # HTML entry với SEO meta tags
-├── package.json               # react, react-router-dom, @tanstack/react-query, recharts, axios
-├── vite.config.ts             # Vite: @/ alias → src/, proxy /api → localhost:3001
-├── tsconfig.json              # TS strict mode, path alias @/*
-├── tsconfig.node.json         # TS config cho vite.config.ts
-├── tailwind.config.js         # Tailwind content: src/**/*.{ts,tsx}
-├── postcss.config.js          # PostCSS: tailwindcss + autoprefixer
-│
-└── src/
-    ├── main.tsx               # React entry: ReactDOM.createRoot + QueryClientProvider
-    ├── App.tsx                # Router: BrowserRouter + Routes + Sidebar + TopBar layout
-    ├── index.css              # Tailwind directives + base styles
-    │
-    ├── types/
-    │   └── index.ts           # Mirror types từ backend: Detection, Machine, Summary,
-    │                          # DetectionFilters, PaginatedResponse, MachineState, ...
-    │
-    ├── utils/
-    │   ├── constants.ts       # MACHINE_ID, POLL_INTERVALS, WASTE_TYPES, BINS, ...
-    │   └── formatters.ts      # formatTime, formatTimeAgo, formatWasteType,
-    │                          # formatConfidence, isOnline, machineStateLabel, ...
-    │
-    ├── api/
-    │   └── client.ts          # Axios instance + typed API functions:
-    │                          #   fetchDetections, fetchLatestDetection,
-    │                          #   fetchSummary, fetchMachine
-    │
-    ├── hooks/                 # TanStack Query hooks (polling + cache)
-    │   ├── useSummary.ts      # GET /api/stats/summary — poll 5s
-    │   ├── useLatestEvent.ts  # GET /api/detections/latest — poll 3s
-    │   ├── useDetections.ts   # GET /api/detections — poll 10s (optional)
-    │   └── useMachine.ts      # GET /api/machines/:id — poll 5s
-    │
-    ├── components/
-    │   ├── layout/
-    │   │   ├── Sidebar.tsx    # Navigation: Overview / History / Machine Status
-    │   │   └── TopBar.tsx     # Header: title + MachineStatusBadge live
-    │   │
-    │   ├── cards/
-    │   │   ├── StatCard.tsx           # Metric card (label, value, unit, color)
-    │   │   ├── LatestEvent.tsx        # Card event phân loại gần nhất
-    │   │   └── MachineStatusBadge.tsx # ● Online/Offline + state pill + time ago
-    │   │
-    │   ├── charts/
-    │   │   ├── WasteTypeChart.tsx     # Recharts BarChart: count theo loại rác
-    │   │   ├── BinDistribution.tsx    # Recharts PieChart: phân bổ theo ngăn
-    │   │   └── TimelineChart.tsx      # Recharts LineChart: detections theo giờ
-    │   │
-    │   └── table/
-    │       ├── DetectionTable.tsx     # Bảng lịch sử + skeleton loader + status badge
-    │       └── TableFilters.tsx       # Filter bar: type, status, date range
-    │
-    └── pages/
-        ├── Dashboard.tsx      # Route "/" — Overview: StatCards + Charts + LatestEvent
-        ├── History.tsx        # Route "/history" — Bảng lịch sử + filters + pagination
-        └── Machine.tsx        # Route "/machine" — Machine info + status + heartbeat log
+```powershell
+npx expo export --platform web --output-dir .expo/verify-web
 ```
 
-### Data flow
-
-```
-App mount
-  │
-  ├── Dashboard.tsx (/)
-  │     ├── useSummary()        → GET /api/stats/summary        [poll 5s]
-  │     ├── useLatestEvent()    → GET /api/detections/latest    [poll 3s]
-  │     └── useDetections()     → GET /api/detections           [poll 10s]
-  │
-  ├── History.tsx (/history)
-  │     └── useDetections(filters, offset)  → GET /api/detections?...  [manual refetch]
-  │
-  └── Machine.tsx (/machine)
-        └── useMachine()        → GET /api/machines/BK_BIN_01  [poll 5s]
-```
-
-### Chạy frontend
-
-```bash
-cd frontend
-cp .env.example .env       # Tuỳ chỉnh VITE_API_BASE_URL nếu cần
-npm install
-npm run dev                # Vite dev server → port 5173
-```
-
----
-
-## `docs/` — Tài liệu
-
-```
-docs/
-├── dashboard-architecture.md  # Kiến trúc chi tiết React dashboard
-└── GreenGuard-Soft-Feat.md    # Software & dashboard workflow toàn hệ thống
-```
-
----
-
-## Chạy cả hai cùng lúc (Demo)
-
-```bash
-# Terminal 1 — Backend
-cd backend && npm run dev      # http://localhost:3001
-
-# Terminal 2 — Frontend
-cd frontend && npm run dev     # http://localhost:5173
-```
-
-> **Vite proxy** tự forward `/api/*` → `localhost:3001` nên không cần config CORS khi dev.
-
----
-
-## MongoDB Atlas Collections
-
-| Collection | Mô tả |
-|---|---|
-| `detections` | Mỗi lượt phân loại rác (eventId unique, compound index machineId+createdAt) |
-| `machines` | Trạng thái hiện tại của từng robot (upsert theo machineId) |
-| `machine_heartbeats` | Lịch sử heartbeat append-only (index machineId) |
+Backend production build: `npm run build`, then `npm start` with environment
+configured. Tests use Node's test runner and the installed TypeScript compiler,
+with fixtures and no live database requests. Type checking excludes generated
+dist and .expo output. Check desktop/narrow layouts, presentation navigation,
+live initial failure, stale data and recovery before releasing. Web export
+alone does not establish visual or device correctness.

@@ -16,12 +16,13 @@ intentionally; `scripts/package_models.py` keeps SHA-256 manifests in sync.
 ```text
 CameraFrame
   → M1 HBB detector (640 PC / 416 Jetson): metal_can | pet_bottle | pp_cup
-  → filter pp_cup, then top-1 visible class (min area ≥ 2% of frame)
+  → filter pp_cup, then top-1 visible class (min area ≥ 2% of frame,
+       PC decision confidence ≥ 0.65; see MODEL_CONTRACT.md for the Jetson difference)
   → shared ExactWindowVoter collects exactly 7 M1 observations
        → ≥4 aluminum: final signal 0; Model 2 is skipped
        → ≥4 PET: 0.5s warmup, then Model 2 starts
-  → M2 OBB on the tracked PET polygon
-       → keep centers inside the PET polygon
+  → M2 OBB on the full frame
+       → keep centers inside the tracked/smoothed PET polygon
        → one highest-confidence box per class (cap, label, ring)
        → exactly 7 M2 observations: ≥4 clean => signal 1, ≥4 violation => signal 2
   → no quorum emits no signal; one stdout line max per item; 8 clear frames re-arm

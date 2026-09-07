@@ -522,6 +522,8 @@ def score_buckets(
 def assign_splits(cfg: dict[str, Any], groups: list[dict[str, Any]]) -> dict[str, str]:
     ratios = {key: float(value) for key, value in cfg["dataset"]["split_ratios"].items()}
     total_images = sum(group["image_count"] for group in groups)
+    if cfg["dataset"].get("split_strategy") == "balanced_search":
+        return assign_balanced_splits(cfg, groups, ratios, total_images)
     assignment: dict[str, str] = {}
     targets = {split: total_images * ratios[split] for split in ("train", "val", "holdout")}
     counts = {split: 0 for split in targets}
@@ -537,6 +539,52 @@ def assign_splits(cfg: dict[str, Any], groups: list[dict[str, Any]]) -> dict[str
         assignment[group["group_id"]] = choice
         counts[choice] += group["image_count"]
     return assignment
+
+
+def assign_balanced_splits(
+    cfg: dict[str, Any],
+    groups: list[dict[str, Any]],
+    ratios: dict[str, float],
+    total_images: int,
+) -> dict[str, str]:
+    """Find a deterministic grouped split that covers scarce lighting/classes."""
+    if not groups:
+        return {}
+    names = canonical_names(cfg)
+    seed = int(cfg["training"].get("seed", 42))
+    rng = random.Random(seed)
+    ordered = sorted(groups, key=lambda group: group["group_id"])
+
+    def score(assignment: dict[str, str]) -> float:
+        buckets = {name: empty_bucket() for name in ("train", "val", "holdout")}
+        for group in ordered:
+            add_group(buckets[assignment[group["group_id"]]], group)
+        return score_buckets(buckets, ordered, ratios, names)
+
+    assignment = {}
+    targets = {name: total_images * ratios[name] for name in ("train", "val", "holdout")}
+    counts = {name: 0 for name in targets}
+    for group in sorted(ordered, key=lambda item: (-item["image_count"], item["group_id"])):
+        choice = min(
+            ("train", "val", "holdout"),
+            key=lambda name: (counts[name] - targets[name], name == "train"),
+        )
+        assignment[group["group_id"]] = choice
+        counts[choice] += group["image_count"]
+
+    best = dict(assignment)
+    best_score = score(best)
+    for _ in range(max(1000, len(ordered) * 100)):
+        candidate = dict(best)
+        group = rng.choice(ordered)
+        current = candidate[group["group_id"]]
+        alternatives = [name for name in ("train", "val", "holdout") if name != current]
+        candidate[group["group_id"]] = rng.choice(alternatives)
+        candidate_score = score(candidate)
+        if candidate_score < best_score:
+            best = candidate
+            best_score = candidate_score
+    return best
 
 
 def copy_sample_to_split(sample: dict[str, Any], image_dir: Path, label_dir: Path, prefix: str = "") -> dict[str, Any]:
@@ -660,7 +708,7 @@ def write_augmented_sample(
 ) -> dict[str, Any] | None:
     rng = random.Random(f"{cfg['run_name']}::{sample['image_name']}::{variant_id}")
     try:
-        if variant_id == 1:
+        if variant_id % 2 == 1:
             image = cv2.imread(sample["canonical_image"])
             assert image is not None
             aug_image, transforms = apply_glare_variant(image, rng)
@@ -686,6 +734,77 @@ def write_augmented_sample(
     except Exception as exc:
         log_event(cfg, f"augmentation skipped for {sample['image_name']} variant {variant_id}: {exc}")
         return None
+
+
+def apply_legacy_machine_style(image: np.ndarray, rng: random.Random) -> tuple[np.ndarray, list[dict[str, Any]]]:
+    """Add bounded camera-domain appearance variation to legacy replay images."""
+    out = image.astype(np.float32)
+    gamma = 0.70 + (0.55 * rng.random())
+    gain = 0.86 + (0.34 * rng.random())
+    bias = -18.0 + (36.0 * rng.random())
+    out = np.power(np.clip(out / 255.0, 0.0, 1.0), gamma) * 255.0
+    out = np.clip(out * gain + bias, 0.0, 255.0).astype(np.uint8)
+
+    if rng.random() < 0.65:
+        height, width = out.shape[:2]
+        overlay = out.copy()
+        center = (int(width * (0.45 + 0.40 * rng.random())), int(height * (0.15 + 0.55 * rng.random())))
+        axes = (int(width * (0.08 + 0.18 * rng.random())), int(height * (0.04 + 0.12 * rng.random())))
+        cv2.ellipse(overlay, center, axes, -40.0 + 80.0 * rng.random(), 0, 360, (255, 255, 255), -1)
+        out = alpha_blend(out, overlay, 0.04 + 0.12 * rng.random())
+    if rng.random() < 0.60:
+        sigma = 2.0 + 8.0 * rng.random()
+        noise = np.random.default_rng(rng.randint(0, 2**31 - 1)).normal(0.0, sigma, out.shape)
+        out = np.clip(out.astype(np.float32) + noise, 0.0, 255.0).astype(np.uint8)
+    quality = int(58 + 27 * rng.random())
+    ok, encoded = cv2.imencode(".jpg", out, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
+    if ok:
+        decoded = cv2.imdecode(encoded, cv2.IMREAD_COLOR)
+        if decoded is not None:
+            out = decoded
+    return out, [
+        {"type": "legacy_machine_style", "gamma": round(gamma, 6), "gain": round(gain, 6), "bias": round(bias, 6)},
+        {"type": "jpeg", "quality": quality},
+    ]
+
+
+def write_legacy_machine_variant(
+    cfg: dict[str, Any],
+    item: dict[str, Any],
+    variant_id: int,
+    image_dir: Path,
+    label_dir: Path,
+) -> dict[str, Any] | None:
+    image = cv2.imread(str(item["image_path"]))
+    if image is None:
+        return None
+    rng = random.Random(f"{cfg['run_name']}::legacy::{item['image_name']}::{variant_id}")
+    out, transforms = apply_legacy_machine_style(image, rng)
+    image_name = f"legacy_{item['image_name']}.jpg"
+    label_name = f"legacy_{item['label_name']}"
+    cv2.imwrite(str(image_dir / image_name), out)
+    shutil.copy2(item["label_path"], label_dir / label_name)
+    return {
+        "image_name": image_name,
+        "label_name": label_name,
+        "origin": "legacy_machine_augmented",
+        "parent_image_name": item["image_name"],
+        "variant_id": variant_id,
+        "transforms": transforms,
+        "is_negative": item["is_negative"],
+        "class_presence": item["class_presence"],
+        "split": "train",
+    }
+
+
+def live_variant_count(cfg: dict[str, Any], sample: dict[str, Any]) -> int:
+    configured = cfg["dataset"].get("live_aug_variants_by_class")
+    if not configured:
+        return int(cfg["dataset"].get("max_live_aug_variants_per_image", 2))
+    counts = [int(configured.get(name, 0)) for name, present in sample["class_presence"].items() if present]
+    if not counts:
+        return int(configured.get("default", 2))
+    return max(counts)
 
 
 def write_true_negative_variant(
@@ -976,7 +1095,7 @@ def main() -> int:
     augmented_rows = []
     train_samples = [sample for sample in kept_samples if sample["live_split"] == "train"]
     for sample in train_samples:
-        for variant_id in range(1, int(cfg["dataset"]["max_live_aug_variants_per_image"]) + 1):
+        for variant_id in range(1, live_variant_count(cfg, sample) + 1):
             item = write_augmented_sample(cfg, sample, variant_id, dirs["merged_train_images"], dirs["merged_train_labels"])
             if item is not None:
                 augmented_rows.append(item)
@@ -987,6 +1106,8 @@ def main() -> int:
     replay_target = int(round(live_train_total * float(cfg["dataset"]["legacy_replay_ratio"])))
     replay_selected = select_replay(replay_pool, replay_target, int(cfg["training"]["seed"]), cfg["canonical_names"])
     replay_rows = []
+    replay_augmented_rows = []
+    legacy_variant_count = int(cfg["dataset"].get("legacy_domain_variant_count", 0))
     for item in replay_selected:
         image_name = f"replay_{item['image_name']}"
         label_name = f"replay_{item['label_name']}"
@@ -1006,8 +1127,21 @@ def main() -> int:
                 "parent_image_name": item["image_name"],
                 "is_negative": item["is_negative"],
                 "class_presence": item["class_presence"],
+                "split": "train",
             }
         )
+        for variant_id in range(1, legacy_variant_count + 1):
+            variant = write_legacy_machine_variant(
+                cfg,
+                item,
+                variant_id,
+                dirs["replay_train_images"],
+                dirs["replay_train_labels"],
+            )
+            if variant is not None:
+                shutil.copy2(dirs["replay_train_images"] / variant["image_name"], dirs["merged_train_images"] / variant["image_name"])
+                shutil.copy2(dirs["replay_train_labels"] / variant["label_name"], dirs["merged_train_labels"] / variant["label_name"])
+                replay_augmented_rows.append(variant)
 
     write_yaml_surfaces(cfg, generated_root)
     gate_sequences = sequence_reports(groups, assignment, dirs["gate_sequences"])
@@ -1037,7 +1171,8 @@ def main() -> int:
         + augmented_rows
         + true_negative_train_rows
         + true_negative_augmented_rows
-        + replay_rows,
+        + replay_rows
+        + replay_augmented_rows,
     )
 
     reviewed_negative_count = sum(1 for sample in kept_samples if sample["reviewed_negative"] and sample["is_negative"])
@@ -1096,6 +1231,7 @@ def main() -> int:
             "live_train_augmented": len(augmented_rows),
             "legacy_replay_selected": len(replay_rows),
             "legacy_replay_target": replay_target,
+            "legacy_replay_augmented": len(replay_augmented_rows),
         },
         "quarantine": quarantine + true_negative_quarantine,
         "promotion_prereq_failures": promotion_prereq_failures,

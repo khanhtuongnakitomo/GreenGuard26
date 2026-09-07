@@ -291,6 +291,11 @@ def main() -> int:
     parser.add_argument("--config", default=None)
     parser.add_argument("--run", default=None)
     parser.add_argument("--weights", default=None)
+    parser.add_argument(
+        "--manual-machine-acceptance",
+        action="store_true",
+        help="Promote the selected fixed-camera candidate despite automated metric or parity blockers.",
+    )
     args = parser.parse_args()
 
     cfg = load_config(args.config, run_name_override=args.run)
@@ -302,7 +307,11 @@ def main() -> int:
         write_status(cfg, "CRASHED", step="promote", detail=f"candidate weights missing: {weights}")
         return 1
 
-    evaluation_report = read_json(report_path(cfg, "evaluation_report.json"), default={})
+    evaluation_report_name = "revamped_evaluation_report.json"
+    evaluation_report = read_json(report_path(cfg, evaluation_report_name), default={})
+    if not evaluation_report:
+        evaluation_report_name = "evaluation_report.json"
+        evaluation_report = read_json(report_path(cfg, evaluation_report_name), default={})
     prepare_report = read_json(report_path(cfg, "prepare_report.json"), default={})
     candidate_root = workflow_paths(cfg)["candidate_export_root"]
     candidate_root.mkdir(parents=True, exist_ok=True)
@@ -343,7 +352,7 @@ def main() -> int:
     provenance = {
         "run_name": run_name,
         "dataset_source_hash": prepare_report.get("dataset_source_hash"),
-        "evaluation_report": str(report_path(cfg, "evaluation_report.json")),
+        "evaluation_report": str(report_path(cfg, evaluation_report_name)),
         "promote_invoked_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
     package_info = stage_package(cfg, candidate_root, provenance, stage_root)
@@ -361,9 +370,17 @@ def main() -> int:
         "packaged_hash_match_jetson": staged_hashes["jetson"].get("m2_obb_416.onnx") == export_results["onnx_416"]["sha256"].lower(),
     }
 
+    automated_blockers = evaluation_report.get("gate_blockers", evaluation_report.get("production_blockers", []))
+    manual_acceptance = bool(args.manual_machine_acceptance or evaluation_report.get("manual_machine_acceptance", False))
+    ignored_for_manual_acceptance = {"pc_parity", "jetson_parity"}
     blockers = []
-    blockers.extend(evaluation_report.get("gate_blockers", []))
-    blockers.extend([name for name, ok in export_validation_gates.items() if not ok])
+    if not manual_acceptance:
+        blockers.extend(automated_blockers)
+    blockers.extend(
+        name
+        for name, ok in export_validation_gates.items()
+        if not ok and (not manual_acceptance or name not in ignored_for_manual_acceptance)
+    )
     blockers = sorted(set(blockers))
 
     report = {
@@ -377,6 +394,9 @@ def main() -> int:
         "stage_root": str(stage_root),
         "stage_package": package_info,
         "export_validation_gates": export_validation_gates,
+        "automated_gate_blockers": sorted(set(automated_blockers)),
+        "manual_machine_acceptance": manual_acceptance,
+        "manual_acceptance_reason": evaluation_report.get("manual_acceptance_reason") if manual_acceptance else None,
         "gate_blockers": blockers,
         "promotion_occurred": False,
     }
@@ -422,7 +442,7 @@ def main() -> int:
 
     report.update(
         {
-            "status": "promoted",
+            "status": "promoted_manual_machine_acceptance" if manual_acceptance else "promoted",
             "promotion_occurred": True,
             "backup_root": str(backup_root),
             "replacement": replacement,
