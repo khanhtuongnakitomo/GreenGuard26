@@ -1,7 +1,8 @@
 # GreenGuard Trash-detection
 
-Detection for the GreenGuard recycling kiosk: PET vs aluminum (Model 1), then
-cap / label / ring gate on PET only (Model 2).
+Detection for the GreenGuard recycling kiosk: a seven-observation Model 1
+material decision followed, for PET only, by a seven-observation Model 2
+quality decision.
 
 ## Layout
 
@@ -58,7 +59,11 @@ on-device and never committed.
 2. Only aluminum can and PET bottle are visible; PP cup is filtered before top-1 selection
 3. Aluminum can → display aluminum and skip M2
 4. PET bottle → M2 OBB on the full frame; keep centers inside the PET polygon; one box per class
-5. Gate: 0.5s warmup, 4-of-7 vote, 1.5s verdict hold, miss hold 3 frames
+5. Gate: exactly 7 M1 observations; 4 aluminum emits signal `0`, 4 PET enters
+   Model 2 after the existing 0.5s warmup; exactly 7 M2 observations; 4 good
+   emits `1`, 4 bad emits `2`
+6. PP/unknown/missing observations abstain; no quorum emits no signal; one
+   signal is allowed per item and eight clear frames re-arm the workflow
 
 The PC runtime now separates Model 1 candidate generation (`infer_conf=0.05`)
 from public acceptance (`decision_conf=0.65`). Unknown and PP classes are
@@ -77,17 +82,31 @@ cd pc-demo
 .\.venv\Scripts\python.exe src\analyze_m1_rvm.py --sessions ..\validation\rvm-sessions\bright-01 --output ..\validation\threshold-report.json
 ```
 
-Build the Windows bundle from main's locked Model 1 and Model 2. The output is
-ignored and may be regenerated:
+Build the Windows bundle from main's locked Model 1 and Model 2. The primary
+portable build is fail-closed until a staged Python 3.11 x64 runtime and local
+wheelhouse are supplied under `windows-rvm-demo/portable-runtime/`; it never
+copies `.venv` or downloads during the build:
 
 ```powershell
-python scripts\build_windows_rvm_demo.py build
-python scripts\build_windows_rvm_demo.py check
+python scripts\build_windows_rvm_demo.py build --profile portable --zip
+python scripts\build_windows_rvm_demo.py check --require-offline
 python scripts\build_windows_rvm_demo.py headless-smoke
 ```
 
-The bundle defaults to serial disabled. Do not use `--enable-serial` until the
-owner signs off the camera-only capture set.
+For development validation only, use the explicitly labelled fallback:
+
+```powershell
+python scripts\build_windows_rvm_demo.py build --profile online-source --allow-dirty
+```
+
+It may require system Python and internet access and is not a movable offline
+release. Generated `dist/` output is ignored.
+
+The bundle defaults to serial disabled. The v2 controller requires an exact
+`RVM-V2` handshake, signal bytes `0`/`1`/`2`, and matching
+`ACK:<signal>`/`DONE:<signal>` lines. Emergency stop is `!`; reset is a
+separate operator action. Do not use `--enable-serial` until the owner signs
+off the camera-only capture set and manually flashes the tracked v2 sketch.
 
 The strict two-class replacement is guarded by
 `training/model1/strict_two_class_config.json` and

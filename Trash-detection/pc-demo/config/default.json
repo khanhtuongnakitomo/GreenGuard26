@@ -27,9 +27,37 @@
     "vote_window": 7,
     "vote_need": 4
   },
+  "decision_contract": {
+    "version": "seven-observation-v1",
+    "window_size": 7,
+    "quorum": 4,
+    "signals": {
+      "ALUMINUM_CAN": 0,
+      "PET_CLEAN": 1,
+      "PET_REJECT": 2
+    },
+    "clear_frames_to_rearm": 8
+  },
   "runtime": {
     "target_fps": 5.0,
-    "device": "cpu"
+    "device": "cpu",
+    "decision_window": 7,
+    "decision_quorum": 4,
+    "clear_frames": 8,
+    "result_hold_s": 1.5
+  },
+  "serial": {
+    "enabled": false,
+    "protocol": "rvm-v2",
+    "port": "auto",
+    "baud": 115200,
+    "timeout_s": 1.0,
+    "command_timeout_s": 180.0
+  },
+  "routing": {
+    "ALUMINUM_CAN": 0,
+    "PET_CLEAN": 1,
+    "PET_REJECT": 2
   },
   "ui": {
     "window_title": "GreenGuard PC Demo",

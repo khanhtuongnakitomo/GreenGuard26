@@ -12,6 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNTIME = ROOT / "runtime"
 sys.path.insert(0, str(RUNTIME / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+if not (RUNTIME / "src" / "pipeline.py").is_file():
+    sys.path.insert(0, str(ROOT.parent / "pc-demo" / "src"))
 
 from config_loader import load_config, load_manifest, validate_manifest  # noqa: E402
 from gate import PetGate  # noqa: E402
@@ -61,7 +63,8 @@ def main() -> int:
                 if key in (ord("q"), ord("Q"), 27): break
                 if key in (ord("s"), ord("S")): workflow.toggle_system()
                 elif key in (ord("p"), ord("P")): workflow.toggle_pause()
-                elif key == ord("0"): workflow.emergency_stop()
+                elif key in (ord("!"), ord("e"), ord("E")): workflow.emergency_stop()
+                elif key in (ord("r"), ord("R")): workflow.reset_after_emergency()
             if args.max_frames and frames >= args.max_frames: break
     finally:
         cap.release(); controller.close()

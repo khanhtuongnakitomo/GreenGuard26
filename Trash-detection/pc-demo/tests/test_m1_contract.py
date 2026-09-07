@@ -11,7 +11,7 @@ sys.path.insert(0, str(SRC))
 
 from analyze_m1_rvm import evaluate_threshold, select_threshold, threshold_grid  # noqa: E402
 from diagnose_m1 import parse_args, trace_to_dict  # noqa: E402
-from pipeline import M1DetectionTrace, M1Pipeline  # noqa: E402
+from pipeline import M1DetectionTrace, M1Pipeline, M1_CLASS_NAMES  # noqa: E402
 
 
 class _Tensor:
@@ -57,6 +57,11 @@ def test_trace_keeps_raw_low_confidence_candidate_and_reason():
     assert trace.reason == "BELOW_DECISION_CONF"
     assert trace.raw_detections[0]["class_name"] == "metal_can"
     assert trace.raw_detections[0]["confidence"] == pytest.approx(0.60)
+
+
+def test_internal_pp_class_name_is_truthful_while_public_pipeline_suppresses_it():
+    assert M1_CLASS_NAMES[2] == "pp_cup"
+    assert fake_pipeline().allowed_ids == {0, 1}
 
 
 def test_diagnostic_launcher_rejects_serial():

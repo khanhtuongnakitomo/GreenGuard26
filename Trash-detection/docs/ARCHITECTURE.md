@@ -17,11 +17,14 @@ intentionally; `scripts/package_models.py` keeps SHA-256 manifests in sync.
 CameraFrame
   → M1 HBB detector (640 PC / 416 Jetson): metal_can | pet_bottle | pp_cup
   → filter pp_cup, then top-1 visible class (min area ≥ 2% of frame)
-  → can: display aluminum, skip M2
-  → pet: M2 OBB on full frame
-       → keep centers inside smoothed PET polygon
+  → shared ExactWindowVoter collects exactly 7 M1 observations
+       → ≥4 aluminum: final signal 0; Model 2 is skipped
+       → ≥4 PET: 0.5s warmup, then Model 2 starts
+  → M2 OBB on the tracked PET polygon
+       → keep centers inside the PET polygon
        → one highest-confidence box per class (cap, label, ring)
-       → 0.5s warmup → 4-of-7 vote → 1.5s verdict hold
+       → exactly 7 M2 observations: ≥4 clean => signal 1, ≥4 violation => signal 2
+  → no quorum emits no signal; one signal max per item; 8 clear frames re-arm
 ```
 
 ## Module split
@@ -30,7 +33,9 @@ Shared idea across both runtimes:
 
 - `app.py` — camera loop, CLI, START/PAUSE
 - `pipeline.py` — model inference only
-- `gate.py` — temporal state (warmup / vote / hold / miss)
+- `gate.py` — inference result types and model-only temporal helpers
+- `decision_core.py` — canonical exact 7/4 M1+M2 workflow shared by PC full
+  mode and the Windows RVM shell
 - `ui.py` — drawing helpers
 
 Jetson adds:
@@ -49,3 +54,13 @@ Jetson adds:
 
 `jetson-runtime/` is the exact folder copied to Ubuntu. Scripts resolve paths from
 their own file location. No symlinks. No Ultralytics/PyTorch on device.
+
+## Windows RVM boundary
+
+`windows-rvm-demo/` is a kiosk shell around the same `pc-demo/src/decision_core.py`
+state machine. Its optional controller requires an exact `RVM-V2` handshake,
+ASCII signal bytes `0`, `1`, or `2`, and matching `ACK:<signal>`/`DONE:<signal>`
+lines. Emergency stop is `!`; byte `0` is never emergency in v2. Serial is
+disabled by default and missing acknowledgements are not retried automatically.
+The tracked legacy firmware reference and manually flashed v2 sketch are under
+`firmware/`.

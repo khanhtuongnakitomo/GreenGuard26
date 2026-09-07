@@ -1,0 +1,9 @@
+{
+  "schema_version": "greenguard-wheelhouse-v1",
+  "wheels": [
+    {
+      "filename": "package-version-py3-none-any.whl",
+      "sha256": "replace-with-the-real-wheel-sha256"
+    }
+  ]
+}

@@ -1,10 +1,18 @@
-"""M1 -> optional M2 -> optional RVM workflow with one-command latching."""
+"""Windows kiosk adapter around the canonical PC decision workflow."""
 from __future__ import annotations
 
+import sys
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
-from decisions import command_for_result
+try:
+    from decision_core import CanonicalWorkflow, FINAL_SIGNALS
+except ModuleNotFoundError:  # source-checkout tests; bundle copies this module
+    pc_src = Path(__file__).resolve().parents[2] / "pc-demo" / "src"
+    if str(pc_src) not in sys.path:
+        sys.path.insert(0, str(pc_src))
+    from decision_core import CanonicalWorkflow, FINAL_SIGNALS
 
 
 @dataclass
@@ -13,17 +21,22 @@ class WorkflowView:
     title: str
     subtitle: str
     result: str = ""
+    signal: int | None = None
     color: tuple[int, int, int] = (160, 160, 160)
 
 
 class SignalLatch:
+    """Send at most one final numeric signal for an item."""
+
     def __init__(self):
         self.sent = False
 
-    def send_once(self, controller, command: str) -> bool:
+    def send_once(self, controller, signal: int) -> bool:
         if self.sent or not controller.enabled:
             return False
-        if not controller.send(command):
+        if signal not in FINAL_SIGNALS:
+            return False
+        if not controller.send_signal(signal):
             return False
         self.sent = True
         return True
@@ -33,108 +46,104 @@ class SignalLatch:
 
 
 class DemoWorkflow:
+    """Expose canonical workflow state and optional serial side effects."""
+
     def __init__(self, cfg: dict, m1, m2, gate, controller):
-        self.m1, self.m2, self.gate, self.controller = m1, m2, gate, controller
-        runtime = cfg["runtime"]
-        self.routing = cfg["routing"]
-        self.can_stable_frames = int(runtime.get("can_stable_frames", 3))
-        self.clear_frames_needed = int(runtime.get("clear_frames", 8))
-        self.decision_process_s = float(runtime.get("decision_process_s", 1.0))
-        self.result_hold_s = float(runtime.get("result_hold_s", 1.5))
+        # ``gate`` remains an ignored constructor parameter for integration
+        # compatibility; full-mode decisions use the shared core.
+        del gate
+        self.core = CanonicalWorkflow(cfg, m1, m2)
+        self.controller = controller
         self.signal = SignalLatch()
         self.state = "READY"
-        self.state_since = time.perf_counter()
         self.system_on = True
         self.paused = False
-        self.pause_started = None
-        self.can_streak = 0
-        self.last_kind = None
-        self.decision_since = None
-        self.pending_result = None
-        self.clear_frames = 0
         self.result_name = ""
+        self.last_signal: int | None = None
+        self._last_error = ""
 
-    def _set_state(self, state: str, now: float):
-        self.state, self.state_since = state, now
-
-    def _send_result(self, result: str, now: float):
-        self.result_name = result
-        if not self.controller.enabled:
-            self._set_state("CAMERA_ONLY", now)
+    def _apply_step(self, step) -> None:
+        if step.phase == "READY" and step.detail == "re-armed after eight clear frames":
+            self.signal.reset()
+            self.result_name = ""
+            self.last_signal = None
+        if step.phase == "EMERGENCY_STOP":
+            self.state = "ERROR"
+            self.result_name = "EMERGENCY STOP"
             return
-        command = command_for_result(result, self.routing)
-        if command is None or not self.signal.send_once(self.controller, command):
-            self._set_state("ERROR", now)
+        if step.result:
+            self.result_name = step.result
+        if step.signal is None:
+            if step.phase == "SIGNAL" and self.state in {"SIGNAL_SENT", "CAMERA_ONLY", "ERROR"}:
+                return
+            self.state = step.phase
+            return
+        # Check None, not truthiness: signal 0 is a valid aluminum command.
+        self.result_name = step.result
+        self.last_signal = step.signal
+        if not self.controller.enabled:
+            self.state = "CAMERA_ONLY"
+            return
+        if self.signal.send_once(self.controller, step.signal):
+            self.state = "SIGNAL_SENT"
         else:
-            self._set_state("SIGNAL_SENT", now)
-
-    def _reset_for_next_item(self, now: float):
-        self.gate.reset(); self.m1.reset_vote(); self.signal.reset()
-        self.state, self.state_since = "READY", now
-        self.can_streak = 0; self.last_kind = None; self.decision_since = None
-        self.pending_result = None; self.clear_frames = 0; self.result_name = ""
+            self._last_error = "v2 serial signal was not acknowledged"
+            self.state = "ERROR"
 
     def update(self, frame, now: float | None = None) -> WorkflowView:
-        now = time.perf_counter() if now is None else now
+        now = time.perf_counter() if now is None else float(now)
         if not self.system_on or self.paused:
             return self.view()
-        if self.state in {"SIGNAL_SENT", "CAMERA_ONLY", "ERROR"}:
-            if now - self.state_since >= self.result_hold_s:
-                self._set_state("WAIT_CLEAR", now)
-            return self.view()
-        if self.state == "WAIT_CLEAR":
-            raw = self.m1.run(frame)
-            if raw.poly is None:
-                self.clear_frames += 1
-                if self.clear_frames >= self.clear_frames_needed:
-                    self._reset_for_next_item(now)
-            else:
-                self.clear_frames = 0
-            return self.view()
-        raw = self.m1.run(frame)
-        if raw.poly is None:
-            self.can_streak = 0; self.last_kind = None; self.decision_since = None; self.pending_result = None
-            if self.state != "READY": self._set_state("READY", now)
-            return self.view()
-        if not raw.is_pet:
-            if self.last_kind == "ALUMINUM_CAN": self.can_streak += 1
-            else: self.last_kind, self.can_streak, self.decision_since = "ALUMINUM_CAN", 1, now
-            self._set_state("DETECTING", now)
-            if self.can_streak >= self.can_stable_frames: self.pending_result = "ALUMINUM_CAN"
-        else:
-            self.last_kind = "PET"; self.decision_since = self.decision_since or now
-            self._set_state("INSPECTING", now)
-            held = self.gate.update_m1_hold(raw, now=now)
-            if held is not None:
-                result = self.gate.evaluate_pet(held, self.m2.run(frame, held.poly), now=now)
-                if result["verdict"].startswith("PET ACCEPT"): self.pending_result = "PET_CLEAN"
-                elif result["verdict"].startswith("PET REJECT"): self.pending_result = "PET_REJECT"
-        if self.pending_result and self.decision_since is not None and now - self.decision_since >= self.decision_process_s:
-            self._send_result(self.pending_result, now)
+        step = self.core.update(frame, now=now)
+        self._apply_step(step)
         return self.view()
 
     def toggle_system(self):
         self.system_on = not self.system_on
+        if not self.system_on:
+            self.core.pause_for_clear()
+            if self.core.phase == "WAIT_CLEAR":
+                self.state = "WAIT_CLEAR"
         return self.system_on
 
     def toggle_pause(self):
         self.paused = not self.paused
+        if self.paused:
+            self.core.pause_for_clear()
+            if self.core.phase == "WAIT_CLEAR":
+                self.state = "WAIT_CLEAR"
         return self.paused
 
     def emergency_stop(self, now: float | None = None):
-        if self.controller.enabled: self.controller.send("0")
-        self._set_state("ERROR", time.perf_counter() if now is None else now)
+        del now
+        if self.controller.enabled:
+            self.controller.emergency_stop()
+        self.core.emergency_stop()
+        self.state = "ERROR"
         self.result_name = "EMERGENCY STOP"
+
+    def reset_after_emergency(self):
+        """Operator-only reset; workflow still requires eight clear frames."""
+        if self.controller.enabled and hasattr(self.controller, "reset_emergency"):
+            if not self.controller.reset_emergency():
+                self._last_error = "v2 firmware emergency reset was not acknowledged"
+                self.state = "ERROR"
+                return
+        self.core.clear_emergency()
+        if self.core.phase == "WAIT_CLEAR":
+            self.state = "WAIT_CLEAR"
+            self.result_name = ""
 
     def view(self) -> WorkflowView:
         labels = {
             "READY": ("Insert one item", "PET bottles and aluminum cans only", (80, 210, 120)),
-            "DETECTING": ("Checking your item", "Please hold it still", (40, 190, 240)),
-            "INSPECTING": ("Inspecting PET bottle", "Checking the bottle", (40, 190, 240)),
-            "CAMERA_ONLY": ("Item detected", "Camera-only validation; no signal sent", (80, 210, 120)),
+            "M1_VOTING": ("Checking your item", "Seven-frame material decision", (40, 190, 240)),
+            "M2_WARMUP": ("Inspecting PET bottle", "Preparing the bottle inspection", (40, 190, 240)),
+            "M2_VOTING": ("Inspecting PET bottle", "Seven-frame quality decision", (40, 190, 240)),
             "SIGNAL_SENT": ("Sorting item", "Signal sent to machine", (80, 210, 120)),
+            "CAMERA_ONLY": ("Item detected", "Camera-only validation; no signal sent", (80, 210, 120)),
             "WAIT_CLEAR": ("Remove the item", "Ready for the next item", (80, 210, 120)),
-            "ERROR": ("Machine needs attention", "Detection is still available", (50, 80, 230)),
+            "ERROR": ("Machine needs attention", self._last_error or "Detection is still available", (50, 80, 230)),
         }
         title, subtitle, color = labels.get(self.state, labels["READY"])
-        return WorkflowView(self.state, title, subtitle, self.result_name, color)
+        return WorkflowView(self.state, title, subtitle, self.result_name, signal=self.last_signal, color=color)

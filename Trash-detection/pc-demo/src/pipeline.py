@@ -12,7 +12,9 @@ from config_loader import resolve_path
 from gate import M1FrameResult, M2Hit, M2_NAMES, center_in_poly, pick_top1_per_class
 
 DEVICE = "cpu"
-M1_CLASS_NAMES = {0: "metal_can", 1: "pet_bottle"}
+# Keep the internal class map truthful for diagnostics even though class 2 is
+# intentionally suppressed before any public decision or Model 2 call.
+M1_CLASS_NAMES = {0: "metal_can", 1: "pet_bottle", 2: "pp_cup"}
 DISPLAY = {
     "pet": ("PET bottle", (255, 80, 0)),
     "can": ("Aluminum can", (0, 255, 0)),

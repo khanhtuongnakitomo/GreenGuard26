@@ -53,7 +53,9 @@ thresholds; the analyzer never rewrites production configuration.
 - `models/` — ONNX + `manifest.json`
 - `src/app.py` — entrypoint
 - `src/pipeline.py` — Ultralytics M1/M2
-- `src/gate.py` — temporal PET gate
+- `src/gate.py` — model result types and model-only helpers
+- `src/decision_core.py` — canonical exact-seven observation workflow shared by
+  the PC full mode and the Windows RVM shell
 - `src/ui.py` — OpenCV overlays
 
 ## Tests
@@ -61,3 +63,10 @@ thresholds; the analyzer never rewrites production configuration.
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests -q
 ```
+
+Full mode uses exactly seven Model 1 observations. Four aluminum observations
+emit signal `0`; four PET observations enter the existing Model 2 warmup and
+then exactly seven quality observations. Four clean observations emit `1`, and
+four violation observations emit `2`. Missing/unknown observations abstain.
+The final signal is latched once per item and eight clear frames are required
+before re-arming.

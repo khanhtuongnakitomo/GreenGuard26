@@ -16,14 +16,21 @@
 
 Root wrappers: `Trash-detection/setup.ps1`, `Trash-detection/run_demo.bat` → `pc-demo/`.
 
-## Locked product behavior (6dbd33a)
+## Locked product behavior (current)
 
 ```text
-frame → M1 det@416 → top-1 (min area 0.02) → crop+10% → cls@224
-  → can: show aluminum, skip M2
-  → pet: M2 full frame → centers in PET poly → one per class
-         warmup 0.5s → vote 4/7 → hold 1.5s → ACCEPT/REJECT
+frame → M1 detector → exactly 7 observations → 4/7 aluminum => signal 0
+  → 4/7 PET => M2 warmup → exactly 7 good/bad/abstain observations
+  → 4/7 good => signal 1; 4/7 bad => signal 2
+  → no quorum => no signal; one signal/item; 8 clear frames re-arm
 ```
+
+The Windows RVM v2 transport waits through firmware progress lines for the
+matching `DONE:<signal>` and treats `ERR...`/timeout as failure without retry.
+Emergency stop is latched in firmware and desktop state; `R` is the separate
+operator reset, followed by the eight-clear re-arm requirement. Pausing or
+turning the system off invalidates an in-progress vote and requires clear
+frames before processing resumes.
 
 No QR, points, backend, counting, or online learning in either runtime.
 

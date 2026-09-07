@@ -1,0 +1,334 @@
+// ==========================================
+// 1. (INPUT_PULLDOWN)
+// ==========================================
+const int S1 = 4;
+const int S2 = 5;
+const int S3 = 6;
+const int S4 = 7;
+const int S5 = 15;
+const int S6 = 16;
+const int S7 = 17;
+const int S8 = 18;
+const int S9 = 8;
+
+// ==========================================
+// 2.  (OUTPUT)
+// ==========================================
+const int M1_FWD = 1;  const int M1_REV = 2;   // Motor 1
+const int M2_FWD = 38; const int M2_REV = 48;  // Motor 2
+const int M3_FWD = 47; const int M3_REV = 21;  // Motor 3
+const int M4_FWD = 14; const int M4_REV = 13;  // Motor 4
+
+// ==========================================
+// 3. 
+// ==========================================
+bool isEmergencyStop = false; 
+bool isM2SeekingS3 = false; // Cờ báo hiệu Motor 2 đang chạy ngầm tìm Sensor 3
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Cấu hình chân sensor_kéo pulldown
+  pinMode(S1, INPUT_PULLDOWN); pinMode(S2, INPUT_PULLDOWN);
+  pinMode(S3, INPUT_PULLDOWN); pinMode(S4, INPUT_PULLDOWN);
+  pinMode(S5, INPUT_PULLDOWN); pinMode(S6, INPUT_PULLDOWN);
+  pinMode(S7, INPUT_PULLDOWN); pinMode(S8, INPUT_PULLDOWN);
+  pinMode(S9, INPUT_PULLDOWN);
+
+  // Cấu hình chân Motor 
+  pinMode(M1_FWD, OUTPUT); pinMode(M1_REV, OUTPUT);
+  pinMode(M2_FWD, OUTPUT); pinMode(M2_REV, OUTPUT);
+  pinMode(M3_FWD, OUTPUT); pinMode(M3_REV, OUTPUT);
+  pinMode(M4_FWD, OUTPUT); pinMode(M4_REV, OUTPUT);
+
+  // Khởi động an toàn: Tắt toàn bộ motor
+  stopAllMotors();
+  
+  Serial.println("=================================");
+  Serial.println(">>> HE THONG MOTOR SAN SANG <<<");
+  Serial.println("- Phim 1: Thuc hien Lenh 1 -> Lenh 2");
+  Serial.println("- Phim 2: Thuc hien Lenh 1 -> Lenh 3");
+  Serial.println("- Phim 3: Thuc hien Lenh 1 -> Lenh 4");
+  Serial.println("- Phim A (hoac 0): DUNG KHAN CAP");
+  Serial.println("=================================");
+}
+
+void loop() {
+  // Liên tục kiểm tra xem Motor 2 chạy ngầm đã chạm S3 chưa
+  checkBackgroundTasks(); 
+
+  // Chỉ khi rảnh rỗi (không chạy lệnh nào), hệ thống mới tự kiểm tra Serial
+  if (Serial.available() > 0) {
+    char command = Serial.read();
+    
+    // Bỏ qua phím Enter bị thừa
+    if (command == '\n' || command == '\r') return;
+
+
+    if (command == 'A' || command == 'a' || command == '0') {
+      isEmergencyStop = true;
+      stopAllMotors();
+      Serial.println("\n>>> [STOP] DA DUNG KHAN CAP TAT CA MOTOR! <<<");
+      return; 
+    }
+
+    // Xử lý các lệnh chạy tuần tự
+    if (command == '1') {
+      isEmergencyStop = false;
+      Serial.println("\n[BAT DAU SEQUENCE 1 (Lenh 1 -> 2)]");
+      lenh1();
+      if (!isEmergencyStop) lenh2();
+      Serial.println("[KET THUC SEQUENCE 1]");
+    }
+    else if (command == '2') {
+      isEmergencyStop = false;
+      Serial.println("\n[BAT DAU SEQUENCE 2 (Lenh 1 -> 3)]");
+      lenh1();
+      if (!isEmergencyStop) lenh3();
+      Serial.println("[KET THUC SEQUENCE 2]");
+    }
+    else if (command == '3') {
+      isEmergencyStop = false;
+      Serial.println("\n[BAT DAU SEQUENCE 3 (Lenh 1 -> 4)]");
+      lenh1();
+      if (!isEmergencyStop) lenh4();
+      Serial.println("[KET THUC SEQUENCE 3]");
+    }
+  }
+}
+
+// ==========================================
+// CÁC HÀM XỬ LÝ LỆNH ĐIỀU KHIỂN LOGIC
+// ==========================================
+
+void lenh1() {
+  if (isEmergencyStop) return;
+  Serial.println("--- LENH 1 ---");
+  
+  Serial.println("Cho Sensor 1 bat...");
+  if (!waitSensor(S1)) return;
+
+  Serial.println("M1 Thuan (6 giay)...");
+  runMotor(1, 1);
+  if (!waitTime(6275)) return;
+
+  Serial.println("M1 Nghich den khi S1 bat.");
+  Serial.println("Dong thoi dem 1.9s de kich hoat M2...");
+  
+  runMotor(1, -1); 
+  unsigned long m1RevStartTime = millis();
+  unsigned long m2AfterS4Time = 0;
+
+  int m1State = 0; // 0: M1 đang chạy chờ S1 | 1: M1 Xong
+  int m2State = 0; // 0: Đang chờ 4.5s | 1: Chạy nghịch chờ S4 | 2: Đang đếm 1.5s | 5: M2 Xong (hoặc đã chuyển qua chạy ngầm)
+
+  // Vòng lặp kết thúc khi CẢ M1 VÀ M2 đều đạt điều kiện hoàn thành Lệnh 1
+  while (m1State != 1 || m2State != 5) {
+    checkSerial(); // Quét phím A
+    checkBackgroundTasks(); // Giám sát nếu S3 bị chạm sớm
+    if (isEmergencyStop) return;
+
+    // --- LOGIC MOTOR 1 ---
+    if (m1State == 0 && digitalRead(S1) == HIGH) {
+      Serial.println("M1 cham S1 -> Dung M1");
+      runMotor(1, 0);
+      m1State = 1;
+    }
+
+    // --- LOGIC MOTOR 2 ---
+    if (m2State == 0) {
+      if (millis() - m1RevStartTime >= 1900) {
+        Serial.println("Da qua 1.9s -> M2 bat dau chay Nghich cho S4");
+        runMotor(2, -1);
+        m2State = 1;
+      }
+    }
+    else if (m2State == 1 && digitalRead(S4) == HIGH) {
+      Serial.println("M2 cham S4 -> M2 Dao chieu Thuan, bat dau dem 1.5 giay...");
+      runMotor(2, 1); // Đảo chiều thành Thuận
+      m2AfterS4Time = millis();
+      m2State = 2;
+    }
+    else if (m2State == 2) {
+      // Đề phòng S3 bị chạm trước khi hết 1.5s
+      if (digitalRead(S3) == HIGH) {
+        Serial.println("M2 cham S3 qua som -> Dung M2");
+        runMotor(2, 0);
+        m2State = 5;
+      } 
+      // Đã qua 1.5s -> Chuyển M2 thành Tác vụ chạy ngầm để thoát Lệnh 1
+      else if (millis() - m2AfterS4Time >= 500) {
+        Serial.println("Da qua 1.5s");
+        isM2SeekingS3 = true; 
+        m2State = 5; 
+      }
+    }
+
+    delay(10); // Chống dội tín hiệu (Debounce)
+  }
+}
+
+void lenh2() {
+  if (isEmergencyStop) return;
+  Serial.println("--- LENH 2 ---");
+
+  Serial.println("M4 Thuan den khi Sensor 9 bat...");
+  runMotor(4, 1);
+  if (!waitSensor(S9)) return;
+
+  Serial.println("M4 Nghich den khi Sensor 8 bat...");
+  runMotor(4, -1);
+  if (!waitSensor(S8)) return;
+  
+  runMotor(4, 0);
+  Serial.println("Lenh 2 Hoan thanh.");
+}
+
+void lenh3() {
+  if (isEmergencyStop) return;
+  Serial.println("--- LENH 3 ---");
+
+  Serial.println("M3 Nghich den khi Sensor 6 bat...");
+  runMotor(3, -1);
+  if (!waitSensor(S6)) return;
+
+  Serial.println("M3 Thuan den khi Sensor 5 bat...");
+  runMotor(3, 1);
+  if (!waitSensor(S5)) return;
+  
+  runMotor(3, 0);
+  Serial.println("Lenh 3 Hoan thanh.");
+}
+
+void lenh4() {
+  if (isEmergencyStop) return;
+  Serial.println("--- LENH 4 (CHAY SONG SONG M3 & M4) ---");
+
+  int m3State = 1; // 1: Nghịch chờ S7 | 2: Thuận chờ S5 | 3: Xong
+  int m4State = 1; // 1: Thuận chờ S9 | 2: Chờ S6 bật | 3: Nghịch chờ S8 | 4: Xong
+
+  runMotor(3, -1); // M3 Nghịch
+  runMotor(4, 1);  // M4 Thuận
+
+  while (m3State != 3 || m4State != 4) {
+    checkSerial();
+    checkBackgroundTasks(); // Tiếp tục giám sát M2 đang chạy ngầm (nếu có)
+    if (isEmergencyStop) return;
+
+    // --- LOGIC MOTOR 3 ---
+    if (m3State == 1 && digitalRead(S7) == HIGH) {
+      Serial.println("M3 cham S7 -> Dao chieu Thuan cho S5");
+      runMotor(3, 1);
+      m3State = 2;
+    }
+    else if (m3State == 2 && digitalRead(S5) == HIGH) {
+      Serial.println("M3 cham S5 -> Dung M3");
+      runMotor(3, 0);
+      m3State = 3;
+    }
+
+    // --- LOGIC MOTOR 4 ---
+    if (m4State == 1 && digitalRead(S9) == HIGH) {
+      Serial.println("M4 cham S9 -> Dung M4, cho he thong bao S6 bat...");
+      runMotor(4, 0);
+      m4State = 2;
+    }
+    else if (m4State == 2 && digitalRead(S6) == HIGH) {
+      Serial.println("S6 da bat -> M4 quay Nghich cho S8");
+      runMotor(4, -1);
+      m4State = 3;
+    }
+    else if (m4State == 3 && digitalRead(S8) == HIGH) {
+      Serial.println("M4 cham S8 -> Dung M4");
+      runMotor(4, 0);
+      m4State = 4;
+    }
+
+    delay(10); 
+  }
+  Serial.println("Lenh 4 Hoan thanh.");
+}
+
+// ==========================================
+// CÁC HÀM CỐT LÕI (CHỜ THÔNG MINH & ĐIỀU KHIỂN)
+// ==========================================
+
+// Tác vụ chạy ngầm để giám sát Motor 2
+void checkBackgroundTasks() {
+  if (isM2SeekingS3) {
+    if (digitalRead(S3) == HIGH) {
+      Serial.println(">>> M2 cham S3 (Chay ngam) -> Dung M2 <<<");
+      runMotor(2, 0);
+      isM2SeekingS3 = false; // Kết thúc tác vụ chạy ngầm
+    }
+  }
+}
+
+// 
+void checkSerial() {
+  // while Loop
+  while (Serial.available() > 0) {
+    char c = Serial.read();
+    // Bắt phím dừng khẩn cấp
+    if (c == 'A' || c == 'a' || c == '0') {
+      isEmergencyStop = true;
+      stopAllMotors();
+      Serial.println("\n>>> [STOP] DA DUNG KHAN CAP TAT CA MOTOR! <<<");
+    }
+  }
+}
+
+// Hàm chờ 
+bool waitTime(unsigned long ms) {
+  unsigned long start = millis();
+  while (millis() - start < ms) {
+    checkSerial();
+    checkBackgroundTasks(); // Giám sát M2 kể cả khi đang đếm thời gian
+    if (isEmergencyStop) return false;
+    delay(10);
+  }
+  return true;
+}
+
+// Hàm chờ Cảm biến thông minh (không làm treo hệ thống)
+bool waitSensor(int sensorPin) {
+  while (digitalRead(sensorPin) == LOW) {
+    checkSerial();
+    checkBackgroundTasks(); // Giám sát M2 kể cả khi đang chờ Cảm biến khác
+    if (isEmergencyStop) return false;
+    delay(10);
+  }
+  return true;
+}
+
+// Hàm ĐK Motor
+void runMotor(int motorNum, int dir) {
+  int pinFwd, pinRev;
+  if (motorNum == 1)      { pinFwd = M1_FWD; pinRev = M1_REV; }
+  else if (motorNum == 2) { pinFwd = M2_FWD; pinRev = M2_REV; }
+  else if (motorNum == 3) { pinFwd = M3_FWD; pinRev = M3_REV; }
+  else if (motorNum == 4) { pinFwd = M4_FWD; pinRev = M4_REV; }
+  else return;
+
+  if (dir == 1) { 
+    digitalWrite(pinRev, LOW);
+    digitalWrite(pinFwd, HIGH);
+  } 
+  else if (dir == -1) { 
+    digitalWrite(pinFwd, LOW);
+    digitalWrite(pinRev, HIGH);
+  } 
+  else { 
+    digitalWrite(pinFwd, LOW);
+    digitalWrite(pinRev, LOW);
+  }
+}
+
+// Hàm dừng toàn bộ hệ thống
+void stopAllMotors() {
+  isM2SeekingS3 = false; // Ngắt tác vụ ngầm của M2 luôn
+  runMotor(1, 0);
+  runMotor(2, 0);
+  runMotor(3, 0);
+  runMotor(4, 0);
+}

@@ -60,11 +60,27 @@ argmax. Angle is radians for polygon reconstruction.
 | M2 infer conf | 0.10 |
 | M2 violation conf | 0.50 |
 | Warmup | 0.5 s |
-| Vote | 4 of 7 |
+| M1 material vote | exactly 7 observations; 4 of 7 quorum |
+| M2 quality vote | exactly 7 observations after warmup; 4 of 7 quorum |
 | Verdict hold | 1.5 s |
-| Miss hold | 3 frames |
+| Clear frames to re-arm | 8 consecutive missing M1 tracks |
 | PET polygon EMA alpha | 0.35 |
 | Target FPS | 5 |
+
+## Public decision signals
+
+The workflow returns only these final machine signals:
+
+| Signal | Meaning |
+|---:|---|
+| `0` | aluminum can |
+| `1` | good PET |
+| `2` | bad PET |
+
+PP cups, unknown classes, and missing tracks are abstentions. A quorum is not
+resolved early: all seven observations are consumed. Missing Model 2 tracking
+is also an abstention and is never counted as good PET. A no-quorum window
+emits no signal and the item must clear before a new window can open.
 
 ## Parity tolerances (validation)
 

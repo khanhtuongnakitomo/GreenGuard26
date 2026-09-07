@@ -16,6 +16,7 @@ if str(SRC) not in sys.path:
 
 from config_loader import app_root, load_config, load_manifest, validate_manifest  # noqa: E402
 from gate import PetGate  # noqa: E402
+from decision_core import CanonicalWorkflow  # noqa: E402
 from pipeline import M1Pipeline, M2Pipeline  # noqa: E402
 from ui import (  # noqa: E402
     draw_controls,
@@ -81,9 +82,14 @@ def main() -> int:
 
     m1 = M1Pipeline(cfg) if args.mode in {"full", "model1"} else None
     m2 = M2Pipeline(cfg) if args.mode in {"full", "model2"} else None
+    if args.m1_conf is not None and m1 is not None:
+        m1.infer_conf = float(args.m1_conf)
     gate = PetGate(cfg) if args.mode == "full" else None
+    canonical = CanonicalWorkflow(cfg, m1, m2) if args.mode == "full" else None
     if args.m2_conf is not None and gate is not None:
         gate.m2_violation_conf = float(args.m2_conf)
+    if args.m2_conf is not None and canonical is not None:
+        canonical.m2_violation_conf = float(args.m2_conf)
 
     src = int(args.source) if args.source.isdigit() else args.source
     is_camera = isinstance(src, int)
@@ -113,10 +119,24 @@ def main() -> int:
     switching = False  # True while the background thread is working
 
     def reset_all():
-        if gate is not None:
+        if canonical is not None:
+            canonical.reset()
+        elif gate is not None:
             gate.reset()
         if m1 is not None:
             m1.reset_vote()
+
+    def pause_for_clear():
+        if canonical is not None:
+            canonical.pause_for_clear()
+        elif gate is not None:
+            gate.reset()
+        if m1 is not None:
+            m1.reset_vote()
+
+    def resume_detection():
+        if canonical is None or canonical.phase not in {"WAIT_CLEAR", "SIGNAL", "EMERGENCY_STOP"}:
+            reset_all()
 
     if not args.headless:
         cv2.namedWindow(window, cv2.WINDOW_NORMAL)
@@ -126,10 +146,10 @@ def main() -> int:
                 return
             if (not state["detecting"]) and hit_button(x, y, state["start_rect"]):
                 state["detecting"] = True
-                reset_all()
+                resume_detection()
             elif state["detecting"] and hit_button(x, y, state["pause_rect"]):
                 state["detecting"] = False
-                reset_all()
+                pause_for_clear()
             elif hit_button(x, y, state["cam_rect"]):
                 state["switch_cam"] = True
 
@@ -157,7 +177,7 @@ def main() -> int:
                 print("[Camera] No other camera found, staying on current")
                 if new_cap is not None:
                     new_cap.release()
-            reset_all()
+            pause_for_clear()
             state["detecting"] = False
             switching = False
             cam_switch_result = None
@@ -196,22 +216,26 @@ def main() -> int:
                 draw_m2_hits(frame, m2_hits)
                 legend.extend((f"{hit.name} {hit.confidence * 100:.0f}%", (255, 255, 255)) for hit in m2_hits)
             else:
-                raw = m1.run(frame, det_conf=args.m1_conf)
-                held = gate.update_m1_hold(raw, now=t0)
-                if held is None:
-                    legend.append(("no PET bottle / aluminum can in frame", (160, 160, 160)))
+                step = canonical.update(frame, now=t0)
+                raw = step.m1_raw
+                if raw is not None and raw.poly is not None:
+                    draw_m1_poly(frame, raw.poly, raw.color)
+                    legend.append((raw.legend, raw.color))
                 else:
-                    draw_m1_poly(frame, held.poly, held.color)
-                    if held.is_pet:
-                        m2_hits = m2.run(frame, held.poly)
-                        result = gate.evaluate_pet(held, m2_hits, now=t0)
-                        draw_m2_hits(frame, result["m2_hits"])
-                        legend.extend(result["legend"])
-                        verdict, vcolor = result["verdict"], result["color"]
-                    else:
-                        legend.append((held.legend, held.color))
-                        gate.state.pet_since = None
-                        gate.state.vote.clear()
+                    legend.append((step.detail or "no PET bottle / aluminum can in frame", (160, 160, 160)))
+                if step.m2_hits:
+                    draw_m2_hits(frame, step.m2_hits)
+                if step.result:
+                    verdict = step.result
+                    vcolor = {
+                        "ALUMINUM_CAN": (0, 220, 0),
+                        "PET_CLEAN": (0, 200, 0),
+                        "PET_REJECT": (0, 0, 255),
+                    }.get(step.result, (160, 160, 160))
+                elif step.phase == "M2_WARMUP":
+                    verdict, vcolor = "INSPECTING PET BOTTLE", (0, 200, 255)
+                elif step.phase in {"M1_VOTING", "M2_VOTING"}:
+                    verdict, vcolor = step.detail, (0, 200, 255)
 
             draw_verdict(frame, verdict, vcolor)
             draw_legend(frame, legend)
@@ -255,11 +279,11 @@ def main() -> int:
             if key in (ord("s"), ord("S"), ord(" ")):
                 if not state["detecting"]:
                     state["detecting"] = True
-                    reset_all()
+                    resume_detection()
             if key in (ord("p"), ord("P")):
                 if state["detecting"]:
                     state["detecting"] = False
-                    reset_all()
+                    pause_for_clear()
             if key in (ord("c"), ord("C")):
                 state["switch_cam"] = True
 
