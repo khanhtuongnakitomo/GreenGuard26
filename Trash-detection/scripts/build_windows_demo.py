@@ -1,4 +1,4 @@
-"""Build and validate the movable Windows RVM demo.
+"""Build and validate the movable Windows detection-only demo.
 
 The default ``portable`` profile is fail-closed: it only succeeds when a
 staged Python 3.11 x64 runtime and local wheels are present.  The explicit
@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -18,18 +19,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PC = ROOT / "pc-demo"
-SOURCE = ROOT / "windows-rvm-demo"
+SOURCE = ROOT / "windows-demo"
 DIST = ROOT / "dist"
-DEFAULT_OUTPUT = DIST / "RVM-Full-Workflow-Demo"
-FIRMWARE = ROOT / "firmware"
+DEFAULT_OUTPUT = DIST / "GreenGuard-Windows-Detection-Demo"
 PORTABLE_STAGE = SOURCE / "portable-runtime"
 LOCKED = {
     "m1_detect_640.onnx": "5069bfae324db8c1aef1fbce4b68aaad217a80a95a6f6b83eacfa60cdb620038",
     "m2_obb_640.onnx": "d4c5f235fbb78e3a8451de695480400a916ffec235a518af47fd5b448c6eb999",
 }
-LEGACY_FIRMWARE_SHA256 = "60eb1cea1befe9a963524a19167bb78e7b350f81898109fe9773d3e1e9458f2e"
 RUNTIME_FILES = ("config_loader.py", "decision_core.py", "gate.py", "pipeline.py", "ui.py")
-WINDOW_FILES = ("app.py", "decisions.py", "kiosk_ui.py", "serial_controller.py", "workflow.py")
+WINDOW_FILES = ("app.py", "decisions.py", "kiosk_ui.py", "signal_sink.py", "workflow.py")
 FORBIDDEN_SUFFIXES = {".pt", ".tflite", ".engine", ".pyc", ".pyo"}
 # A full Python runtime legitimately includes the stdlib ``Lib/venv`` module;
 # only copied developer environments (``.venv``) are forbidden.
@@ -98,15 +97,6 @@ def write_json(path: Path, value: dict) -> None:
 
 def runtime_config() -> dict:
     cfg = json.loads((PC / "config" / "default.json").read_text(encoding="utf-8"))
-    cfg["serial"] = {
-        "enabled": False,
-        "protocol": "rvm-v2",
-        "port": "auto",
-        "baud": 115200,
-        "timeout_s": 1.0,
-        "command_timeout_s": 180.0,
-    }
-    cfg["routing"] = {"ALUMINUM_CAN": 0, "PET_CLEAN": 1, "PET_REJECT": 2}
     cfg["decision_contract"] = {
         "version": "seven-observation-v1",
         "window_size": 7,
@@ -159,7 +149,7 @@ def _validate_stage() -> tuple[Path, Path]:
     executable = runtime / "python.exe"
     if not executable.is_file():
         raise RuntimeError(
-            "portable profile refused: stage windows-rvm-demo/portable-runtime/python/python.exe "
+            "portable profile refused: stage windows-demo/portable-runtime/python/python.exe "
             "(Python 3.11 x64) before building"
         )
     try:
@@ -268,41 +258,22 @@ def copy_runtime(output: Path, profile: str, source_state: dict) -> dict[str, st
 
 def write_bundle_files(output: Path, model_hashes: dict[str, str], profile: str, source_state: dict) -> None:
     _copy_allowlisted(SOURCE / "src", output / "src", WINDOW_FILES)
-    (output / "firmware" / "reference").mkdir(parents=True, exist_ok=True)
-    (output / "firmware" / "rvm-v2").mkdir(parents=True, exist_ok=True)
-    for source, target in (
-        (FIRMWARE / "reference" / "RVMRun.txt", output / "firmware" / "reference" / "RVMRun.txt"),
-        (FIRMWARE / "rvm-v2" / "RVMRun_v2.ino", output / "firmware" / "rvm-v2" / "RVMRun_v2.ino"),
-        (FIRMWARE / "README.md", output / "firmware" / "README.md"),
-    ):
-        if not source.is_file():
-            raise FileNotFoundError(source)
-        shutil.copy2(source, target)
-    write_json(output / "firmware" / "protocol.json", {
-        "version": "RVM-V2", "identity": "RVM-V2", "baud": 115200,
-        "signals": {"ALUMINUM_CAN": 0, "PET_CLEAN": 1, "PET_REJECT": 2},
-        "emergency": "!", "legacy_sha256": LEGACY_FIRMWARE_SHA256,
-    })
     shutil.copy2(SOURCE / "README.md", output / "README.md")
+    for name in ("CONTEXT.md", "RUN_WINDOWS_DEMO.md"):
+        shutil.copy2(SOURCE / name, output / name)
     offline_ready = profile == "portable"
     python_command = "runtime\\python\\python.exe" if offline_ready else "py -3.11"
-    (output / "full_demo.bat").write_text(
-        "@echo off\nsetlocal\ncd /d \"%~dp0\"\n" +
-        "set PYTHONDONTWRITEBYTECODE=1\n" +
-        ("if not exist \"runtime\\python\\python.exe\" (echo Portable runtime missing. Build with --profile portable.& exit /b 2)\n" if offline_ready else "echo ONLINE-SOURCE FALLBACK: system Python and dependencies may be required.\n") +
-        f"{python_command} src\\app.py %*\n", encoding="utf-8"
-    )
     (output / "setup.ps1").write_text(
         "$ErrorActionPreference = 'Stop'\nSet-Location $PSScriptRoot\n" +
         "$env:PYTHONDONTWRITEBYTECODE = '1'\n" +
         ("if (-not (Test-Path 'runtime/python/python.exe')) { throw 'Portable runtime is missing.' }\n" if offline_ready else "Write-Warning 'ONLINE-SOURCE FALLBACK: internet/system Python may be required.'\n") +
-        (("& .\\runtime\\python\\python.exe" if offline_ready else "& py -3.11") + " .\\scripts\\self_check.py\n"), encoding="utf-8"
+        (("& .\\runtime\\python\\python.exe -B" if offline_ready else "& py -3.11 -B") + " .\\scripts\\self_check.py\n"), encoding="utf-8"
     )
     scripts = output / "scripts"
     scripts.mkdir(exist_ok=True)
     shutil.copy2(ROOT / "scripts" / "bundle_self_check.py", scripts / "self_check.py")
     provenance = {
-        "schema_version": "greenguard-rvm-bundle-v2",
+        "schema_version": "greenguard-detection-bundle-v1",
         "profile": profile,
         "offline_ready": offline_ready,
         "source_commit": git("rev-parse", "HEAD"),
@@ -311,9 +282,14 @@ def write_bundle_files(output: Path, model_hashes: dict[str, str], profile: str,
         "build_kind": "development" if not source_state["clean"] else "release",
         "release_ready": bool(source_state["clean"]),
         "model_hashes": model_hashes,
-        "firmware_legacy_sha256": LEGACY_FIRMWARE_SHA256,
-        "serial_default_enabled": False,
         "decision_contract": "seven-observation-v1 (4/7, eight-clear rearm)",
+        "mechanical_control_included": False,
+        "output_transport": "stdout-line",
+        "output_encoding": "ASCII",
+        "allowed_values": [0, 1, 2],
+        "one_signal_per_item": True,
+        "stdout_contains_signals_only": True,
+        "signal_contract": "0=aluminum can, 1=good PET, 2=bad PET",
         "m1_internal_classes": ["metal_can", "pet_bottle", "pp_cup"],
         "m1_public_classes": ["metal_can", "pet_bottle"],
         "m2_contract": "main PC Model 2; unchanged",
@@ -322,6 +298,13 @@ def write_bundle_files(output: Path, model_hashes: dict[str, str], profile: str,
     (output / "OFFLINE_STATUS.md").write_text(
         "# Runtime status\n\n" +
         ("This is a self-contained Windows x64 bundle. It contains the staged Python runtime and locked dependencies; no system Python or internet is required after build.\n" if offline_ready else "This is an ONLINE-SOURCE FALLBACK, not a portable/offline bundle. It does not contain an embedded Python runtime or installed dependencies.\n"), encoding="utf-8"
+    )
+    (output / "run_demo.bat").write_text(
+        "@echo off\nsetlocal\ncd /d \"%~dp0\"\n" +
+        "set \"PYTHONDONTWRITEBYTECODE=1\"\n" +
+        ("if not exist \"runtime\\python\\python.exe\" (echo Portable runtime missing.& exit /b 2)\n"
+         if offline_ready else "") +
+        f"{python_command} src\\app.py %*\n", encoding="utf-8"
     )
     write_json(output / "BUILD_INFO.json", {**provenance, "payload_sha256": payload_hash(output)})
 
@@ -337,13 +320,24 @@ def _scan_forbidden(output: Path) -> str | None:
         # Textual developer-path leakage is relevant to our project-owned
         # source/config/docs, not vendor runtime code.
         rel_parts = path.relative_to(output).parts
+        lowered_parts = {part.lower() for part in rel_parts}
+        if "firmware" in lowered_parts:
+            return f"forbidden firmware path: {path.relative_to(output)}"
+        if path.name.lower() in {"serial_controller.py", "pyserial"}:
+            return f"forbidden machine-control module: {path.relative_to(output)}"
+        if path.name in {"BUILD_INFO.json", "manifest.json"}:
+            continue
         is_vendor_runtime = len(rel_parts) >= 2 and rel_parts[0].lower() == "runtime" and rel_parts[1].lower() == "python"
         if not is_vendor_runtime and any(part.lower() in FORBIDDEN_PARTS for part in rel_parts):
             return f"forbidden path component: {path.relative_to(output)}"
+        if path.as_posix().lower().endswith("scripts/self_check.py"):
+            continue
         if not is_vendor_runtime and path.suffix.lower() in {".json", ".md", ".py", ".bat", ".ps1", ".txt", ".ino"}:
             text = path.read_text(encoding="utf-8", errors="ignore")
             if "D:\\Code\\Project" in text or "C:\\Users\\" in text:
                 return f"absolute development path leaked: {path.relative_to(output)}"
+            if any(token in text.lower() for token in ("pyserial", "rvm-v2", "ack:<", "done:<", "--enable-serial", "--serial-port")):
+                return f"forbidden machine-control reference: {path.relative_to(output)}"
     return None
 
 
@@ -358,21 +352,27 @@ def check(output: Path, require_offline: bool = False) -> tuple[bool, str]:
             if sha256(packaged) != sha256(source) or sha256(packaged) != LOCKED[name]:
                 return False, f"model hash mismatch: {name}"
         cfg = json.loads((output / "runtime" / "config" / "default.json").read_text(encoding="utf-8"))
-        if cfg.get("serial", {}).get("enabled") is not False:
-            return False, "serial default is not disabled"
+        if "serial" in cfg or "routing" in cfg:
+            return False, "machine-control configuration is present"
         contract = cfg.get("decision_contract", {})
         if contract.get("window_size") != 7 or contract.get("quorum") != 4 or contract.get("clear_frames_to_rearm") != 8:
             return False, "decision contract is not 7/4/eight-clear"
         if any(name not in LOCKED for name in (entry.get("filename") for entry in manifest.get("models", []))):
             return False, "manifest contains an unapproved model"
-        if sha256(output / "firmware" / "reference" / "RVMRun.txt") != LEGACY_FIRMWARE_SHA256:
-            return False, "legacy firmware reference hash mismatch"
-        if not (output / "firmware" / "rvm-v2" / "RVMRun_v2.ino").is_file():
-            return False, "v2 firmware is missing"
         forbidden = _scan_forbidden(output)
         if forbidden:
             return False, forbidden
         info = json.loads((output / "BUILD_INFO.json").read_text(encoding="utf-8"))
+        required_info = {
+            "mechanical_control_included": False,
+            "output_transport": "stdout-line",
+            "output_encoding": "ASCII",
+            "allowed_values": [0, 1, 2],
+            "one_signal_per_item": True,
+            "stdout_contains_signals_only": True,
+        }
+        if any(info.get(key) != value for key, value in required_info.items()):
+            return False, "detection-only output contract is incomplete"
         if require_offline and info.get("offline_ready") is not True:
             return False, "bundle is not offline-ready"
         if info.get("offline_ready") and not (output / "runtime" / "python" / "python.exe").is_file():
@@ -444,7 +444,9 @@ def main() -> int:
         info = json.loads((output / "BUILD_INFO.json").read_text(encoding="utf-8"))
         interpreter = smoke_interpreter(output, info)
         command = [str(interpreter), "-B", str(output / "src" / "app.py"), "--headless", "--source", str(fixture), "--max-frames", "1"]
-        subprocess.run(command, cwd=output, check=True)
+        smoke_env = os.environ.copy()
+        smoke_env["PYTHONDONTWRITEBYTECODE"] = "1"
+        subprocess.run(command, cwd=output, check=True, env=smoke_env)
     print(message)
     return 0
 

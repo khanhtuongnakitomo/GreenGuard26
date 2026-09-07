@@ -42,8 +42,6 @@ def load_sessions(paths: list[Path]) -> list[dict[str, Any]]:
         report_path = path / "session_report.json"
         if report_hash and _sha256(report_path) != str(report_hash).lower():
             raise ValueError(f"session report hash mismatch: {report_path}")
-        if report.get("serial_enabled") is not False or manifest.get("serial_enabled") is not False:
-            raise ValueError(f"serial must be disabled: {path}")
         label = report.get("label")
         if label not in KNOWN_LABELS:
             raise ValueError(f"unknown ground-truth label {label!r}: {path}")

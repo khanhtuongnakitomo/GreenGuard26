@@ -1,8 +1,4 @@
 @echo off
 setlocal
-cd /d "%~dp0pc-demo"
-if not exist ".venv\Scripts\python.exe" (
-    echo Run pc-demo\setup.ps1 first
-    exit /b 1
-)
-".venv\Scripts\python.exe" src\app.py --mode full %*
+call "%~dp0windows-demo\run_demo.bat" %*
+exit /b %ERRORLEVEL%

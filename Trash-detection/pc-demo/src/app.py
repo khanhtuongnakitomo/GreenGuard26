@@ -135,7 +135,7 @@ def main() -> int:
             m1.reset_vote()
 
     def resume_detection():
-        if canonical is None or canonical.phase not in {"WAIT_CLEAR", "SIGNAL", "EMERGENCY_STOP"}:
+        if canonical is None or canonical.phase not in {"WAIT_CLEAR", "RESULT"}:
             reset_all()
 
     if not args.headless:

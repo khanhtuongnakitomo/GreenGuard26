@@ -64,9 +64,9 @@ def test_internal_pp_class_name_is_truthful_while_public_pipeline_suppresses_it(
     assert fake_pipeline().allowed_ids == {0, 1}
 
 
-def test_diagnostic_launcher_rejects_serial():
-    with pytest.raises(SystemExit):
-        parse_args(["--source", "0", "--session-id", "s", "--label", "empty", "--item-id", "i", "--lighting", "normal", "--enable-serial"])
+def test_diagnostic_launcher_accepts_camera_arguments():
+    args = parse_args(["--source", "0", "--session-id", "s", "--label", "empty", "--item-id", "i", "--lighting", "normal"])
+    assert args.source == "0"
 
 
 def test_trace_serializes_public_acceptance():
@@ -76,7 +76,6 @@ def test_trace_serializes_public_acceptance():
     )
     row = trace_to_dict(trace, session_id="s", trial_id="t", frame_index=1, timestamp="now", label="pet_bottle", item_id="i", lighting="bright", original_frame=(120, 100), model_hash="m", config_hash="c")
     assert row["model2_would_be_invoked"] is True
-    assert row["serial_enabled"] is False
     json.dumps(row)
 
 

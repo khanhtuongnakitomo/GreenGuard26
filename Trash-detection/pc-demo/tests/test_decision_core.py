@@ -89,6 +89,7 @@ def test_m1_four_of_seven_can_emits_signal_zero():
     engine = CanonicalWorkflow(cfg(), FakeM1([can(), can(), can(), can(), missing(), missing(), missing()]), FakeM2())
     steps = advance(engine, range(7))
     assert steps[-1].signal == SIGNAL_ALUMINUM
+    assert steps[-1].phase == "RESULT"
     assert engine.result == "ALUMINUM_CAN"
 
 
@@ -138,12 +139,8 @@ def test_signal_latches_once_and_eight_clear_frames_rearm():
     assert rearm_steps[-1].phase == "READY"
 
 
-def test_core_reset_cannot_clear_emergency_without_explicit_clear():
+def test_reset_returns_detection_workflow_to_ready():
     engine = CanonicalWorkflow(cfg(), FakeM1([can()] * 20), FakeM2())
-    engine.emergency_stop()
+    advance(engine, range(7))
     engine.reset()
-    assert engine.emergency_latched is True
-    assert engine.update(object(), now=1.0).phase == "EMERGENCY_STOP"
-    engine.clear_emergency()
-    assert engine.emergency_latched is False
-    assert engine.phase == "WAIT_CLEAR"
+    assert engine.phase == "READY"

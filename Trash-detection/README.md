@@ -17,8 +17,8 @@ Trash-detection/
   training/model1|model2       # Research / training trees
   validation/                  # Fixtures + baseline contracts
   scripts/package_models.py    # Deterministic ONNX packaging
-  scripts/build_windows_rvm_demo.py # Main-based reproducible Windows bundle
-  windows-rvm-demo/             # Windows-specific workflow source
+  scripts/build_windows_demo.py # Main-based reproducible Windows bundle
+  windows-demo/                  # Detection-only Windows workflow source
   docs/                        # Architecture + model contract
 ```
 
@@ -84,29 +84,27 @@ cd pc-demo
 
 Build the Windows bundle from main's locked Model 1 and Model 2. The primary
 portable build is fail-closed until a staged Python 3.11 x64 runtime and local
-wheelhouse are supplied under `windows-rvm-demo/portable-runtime/`; it never
+wheelhouse are supplied under `windows-demo/portable-runtime/`; it never
 copies `.venv` or downloads during the build:
 
 ```powershell
-python scripts\build_windows_rvm_demo.py build --profile portable --zip
-python scripts\build_windows_rvm_demo.py check --require-offline
-python scripts\build_windows_rvm_demo.py headless-smoke
+python scripts\build_windows_demo.py build --profile portable --zip
+python scripts\build_windows_demo.py check --require-offline
+python scripts\build_windows_demo.py headless-smoke
 ```
 
 For development validation only, use the explicitly labelled fallback:
 
 ```powershell
-python scripts\build_windows_rvm_demo.py build --profile online-source --allow-dirty
+python scripts\build_windows_demo.py build --profile online-source --allow-dirty
 ```
 
 It may require system Python and internet access and is not a movable offline
 release. Generated `dist/` output is ignored.
 
-The bundle defaults to serial disabled. The v2 controller requires an exact
-`RVM-V2` handshake, signal bytes `0`/`1`/`2`, and matching
-`ACK:<signal>`/`DONE:<signal>` lines. Emergency stop is `!`; reset is a
-separate operator action. Do not use `--enable-serial` until the owner signs
-off the camera-only capture set and manually flashes the tracked v2 sketch.
+The Windows bundle is detection-only. It emits one flushed ASCII stdout line
+(`0`, `1`, or `2`) per completed item and sends all diagnostics to stderr. A
+separate mechanical codebase owns physical routing, safety, and firmware.
 
 The strict two-class replacement is guarded by
 `training/model1/strict_two_class_config.json` and

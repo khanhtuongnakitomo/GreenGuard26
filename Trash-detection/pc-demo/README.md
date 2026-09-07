@@ -40,12 +40,12 @@ Useful flags: `--headless`, `--save <dir>`, `--max-frames N`, `--m1-conf`, `--m2
 configured independently as `m1.detector.decision_conf` (0.65 on the main
 baseline). PP and unknown classes are filtered before top-1 selection.
 
-For camera-only RVM evidence, run the repository launcher
-`..\diagnose_model1_rvm.bat`. It refuses serial arguments, writes immutable
-session directories under `validation/rvm-sessions/` (when requested), and
-records raw detections, rejection reasons, camera metadata, model/config hashes,
-and separate original/overlay frames. Use `src\analyze_m1_rvm.py` to sweep
-thresholds; the analyzer never rewrites production configuration.
+For camera evidence, run the repository launcher
+`..\diagnose_model1_rvm.bat`. It writes immutable session directories under
+`validation/rvm-sessions/` (when requested), and records raw detections,
+rejection reasons, camera metadata, model/config hashes, and separate
+original/overlay frames. Use `src\analyze_m1_rvm.py` to sweep thresholds; the
+analyzer never rewrites production configuration.
 
 ## Layout
 
@@ -68,5 +68,5 @@ Full mode uses exactly seven Model 1 observations. Four aluminum observations
 emit signal `0`; four PET observations enter the existing Model 2 warmup and
 then exactly seven quality observations. Four clean observations emit `1`, and
 four violation observations emit `2`. Missing/unknown observations abstain.
-The final signal is latched once per item and eight clear frames are required
-before re-arming.
+The final signal is emitted once per item and eight clear frames are required
+before re-arming. Physical-machine control is outside this repository.

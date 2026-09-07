@@ -13,7 +13,7 @@ M1 is a single-stage HBB detector. Class IDs 0 and 1 map to the visible
 aluminum-can and PET-bottle verdicts. Class ID 2 (`pp_cup`) is intentionally
 ignored before top-1 selection and is never shown or sent to Model 2.
 
-## RVM recovery contract
+## Windows detection contract
 
 The Windows PC recovery branch keeps the known-good main artifacts. Model 1
 SHA-256 is `5069BFAE324DB8C1AEF1FBCE4B68AAAD217A80A95A6F6B83EACFA60CDB620038`;
@@ -69,7 +69,7 @@ argmax. Angle is radians for polygon reconstruction.
 
 ## Public decision signals
 
-The workflow returns only these final machine signals:
+The workflow returns only these final detection signals:
 
 | Signal | Meaning |
 |---:|---|
@@ -81,6 +81,11 @@ PP cups, unknown classes, and missing tracks are abstentions. A quorum is not
 resolved early: all seven observations are consumed. Missing Model 2 tracking
 is also an abstention and is never counted as good PET. A no-quorum window
 emits no signal and the item must clear before a new window can open.
+
+The Windows demo maps these values to one stdout line per completed item:
+`0\n`, `1\n`, or `2\n` in ASCII. The line is flushed immediately and appears
+only on the exact decision frame; result-hold and re-arm frames are silent.
+Process exit status is application status, not classification value `0`.
 
 ## Parity tolerances (validation)
 

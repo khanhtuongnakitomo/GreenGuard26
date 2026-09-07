@@ -13,3 +13,7 @@ files. If those two staged inputs are absent, `build --profile portable`
 fails closed. `--profile online-source` is an explicitly labelled fallback
 that produces source and model files only and may require system Python and
 internet access during setup; it must not be described as an offline bundle.
+
+The generated bundle is detection-only. The embedded runtime and wheelhouse
+contain no machine-control dependencies; see the parent demo documentation
+for the stdout signal contract.

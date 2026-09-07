@@ -1,14 +1,10 @@
-"""Minimal public UI: workflow phase/result only."""
+"""Minimal public UI: workflow phase and detection result only."""
 from __future__ import annotations
 
 import cv2
 
 
-def render(view, controller_connected: bool, width: int, height: int):
-    # ``controller_connected`` remains an adapter-compatible argument, but
-    # serial/COM diagnostics are deliberately not part of the public kiosk
-    # surface.  Operators can inspect the separate self-check/diagnostic logs.
-    del controller_connected
+def render(view, width: int, height: int):
     canvas = __import__("numpy").zeros((height, width, 3), dtype="uint8")
     canvas[:] = (24, 30, 38)
     cv2.putText(canvas, view.title, (70, 180), cv2.FONT_HERSHEY_SIMPLEX, 1.5, view.color, 3, cv2.LINE_AA)

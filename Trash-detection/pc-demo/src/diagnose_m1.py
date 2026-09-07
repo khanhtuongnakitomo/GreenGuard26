@@ -1,6 +1,6 @@
 """Camera-only Model 1 evidence collector.
 
-This module intentionally has no serial-controller import.  It records the
+This module intentionally has no machine-control import.  It records the
 candidate detections and the public decision made by the canonical PC M1
 pipeline without changing the kiosk result type or routing behavior.
 """
@@ -39,7 +39,7 @@ REASONS = {
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Collect camera-only Model 1 RVM diagnostics")
+    parser = argparse.ArgumentParser(description="Collect camera-only Model 1 diagnostics")
     parser.add_argument("--source", required=True, help="camera index or video/image source")
     parser.add_argument("--session-id", required=True)
     parser.add_argument("--label", required=True, choices=sorted(LABELS))
@@ -50,11 +50,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-frames", type=int, default=0)
     parser.add_argument("--save-every", type=int, default=1)
     parser.add_argument("--no-display", action="store_true")
-    parser.add_argument("--enable-serial", action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument("--serial-port", default=None, help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
-    if args.enable_serial or args.serial_port:
-        parser.error("diagnostic mode is camera-only; serial arguments are forbidden")
     if args.duration <= 0 or args.save_every <= 0 or args.max_frames < 0:
         parser.error("duration, save-every, and max-frames must be positive (max-frames may be zero)")
     return args
@@ -101,7 +97,6 @@ def trace_to_dict(trace: M1DetectionTrace, *, session_id: str, trial_id: str, fr
         "inference_ms": trace.inference_ms,
         "achieved_fps": fps,
         "model2_would_be_invoked": trace.reason == "ACCEPTED_PET_BOTTLE",
-        "serial_enabled": False,
         "decision_conf": trace.decision_conf,
         "min_area_frac": trace.min_area_frac,
     }
@@ -165,7 +160,6 @@ def main(argv: list[str] | None = None) -> int:
         raise RuntimeError(f"cannot open source {args.source!r}")
 
     metadata = _camera_metadata(cap, args.source)
-    metadata["serial_enabled"] = False
     started = datetime.now(UTC)
     trace_path = session_dir / "trace.jsonl"
     trace_tmp = session_dir / ".trace.jsonl.tmp"
@@ -206,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
                     cv2.imwrite(str(frames_dir / f"frame_{frame_index:06d}.jpg"), frame)
                     cv2.imwrite(str(overlays_dir / f"frame_{frame_index:06d}.jpg"), overlay(frame, trace))
                 if not args.no_display:
-                    cv2.imshow("Model 1 RVM diagnostics (serial disabled)", overlay(frame, trace))
+                    cv2.imshow("Model 1 diagnostics", overlay(frame, trace))
                     if cv2.waitKey(1) & 0xFF in (ord("q"), ord("Q")):
                         break
                 if args.max_frames and frame_index >= args.max_frames:
@@ -230,7 +224,6 @@ def main(argv: list[str] | None = None) -> int:
         "label": args.label,
         "item_id": args.item_id,
         "lighting": args.lighting,
-        "serial_enabled": False,
         "model_path": str(model_path),
         "model_sha256": model_hash,
         "config_sha256": config_hash,
@@ -254,10 +247,9 @@ def main(argv: list[str] | None = None) -> int:
         },
         "model_sha256": model_hash,
         "config_sha256": config_hash,
-        "serial_enabled": False,
     }
     atomic_write(session_dir / "manifest.json", json.dumps(manifest, indent=2, sort_keys=True))
-    print(json.dumps({"session": args.session_id, "frames": frame_index, "reasons": dict(reasons), "serial_enabled": False}, indent=2))
+    print(json.dumps({"session": args.session_id, "frames": frame_index, "reasons": dict(reasons)}, indent=2))
     return 0
 
 

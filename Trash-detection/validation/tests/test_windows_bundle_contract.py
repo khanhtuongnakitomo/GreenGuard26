@@ -9,7 +9,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
-import build_windows_rvm_demo as builder  # noqa: E402
+import build_windows_demo as builder  # noqa: E402
 
 
 def test_builder_rejects_deletion_target_outside_dist():
@@ -51,9 +51,10 @@ def test_payload_hash_and_zip_are_reproducible():
             zip_path.unlink()
 
 
-def test_recovered_legacy_firmware_hash_is_locked():
-    path = ROOT / "firmware" / "reference" / "RVMRun.txt"
-    assert builder.sha256(path) == builder.LEGACY_FIRMWARE_SHA256
+def test_detection_only_source_has_no_control_artifacts():
+    assert not (ROOT / "firmware").exists()
+    assert not (ROOT / "windows-demo" / "src" / "serial_controller.py").exists()
+    assert "serial" not in (ROOT / "pc-demo" / "requirements.txt").read_text(encoding="utf-8").lower()
 
 
 def test_smoke_interpreter_selection_and_worktree_provenance():

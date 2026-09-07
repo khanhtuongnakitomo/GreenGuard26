@@ -1,8 +1,8 @@
 """Canonical seven-observation decision workflow.
 
-This module is deliberately independent of the UI and serial transport.  The
-PC reference demo and the Windows RVM shell both import it, so a change to the
-decision contract cannot silently diverge between the two launchers.
+This module is deliberately independent of the UI and output transport.  The
+PC reference demo and the Windows detection demo both import it, so a change
+to the decision contract cannot silently diverge between the two launchers.
 """
 from __future__ import annotations
 
@@ -133,7 +133,6 @@ class CanonicalWorkflow:
         self.clear_frames_needed = int(runtime.get("clear_frames", 8))
         if self.clear_frames_needed < 8:
             raise ValueError("the production re-arm contract requires eight clear frames")
-        self.emergency_latched = False
         self._reset_state()
 
     def _reset_state(self) -> None:
@@ -150,35 +149,12 @@ class CanonicalWorkflow:
         self.last_step = WorkflowStep("READY")
 
     def reset(self) -> None:
-        """Reset normal workflow state without clearing an emergency stop."""
-        if self.emergency_latched:
-            self.phase = "EMERGENCY_STOP"
-            self.last_step = WorkflowStep("EMERGENCY_STOP", result="EMERGENCY STOP", detail="operator reset required")
-            return
+        """Reset the detection workflow to its initial ready state."""
         self._reset_state()
-
-    def emergency_stop(self) -> None:
-        """Latch a stop until the explicit operator reset path is used."""
-        self.emergency_latched = True
-        self.phase = "EMERGENCY_STOP"
-        self.m1_vote.reset()
-        self.m2_vote.reset()
-        self.clear_frames = 0
-        self.last_step = WorkflowStep("EMERGENCY_STOP", result="EMERGENCY STOP", detail="operator reset required")
-
-    def clear_emergency(self) -> None:
-        """Explicitly leave emergency mode, requiring eight clear frames."""
-        if not self.emergency_latched:
-            return
-        self.emergency_latched = False
-        self._reset_state()
-        self.phase = "WAIT_CLEAR"
-        self.clear_frames = 0
-        self.last_step = WorkflowStep("WAIT_CLEAR", detail="operator reset; clear item before re-arm")
 
     def pause_for_clear(self) -> None:
         """Invalidate an in-progress vote when the system is turned off."""
-        if self.emergency_latched or self.phase in {"SIGNAL", "EMERGENCY_STOP", "WAIT_CLEAR"}:
+        if self.phase in {"RESULT", "WAIT_CLEAR"}:
             return
         self.m1_vote.reset()
         self.m2_vote.reset()
@@ -206,7 +182,7 @@ class CanonicalWorkflow:
             SIGNAL_BAD_PET: "PET_REJECT",
         }[signal]
         self.signal_since = now
-        self.phase = "SIGNAL"
+        self.phase = "RESULT"
         return WorkflowStep(
             phase=self.phase,
             signal=signal,
@@ -249,13 +225,9 @@ class CanonicalWorkflow:
 
     def update(self, frame, now: float | None = None) -> WorkflowStep:
         now = time.perf_counter() if now is None else float(now)
-        if self.emergency_latched:
-            step = WorkflowStep("EMERGENCY_STOP", result="EMERGENCY STOP", detail="operator reset required")
-            self.last_step = step
-            return step
-        if self.phase == "SIGNAL":
+        if self.phase == "RESULT":
             if now - self.signal_since < self.result_hold_s:
-                return WorkflowStep("SIGNAL", signal=None, result=self.result, detail="result hold")
+                return WorkflowStep("RESULT", signal=None, result=self.result, detail="result hold")
             self.phase = "WAIT_CLEAR"
             self.clear_frames = 0
         raw = self.m1.run(frame)

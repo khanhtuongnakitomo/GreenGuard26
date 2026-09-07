@@ -21,6 +21,8 @@ this document does not define the current branch.
 ## Read Only For The Component You Change
 
 - PC runtime: `Trash-detection/pc-demo/README.md`
+- Windows detection demo: `Trash-detection/windows-demo/README.md`, then
+  `CONTEXT.md` and `RUN_WINDOWS_DEMO.md`
 - Jetson deployment: `Trash-detection/jetson-runtime/README.md` and
   `Trash-detection/jetson-runtime/DEVICE_VALIDATION.md`
 - Model 1 training: `Trash-detection/training/model1/README.md` and

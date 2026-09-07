@@ -8,13 +8,14 @@
 
 | Goal | Path |
 |---|---|
-| Windows booth demo | `Trash-detection/pc-demo/` (`setup.ps1`, `run_demo.bat`) |
+| Windows detection demo | `Trash-detection/windows-demo/` (`run_demo.bat`) |
 | Quick Model 2-only webcam test | `Trash-detection/training/model2/run_m2_demo.bat` |
 | Jetson Nano B01 deploy | Copy **only** `Trash-detection/jetson-runtime/` to Ubuntu |
 | Retrain / export | `Trash-detection/training/model1` and `training/model2` |
 | Parity fixtures | `Trash-detection/validation/` |
 
-Root wrappers: `Trash-detection/setup.ps1`, `Trash-detection/run_demo.bat` → `pc-demo/`.
+Root wrappers: `Trash-detection/setup.ps1` prepares the PC environment;
+`Trash-detection/full_demo.bat` delegates to `windows-demo/run_demo.bat`.
 
 ## Locked product behavior (current)
 
@@ -25,12 +26,11 @@ frame → M1 detector → exactly 7 observations → 4/7 aluminum => signal 0
   → no quorum => no signal; one signal/item; 8 clear frames re-arm
 ```
 
-The Windows RVM v2 transport waits through firmware progress lines for the
-matching `DONE:<signal>` and treats `ERR...`/timeout as failure without retry.
-Emergency stop is latched in firmware and desktop state; `R` is the separate
-operator reset, followed by the eight-clear re-arm requirement. Pausing or
-turning the system off invalidates an in-progress vote and requires clear
-frames before processing resumes.
+The Windows demo is detection-only. It writes exactly one flushed ASCII stdout
+line (`0`, `1`, or `2`) per completed item; diagnostics go to stderr. It has no
+machine transport, firmware, acknowledgements, emergency controls, reset, or
+motor sequencing. Pausing or turning the system off invalidates an in-progress
+vote and requires clear frames before processing resumes.
 
 No QR, points, backend, counting, or online learning in either runtime.
 

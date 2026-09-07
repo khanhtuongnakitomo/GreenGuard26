@@ -46,21 +46,8 @@
     "clear_frames": 8,
     "result_hold_s": 1.5
   },
-  "serial": {
-    "enabled": false,
-    "protocol": "rvm-v2",
-    "port": "auto",
-    "baud": 115200,
-    "timeout_s": 1.0,
-    "command_timeout_s": 180.0
-  },
-  "routing": {
-    "ALUMINUM_CAN": 0,
-    "PET_CLEAN": 1,
-    "PET_REJECT": 2
-  },
   "ui": {
-    "window_title": "GreenGuard PC Demo",
+    "window_title": "GreenGuard Detection Demo",
     "display_scale": 1.5
   }
 }

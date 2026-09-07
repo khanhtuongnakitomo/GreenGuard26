@@ -1,4 +1,0 @@
-# Preserve controller source bytes exactly; the legacy snapshot's SHA-256 is
-# part of the provenance contract and must not be newline-normalized by Git.
-Trash-detection/firmware/reference/RVMRun.txt -text
-Trash-detection/firmware/rvm-v2/RVMRun_v2.ino -text
