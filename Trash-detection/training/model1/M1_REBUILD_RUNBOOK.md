@@ -14,7 +14,8 @@ Run from Trash-detection/training/model1:
 powershell -ExecutionPolicy Bypass -File scripts/run_m1_rebuild.ps1 -Full -MaxHours 12
 ~~~
 
-The script audits, prepares, smoke-tests, starts the report-only supervisor for
+The script records preflight inputs, creates the annotation review request,
+audits, prepares, smoke-tests, starts the report-only supervisor for
 the available GPU window, evaluates, exports, and verifies. The supervisor
 keeps the computer awake only while its own child run is active, allows at
 most two bounded recovery attempts, and writes compact status to
@@ -28,6 +29,8 @@ for a fresh attempt.
 
 ~~~powershell
 $RunId = "m1rebuild_20260907_seed42_yolo11s_v4"
+.\.venv\Scripts\python.exe scripts/m1_rebuild.py preflight --run-id $RunId
+.\.venv\Scripts\python.exe scripts/m1_rebuild.py annotate --run-id $RunId
 .\.venv\Scripts\python.exe scripts/m1_rebuild.py audit --run-id $RunId
 .\.venv\Scripts\python.exe scripts/m1_rebuild.py review --run-id $RunId
 .\.venv\Scripts\python.exe scripts/m1_rebuild.py prepare --run-id $RunId --audit-run-id $RunId

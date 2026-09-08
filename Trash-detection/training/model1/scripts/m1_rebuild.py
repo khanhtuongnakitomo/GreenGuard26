@@ -325,6 +325,83 @@ def load_machine_review(path: Path) -> dict[str, dict[str, Any]]:
     return result
 
 
+def machine_image_paths(cfg: dict[str, Any]) -> list[Path]:
+    roots = [root for _model, source, root in source_roots(cfg) if source == "live-machine-dataset"]
+    return [image for root in roots if root.is_dir() for image in image_files(root)]
+
+
+def preflight(cfg: dict[str, Any], name: str) -> dict[str, Any]:
+    """Record immutable inputs and runtime readiness before data work."""
+    report_root = report_dir(cfg, name)
+    pretrained = Path(str(cfg["training"]["pretrained_model"]))
+    if not pretrained.is_absolute():
+        pretrained = MODEL_ROOT / pretrained
+    active_m1 = RUNTIME_ROOT / "models" / "m1_detect_640.onnx"
+    active_m2 = RUNTIME_ROOT / "models" / "m2_obb_640.onnx"
+    jetson_m2 = RUNTIME_ROOT.parent / "jetson-runtime" / "models" / "m2_obb_416.onnx"
+    result: dict[str, Any] = {
+        "schema": "greenguard-m1-rebuild-preflight-v1",
+        "run_id": name,
+        "status": "READY",
+        "created_at": utc_now(),
+        "environment": environment(),
+        "pretrained_model": str(pretrained),
+        "pretrained_exists": pretrained.is_file(),
+        "pretrained_sha256": sha256_file(pretrained) if pretrained.is_file() else None,
+        "protected_hashes": {
+            "active_m1": sha256_file(active_m1) if active_m1.is_file() else None,
+            "active_pc_m2": sha256_file(active_m2) if active_m2.is_file() else None,
+            "active_jetson_m2": sha256_file(jetson_m2) if jetson_m2.is_file() else None,
+        },
+        "machine_images": len(machine_image_paths(cfg)),
+        "config_sha256": sha256_file(Path(cfg.get("_config_path", CONFIG_PATH))),
+    }
+    failures = []
+    if not result["pretrained_exists"]:
+        failures.append("pretrained_model_missing")
+    if not result["environment"].get("cuda_available"):
+        failures.append("cuda_unavailable")
+    if failures:
+        result["status"] = "FAILED"
+        result["failures"] = failures
+    atomic_write(report_root / "preflight_report.json", result)
+    return result
+
+
+def annotate(cfg: dict[str, Any], name: str) -> dict[str, Any]:
+    """Create a machine-review request without inferring any boxes."""
+    report_root = report_dir(cfg, name)
+    template_path = report_root / "machine_m1_review_template.jsonl"
+    review_path = machine_review_path(cfg)
+    images = machine_image_paths(cfg)
+    if not template_path.is_file():
+        template = "".join(json.dumps({
+            "image": image.relative_to(REPO_ROOT).as_posix(),
+            "status": "pending",
+            "labels": [],
+            "reviewer": None,
+            "session_id": group_key("live-machine-dataset", image),
+            "item_id": None,
+            "trial_id": None,
+            "review_basis": "manual whole-object visual review required",
+        }) + "\n" for image in images)
+        atomic_write(template_path, template)
+    approved = load_machine_review(review_path)
+    result = {
+        "schema": "greenguard-m1-rebuild-annotate-v1",
+        "run_id": name,
+        "status": "READY" if review_path.is_file() else "NEEDS_REVIEW",
+        "machine_image_count": len(images),
+        "review_manifest": str(review_path),
+        "review_template": str(template_path),
+        "reviewed_records": len(approved),
+        "approved_records": sum(1 for row in approved.values() if row.get("status") == "approved"),
+        "note": "This stage never infers or writes target boxes; every admitted box must be manually reviewed.",
+    }
+    atomic_write(report_root / "annotate_report.json", result)
+    return result
+
+
 def source_mapping(model: str, source: str, names: dict[int, str]) -> tuple[dict[int, int], set[int], str]:
     """Return target mapping, excluded source IDs, and mapping explanation."""
     if model == "model2":
@@ -1840,7 +1917,9 @@ def dispatch(args: argparse.Namespace) -> int:
     cfg = load_config(config_path)
     cfg["_config_path"] = str(config_path)
     name = run_id(cfg, args.run_id)
-    if args.command == "audit": result = audit(cfg, name)
+    if args.command == "preflight": result = preflight(cfg, name)
+    elif args.command == "annotate": result = annotate(cfg, name)
+    elif args.command == "audit": result = audit(cfg, name)
     elif args.command == "review": result = review(cfg, name)
     elif args.command == "compact-audit": result = compact_audit(cfg, name)
     elif args.command == "prepare": result = prepare(cfg, name, audit_name=args.audit_run_id)
@@ -1861,7 +1940,7 @@ def dispatch(args: argparse.Namespace) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="GreenGuard two-class Model 1 rebuild")
-    parser.add_argument("command", choices=["audit", "review", "compact-audit", "prepare", "freeze", "smoke", "screen-a", "screen-b", "train", "evaluate", "export", "verify", "activate"])
+    parser.add_argument("command", choices=["preflight", "annotate", "audit", "review", "compact-audit", "prepare", "freeze", "smoke", "screen-a", "screen-b", "train", "evaluate", "export", "verify", "activate"])
     parser.add_argument("--config", type=Path)
     parser.add_argument("--run-id")
     parser.add_argument("--batch", type=int)

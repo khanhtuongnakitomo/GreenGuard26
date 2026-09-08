@@ -1,5 +1,7 @@
 param(
     [string]$RunId = "",
+    [switch]$Preflight,
+    [switch]$Annotate,
     [switch]$Audit,
     [switch]$Review,
     [switch]$Prepare,
@@ -28,6 +30,8 @@ function Invoke-Stage([string]$Stage) {
 }
 
 if ($Full) {
+    Invoke-Stage "preflight"
+    Invoke-Stage "annotate"
     Invoke-Stage "audit"
     Invoke-Stage "review"
     Invoke-Stage "prepare"
@@ -68,6 +72,8 @@ if ($Full) {
     exit 0
 }
 
+if ($Preflight) { Invoke-Stage "preflight" }
+if ($Annotate) { Invoke-Stage "annotate" }
 if ($Audit) { Invoke-Stage "audit" }
 if ($Review) { Invoke-Stage "review" }
 if ($Prepare) { Invoke-Stage "prepare" }
