@@ -16,11 +16,11 @@
       "family": "m1",
       "task": "detect",
       "source_path": "Trash-detection/training/model1/export/detect_640/model.onnx",
-      "source_commit": "f1c5a70642bfdc38f20bc7cf39c2d1e82c3581c2",
-      "source_sha256": "5069bfae324db8c1aef1fbce4b68aaad217a80a95a6f6b83eacfa60cdb620038",
-      "source_bytes": 44748966,
-      "sha256": "5069bfae324db8c1aef1fbce4b68aaad217a80a95a6f6b83eacfa60cdb620038",
-      "bytes": 44748966,
+      "source_commit": "481a068622082d9793604f1be52248835fd3ad36",
+      "source_sha256": "cf7baf1c4a917c7f8ecbd1e30bf92ca5e3a38869b99ccbfb6b94a0b95111eb24",
+      "source_bytes": 37929497,
+      "sha256": "cf7baf1c4a917c7f8ecbd1e30bf92ca5e3a38869b99ccbfb6b94a0b95111eb24",
+      "bytes": 37929497,
       "input_name": "images",
       "input_shape": [
         1,
@@ -30,13 +30,12 @@
       ],
       "output_shape": [
         1,
-        7,
+        6,
         8400
       ],
       "classes": [
         "metal_can",
-        "pet_bottle",
-        "pp_cup"
+        "pet_bottle"
       ],
       "image_size": 640
     },

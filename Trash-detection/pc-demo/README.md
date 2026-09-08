@@ -30,18 +30,18 @@ The supported launchers are at the `Trash-detection/` root:
 .\full_demo.bat --source 0 --auto-start
 ```
 
-The `--mode` values are `model1`, `model2`, and `full`. Model 1 is a single
-three-class detector; PP cup is filtered and never shown. Model 1 uses a low
-inference floor (`0.05`) to retain candidates, then requires `0.65` confidence
-after visibility and area filtering before the candidate enters the workflow.
+The `--mode` values are `model1`, `model2`, and `full`. The active Model 1
+detector has two classes: aluminum beverage can and PET bottle. It uses a low
+inference floor (`0.05`) to retain candidates, then requires `0.84` confidence
+after area filtering before the candidate enters the workflow.
 
 Useful flags: `--headless`, `--save <dir>`, `--max-frames N`, `--m1-conf`, `--m2-conf`,
 `--fps`. `--m1-conf` overrides the inference floor only; it does not lower the
 decision floor in the locked config.
 
 `m1-conf` is the candidate-generation floor. The public M1 decision floor is
-configured independently as `m1.detector.decision_conf` (0.65 on the main
-baseline). PP and unknown classes are filtered before top-1 selection.
+configured independently as `m1.detector.decision_conf` (0.84 for the currently
+activated candidate). Unknown classes are filtered before top-1 selection.
 
 For camera evidence, run the repository launcher
 `..\diagnose_model1_rvm.bat`. It writes immutable session directories under

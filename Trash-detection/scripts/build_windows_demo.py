@@ -24,7 +24,7 @@ DIST = ROOT / "dist"
 DEFAULT_OUTPUT = DIST / "GreenGuard-Windows-Detection-Demo"
 PORTABLE_STAGE = SOURCE / "portable-runtime"
 LOCKED = {
-    "m1_detect_640.onnx": "5069bfae324db8c1aef1fbce4b68aaad217a80a95a6f6b83eacfa60cdb620038",
+    "m1_detect_640.onnx": "cf7baf1c4a917c7f8ecbd1e30bf92ca5e3a38869b99ccbfb6b94a0b95111eb24",
     "m2_obb_640.onnx": "2df4f8f9f7d941998029e65809eb53bbf401199eb4d0a8489e7b259503ad1449",
 }
 RUNTIME_FILES = ("config_loader.py", "decision_core.py", "gate.py", "pipeline.py", "ui.py")
@@ -290,7 +290,7 @@ def write_bundle_files(output: Path, model_hashes: dict[str, str], profile: str,
         "one_signal_per_item": True,
         "stdout_contains_signals_only": True,
         "signal_contract": "0=aluminum can, 1=good PET, 2=bad PET",
-        "m1_internal_classes": ["metal_can", "pet_bottle", "pp_cup"],
+        "m1_internal_classes": ["metal_can", "pet_bottle"],
         "m1_public_classes": ["metal_can", "pet_bottle"],
         "m2_contract": "main PC Model 2; unchanged",
         "rejected_hashes": sorted(rejected_hashes()),

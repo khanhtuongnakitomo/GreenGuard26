@@ -4,11 +4,11 @@
       "path": "models/m1_detect_640.onnx",
       "imgsz": 640,
       "task": "detect",
-      "classes": ["metal_can", "pet_bottle", "pp_cup"],
+      "classes": ["metal_can", "pet_bottle"],
       "visible_class_ids": [0, 1],
-      "ignored_class_ids": [2],
+      "ignored_class_ids": [],
       "infer_conf": 0.05,
-      "decision_conf": 0.65
+      "decision_conf": 0.84
     },
     "min_area_frac": 0.02,
     "miss_hold": 3,
