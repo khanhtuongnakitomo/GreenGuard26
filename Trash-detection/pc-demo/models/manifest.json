@@ -16,7 +16,7 @@
       "family": "m1",
       "task": "detect",
       "source_path": "Trash-detection/training/model1/export/detect_640/model.onnx",
-      "source_commit": "481a068622082d9793604f1be52248835fd3ad36",
+      "source_commit": "4a6d140c71310ac9a78350292a64a3a5d856b75b",
       "source_sha256": "cf7baf1c4a917c7f8ecbd1e30bf92ca5e3a38869b99ccbfb6b94a0b95111eb24",
       "source_bytes": 37929497,
       "sha256": "cf7baf1c4a917c7f8ecbd1e30bf92ca5e3a38869b99ccbfb6b94a0b95111eb24",

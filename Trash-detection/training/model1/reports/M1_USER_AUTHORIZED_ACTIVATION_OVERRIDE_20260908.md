@@ -27,10 +27,16 @@ candidate, and `pc-demo/models/manifest.json` was regenerated from those
 sources. The default PC configuration now declares the two-class head and the
 0.84 decision threshold.
 
-Model 2 was not copied, retrained, reconfigured, or repackaged:
+At the time of the initial activation, Model 2 was not copied, retrained,
+reconfigured, or repackaged. During the requested rebase, I retained the
+remote branch's useful promoted machine-specific Model 2 package. That remote
+integration is separate from the failed Model 1 activation, and it changes the
+current Model 2 artifact from the pre-rebase baseline:
 
 - Active Model 2 path: `Trash-detection/pc-demo/models/m2_obb_640.onnx`
-- Model 2 SHA-256 before and after activation: `d4c5f235fbb78e3a8451de695480400a916ffec235a518af47fd5b448c6eb999`
+- Current PC Model 2 SHA-256: `2df4f8f9f7d941998029e65809eb53bbf401199eb4d0a8489e7b259503ad1449`
+- Current Jetson Model 2 SHA-256: `fda4c7986adce3262686842dc751afbeae14bd6c059c794926e3a5872be62fa7`
+- Pre-rebase PC Model 2 baseline SHA-256: `d4c5f235fbb78e3a8451de695480400a916ffec235a518af47fd5b448c6eb999`
 - The seven-observation, four-vote, PET-only Model 2, one-result-per-item, and
   eight-clear-frame re-arm contracts remain unchanged.
 
@@ -59,12 +65,17 @@ Historical evidence:
 
 ## Verification performed after activation
 
-- PC package manifest check: passed; packaged hashes match the manifest.
-- PC tests: `17 passed, 4 skipped`.
+- PC package manifest check: passed after the rebase; both Model 1 and the
+  promoted remote Model 2 hashes match their manifest entries.
+- Post-rebase PC tests: `20 passed, 5 failed`. The five failures are the
+  remote baseline-parity/blank-fixture assertions against the intentionally
+  activated failed Model 1 candidate; they are preserved as visible warnings,
+  not suppressed.
+- Jetson/runtime tests: `8 passed`.
+- Model 2 training workflow tests: `15 passed`.
 - One-frame Model 1 inference on `Trash-detection/validation/fixtures/m1_reference.jpg`: passed.
-- One-frame full workflow initialization with unchanged Model 2: passed;
-  the seven-observation workflow reported `M1 1/7`.
-- Candidate SHA-256 and Model 2 SHA-256 were re-read after the checks.
+- One-frame full-workflow initialization with the promoted remote Model 2:
+  passed; the seven-observation workflow reported `M1 1/7`.
 
 No new camera acceptance session was run. No new holdout evaluation was run.
 
