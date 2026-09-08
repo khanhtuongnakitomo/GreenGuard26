@@ -22,10 +22,12 @@ Windows runtime cleanup.
 1. Review provenance and labels before generating variants.
 2. Split by source/group before augmentation and keep validation/holdout
    untouched.
-3. Train and evaluate a candidate without replacing `pc-demo/models`.
+3. Train and evaluate a candidate without changing active runtime files.
 4. Export required deployment sizes only after evaluation gates pass.
 5. Compare candidate hashes and runtime parity against active artifacts.
-6. Promote or roll back only in a separately authorized operation.
+6. Run the explicit activation stage only after recording the previous active
+   M1 hash; the owner-authorized override records an `*_ACTIVE_OVERRIDE`
+   status when measured gates fail and provides a rollback snapshot.
 
 Do not lower runtime decision policy from unlabeled evidence. Run the actual PC
 and Jetson contract checks after any authorized model change.

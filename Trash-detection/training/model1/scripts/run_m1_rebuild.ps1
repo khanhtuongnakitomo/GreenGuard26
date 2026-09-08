@@ -1,14 +1,17 @@
 param(
     [string]$RunId = "",
     [switch]$Audit,
+    [switch]$Review,
     [switch]$Prepare,
+    [switch]$Freeze,
     [switch]$Smoke,
     [switch]$Train,
     [switch]$Evaluate,
     [switch]$Export,
     [switch]$Verify,
+    [switch]$Activate,
     [switch]$Full,
-    [double]$MaxHours = 10
+    [double]$MaxHours = 12
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,8 +29,12 @@ function Invoke-Stage([string]$Stage) {
 
 if ($Full) {
     Invoke-Stage "audit"
+    Invoke-Stage "review"
     Invoke-Stage "prepare"
+    Invoke-Stage "freeze"
     Invoke-Stage "smoke"
+    Invoke-Stage "screen-a"
+    Invoke-Stage "screen-b"
     $resolved = if ($RunId) { $RunId } else { "m1rebuild_$(Get-Date -Format yyyyMMdd)_seed42_yolo11s" }
     $trainingHours = [Math]::Max(1, $MaxHours - 4)
     & $Python (Join-Path $ModelRoot "scripts\watch_m1_rebuild.py") --run-id $resolved --max-hours $trainingHours
@@ -50,7 +57,7 @@ if ($Full) {
         Write-Warning "No valid checkpoint was produced; export and evaluation are unavailable. The training report is the failure evidence."
         exit 2
     }
-    foreach ($stage in @("evaluate", "export", "verify")) {
+    foreach ($stage in @("evaluate", "export", "verify", "activate")) {
         & $Python $Script $stage @("--run-id", $resolved)
         if ($LASTEXITCODE -ne 0) {
             $postFailure = $true
@@ -62,9 +69,12 @@ if ($Full) {
 }
 
 if ($Audit) { Invoke-Stage "audit" }
+if ($Review) { Invoke-Stage "review" }
 if ($Prepare) { Invoke-Stage "prepare" }
+if ($Freeze) { Invoke-Stage "freeze" }
 if ($Smoke) { Invoke-Stage "smoke" }
 if ($Train) { Invoke-Stage "train" }
 if ($Evaluate) { Invoke-Stage "evaluate" }
 if ($Export) { Invoke-Stage "export" }
 if ($Verify) { Invoke-Stage "verify" }
+if ($Activate) { Invoke-Stage "activate" }

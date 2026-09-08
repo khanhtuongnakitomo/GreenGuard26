@@ -64,6 +64,11 @@ def generated_dir(cfg: dict[str, Any], name: str) -> Path:
     return MODEL_ROOT / cfg["data"]["generated_root"] / name
 
 
+def machine_review_path(cfg: dict[str, Any]) -> Path:
+    configured = Path(str(cfg.get("data", {}).get("machine_review_manifest", "dataset/annotations/machine_m1_review.jsonl")))
+    return configured if configured.is_absolute() else MODEL_ROOT / configured
+
+
 def atomic_write(path: Path, value: str | dict[str, Any] | list[Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
@@ -235,8 +240,89 @@ def group_key(source: str, image: Path) -> str:
         session = match.group(1) if match else "reviewed-empty-scene"
         return f"true-negative:{session}"
     if "live-machine" in relative:
-        return "live-machine:machine-capture-sequence"
+        match = re.search(r"live-machine-dataset[\\/]([^\\/]+)[\\/]images[\\/]WIN_\d{8}_(\d{2})_(\d{2})_(\d{2})", relative, re.IGNORECASE)
+        if match:
+            machine, hour, minute, second = match.groups()
+            minute_value = int(minute)
+            # These are the observed capture sessions. A session is never
+            # split by filename; its boundaries come from capture timing.
+            if machine.upper() == "GG1":
+                if 18 <= minute_value <= 29:
+                    session = "pet_1218_1229"
+                elif 31 <= minute_value <= 32:
+                    session = "pet_1231_1232"
+                elif 33 <= minute_value <= 34:
+                    session = "pet_1233_1234"
+                elif minute_value == 38:
+                    session = "pet_1238"
+                elif minute_value in {40, 41}:
+                    session = "can_1240_1241"
+                elif minute_value in {42, 43}:
+                    session = "can_1242_1243"
+                else:
+                    session = f"unknown_{hour}{minute}{second}"
+            elif machine.upper() == "GG2":
+                if hour == "15" and minute_value == 55:
+                    session = "pet_1555"
+                elif hour == "15" and 56 <= minute_value <= 59:
+                    session = "pet_1556_1605"
+                elif hour == "16" and minute_value <= 5:
+                    session = "pet_1556_1605"
+                elif hour == "16" and 6 <= minute_value <= 10:
+                    session = "pet_1606_1610"
+                else:
+                    session = f"unknown_{hour}{minute}{second}"
+            else:
+                session = f"unknown_{hour}{minute}{second}"
+            return f"live-machine:{machine.upper()}:{session}"
+        return "live-machine:unknown-capture-session"
     return f"{source}:{stem}"
+
+
+def machine_fixed_split(source: str, group: str) -> str | None:
+    """Return the frozen role for reviewed machine sessions.
+
+    The assignment intentionally uses complete capture sessions. It is a
+    policy input to the split, not a class-balancing heuristic.
+    """
+    if source == "dataset-live":
+        return "train"
+    if source == "true-negative":
+        if "14_17" in group:
+            return "train"
+        if "15_47" in group:
+            return "holdout"
+    if group.endswith(":can_1240_1241"):
+        return "selection"
+    if group.endswith(":can_1242_1243"):
+        return "holdout"
+    if group.endswith(":pet_1233_1234"):
+        return "selection"
+    if group.endswith(":pet_1238") or group.endswith(":pet_1555"):
+        return "calibration"
+    if group.endswith(":pet_1606_1610"):
+        return "holdout"
+    if group.endswith(":pet_1218_1229") or group.endswith(":pet_1231_1232") or group.endswith(":pet_1556_1605"):
+        return "train"
+    return None
+
+
+def load_machine_review(path: Path) -> dict[str, dict[str, Any]]:
+    """Load explicit whole-object review records; never infer them."""
+    if not path.is_file():
+        return {}
+    result: dict[str, dict[str, Any]] = {}
+    for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"invalid machine review JSON at line {line_no}: {exc}") from exc
+        image = str(row.get("image", ""))
+        if image:
+            result[image.replace("\\", "/")] = row
+    return result
 
 
 def source_mapping(model: str, source: str, names: dict[int, str]) -> tuple[dict[int, int], set[int], str]:
@@ -271,6 +357,7 @@ def source_roots(cfg: dict[str, Any]) -> list[tuple[str, str, Path]]:
 
 
 def make_record(model: str, source: str, image: Path, root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    image_relative = image.relative_to(REPO_ROOT).as_posix()
     label = find_label(image)
     names = cfg.get("_source_names", {}).get(str(root))
     if names is None:
@@ -281,6 +368,35 @@ def make_record(model: str, source: str, image: Path, root: Path, cfg: dict[str,
     mapping, excluded_ids, explanation = source_mapping(model, source, names)
     labels: list[dict[str, Any]] = []
     invalid_box = False
+    review_basis = f"configured source adapter: {explanation}"
+    machine_review = cfg.get("_machine_review", {}).get(image_relative) if source == "live-machine-dataset" else None
+    if source == "live-machine-dataset":
+        # Part-only machine labels are never converted by this adapter. A
+        # separate, explicit review record must contain manually verified
+        # whole-object boxes.
+        records, errors = [], []
+        mapping, excluded_ids = {}, set()
+        if isinstance(machine_review, dict) and machine_review.get("status") == "approved":
+            review_basis = "manual whole-object machine review"
+            for item in machine_review.get("labels", []):
+                class_id = item.get("class_id")
+                bbox = item.get("bbox")
+                if class_id not in (0, 1) or not isinstance(bbox, list) or len(bbox) != 4:
+                    errors.append("machine_review_invalid_box")
+                    continue
+                try:
+                    values = [float(value) for value in bbox]
+                except (TypeError, ValueError):
+                    errors.append("machine_review_non_numeric_box")
+                    continue
+                if not all(math.isfinite(value) for value in values) or not (0.0 <= values[0] <= 1.0 and 0.0 <= values[1] <= 1.0 and 0.0 < values[2] <= 1.0 and 0.0 < values[3] <= 1.0):
+                    errors.append("machine_review_out_of_bounds_box")
+                    continue
+                labels.append({"class_id": int(class_id), "bbox": values, "source_class_id": None})
+            if not labels and not errors:
+                errors.append("machine_review_has_no_target")
+        else:
+            review_basis = "manual whole-object machine review required; part-only source labels excluded"
     for record in records:
         if record["class_id"] in mapping:
             box = normalized_hbb(record)
@@ -292,8 +408,10 @@ def make_record(model: str, source: str, image: Path, root: Path, cfg: dict[str,
         disposition = "approved_negative"
     elif source == "true-negative" and not records and not errors:
         disposition = "approved_negative"
-    elif "live-machine" in str(image).lower():
-        disposition = "exclude_part_only_machine_label"
+    elif source == "live-machine-dataset" and not machine_review:
+        disposition = "quarantine_machine_review_required"
+    elif source == "live-machine-dataset" and machine_review.get("status") != "approved":
+        disposition = "quarantine_machine_review_required"
     elif invalid_box or errors:
         disposition = "quarantine_invalid_label"
     elif labels:
@@ -322,7 +440,7 @@ def make_record(model: str, source: str, image: Path, root: Path, cfg: dict[str,
     return {
         "model": model,
         "source": source,
-        "image": image.relative_to(REPO_ROOT).as_posix(),
+        "image": image_relative,
         "label": label.relative_to(REPO_ROOT).as_posix() if label else None,
         "image_sha256": image_hash,
         "pixel_sha256": pixel_hash,
@@ -333,10 +451,11 @@ def make_record(model: str, source: str, image: Path, root: Path, cfg: dict[str,
         "height": height,
         "source_names": names,
         "mapping": explanation,
-        "review_basis": f"configured source adapter: {explanation}",
-        "identity": {"item": None, "session": None, "trial": None, "status": "unknown"},
+        "review_basis": review_basis,
+        "identity": {"item": machine_review.get("item_id") if isinstance(machine_review, dict) else None, "session": machine_review.get("session_id") if isinstance(machine_review, dict) else None, "trial": machine_review.get("trial_id") if isinstance(machine_review, dict) else None, "status": "reviewed" if isinstance(machine_review, dict) and machine_review.get("status") == "approved" else "unknown"},
         "labels": labels,
         "group": group_key(source, image),
+        "fixed_split": machine_fixed_split(source, group_key(source, image)),
         "disposition": disposition,
         "source_class_ids_seen": sorted({r["class_id"] for r in records}),
         "parse_errors": errors,
@@ -349,12 +468,17 @@ def audit(cfg: dict[str, Any], name: str) -> dict[str, Any]:
     missing_roots: list[str] = []
     roots = source_roots(cfg)
     cfg["_source_names"] = {str(root): yaml_names(root) for _, _, root in roots if root.is_dir()}
+    cfg["_machine_review"] = load_machine_review(machine_review_path(cfg))
+    progress_path = report_dir(cfg, name) / "audit_progress.json"
     for model, source, root in roots:
         if not root.is_dir():
             missing_roots.append(str(root))
             continue
-        for image in image_files(root):
+        source_images = image_files(root)
+        for index, image in enumerate(source_images, 1):
             records.append(make_record(model, source, image, root, cfg))
+            if index == len(source_images) or index % 500 == 0:
+                atomic_write(progress_path, {"stage": "audit", "source": source, "processed": index, "source_total": len(source_images), "records": len(records), "updated_at": utc_now()})
     byte_groups: dict[str, list[int]] = defaultdict(list)
     pixel_groups: dict[str, list[int]] = defaultdict(list)
     for index, record in enumerate(records):
@@ -385,28 +509,15 @@ def audit(cfg: dict[str, Any], name: str) -> dict[str, Any]:
         if records[index]["disposition"] in {"eligible", "approved_negative"}:
             records[index]["disposition"] = "exclude_duplicate"
 
-    # A perceptual match is a split-leakage proposal, not an automatic label merge.
-    # Use a small prefix bucket to avoid an O(n^2) comparison across the inventory.
+    # A perceptual match is a review proposal, never an automatic label merge
+    # or group union. Known source/capture groups above remain authoritative.
     near_buckets: dict[str, list[int]] = defaultdict(list)
     for index, record in enumerate(records):
         if record["perceptual_hash"]:
             near_buckets[record["perceptual_hash"][:2]].append(index)
-    group_parent: dict[str, str] = {}
-
-    def find_group(value: str) -> str:
-        group_parent.setdefault(value, value)
-        while group_parent[value] != value:
-            group_parent[value] = group_parent[group_parent[value]]
-            value = group_parent[value]
-        return value
-
-    def union_groups(left: str, right: str) -> None:
-        left_root, right_root = find_group(left), find_group(right)
-        if left_root != right_root:
-            group_parent[right_root] = left_root
-
     near_proposals = 0
     comparisons = 0
+    proposal_pairs: list[dict[str, str]] = []
     for bucket in near_buckets.values():
         # This is a proposal index, not a ground-truth merge. Bound the work
         # so a visually uniform source cannot turn audit into an O(n^2) job.
@@ -418,13 +529,12 @@ def audit(cfg: dict[str, Any], name: str) -> dict[str, Any]:
                 right_hash = records[right_index]["perceptual_hash"]
                 if left_hash and right_hash and hamming_distance(left_hash, right_hash) <= 5:
                     if records[left_index]["group"] != records[right_index]["group"]:
-                        union_groups(records[left_index]["group"], records[right_index]["group"])
                         near_proposals += 1
+                        if len(proposal_pairs) < 5000:
+                            proposal_pairs.append({"left": records[left_index]["image"], "right": records[right_index]["image"], "left_group": records[left_index]["group"], "right_group": records[right_index]["group"]})
     for record in records:
-        root = find_group(record["group"])
-        record["duplicate_group"] = f"near:{root}" if root != record["group"] else record["group"]
-        if root != record["group"]:
-            record["group"] = f"near:{root}"
+        record["duplicate_group"] = record["group"]
+    atomic_write(report_dir(cfg, name) / "near_duplicate_review.json", {"schema": "greenguard-m1-near-duplicate-review-v1", "proposal_count": near_proposals, "comparison_count": comparisons, "proposals": proposal_pairs, "truncated": near_proposals > len(proposal_pairs)})
     counts = Counter(record["disposition"] for record in records)
     source_counts: dict[str, dict[str, int]] = {}
     for record in records:
@@ -445,6 +555,7 @@ def audit(cfg: dict[str, Any], name: str) -> dict[str, Any]:
         "conflicting_duplicate_image_count": len(conflicting_duplicate_indices),
         "near_duplicate_group_proposals": near_proposals,
         "near_duplicate_comparisons": comparisons,
+        "near_duplicate_review_file": str(report_dir(cfg, name) / "near_duplicate_review.json"),
         "distinct_image_hashes": len({r["image_sha256"] for r in records if r["image_sha256"]}),
         "distinct_pixel_hashes": len({r["pixel_sha256"] for r in records if r["pixel_sha256"]}),
         "true_negative_distinct_images": len({r["pixel_sha256"] for r in records if r["source"] == "true-negative" and r["pixel_sha256"]}),
@@ -540,16 +651,12 @@ def split_groups(records: list[dict[str, Any]], cfg: dict[str, Any], seed: int) 
         return score
 
     # Stratify by instance counts while assigning connected groups atomically.
-    # Can-bearing groups are placed first so the small can pool is represented
-    # in all partitions instead of being consumed by the training target.
-    reserved_machine_groups = {
-        key for key, items in groups.items()
-        if any(item.get("source") in {"dataset-live", "true-negative"} for item in items)
-    }
+    # Explicit machine roles are honored first; generic groups are then
+    # assigned by deficit. Calibration is a subdivision of validation.
     ordered_keys = sorted(
         keys,
         key=lambda item: (
-            0 if item in reserved_machine_groups else 1,
+            0 if any(group_item.get("fixed_split") for group_item in groups[item]) else 1,
             -group_instances[item][0],
             -group_instances[item][1],
             -len(groups[item]),
@@ -558,7 +665,11 @@ def split_groups(records: list[dict[str, Any]], cfg: dict[str, Any], seed: int) 
     )
     for key in ordered_keys:
         labels = set(group_instances[key])
-        chosen = "holdout" if key in reserved_machine_groups else max(("train", "val", "holdout"), key=lambda split: (assignment_score(key, split), split))
+        fixed_roles = {item.get("fixed_split") for item in groups[key] if item.get("fixed_split")}
+        if len(fixed_roles) > 1:
+            raise RuntimeError(f"machine group has conflicting fixed roles: {key}")
+        fixed_role = next(iter(fixed_roles), None)
+        chosen = ("val" if fixed_role == "calibration" else fixed_role) if fixed_role else max(("train", "val", "holdout"), key=lambda split: (assignment_score(key, split), split))
         assigned[key] = chosen
         sizes[chosen] += len(groups[key])
         instances[chosen].update(group_instances[key])
@@ -567,7 +678,7 @@ def split_groups(records: list[dict[str, Any]], cfg: dict[str, Any], seed: int) 
         for split in ("train", "val", "holdout"):
             for class_id in (0, 1):
                 if class_id not in class_by_split[split]:
-                    candidates = [key for key in keys if class_id in {int(label["class_id"]) for record in groups[key] for label in record["labels"]} and assigned[key] != split]
+                    candidates = [key for key in keys if class_id in {int(label["class_id"]) for record in groups[key] for label in record["labels"]} and assigned[key] != split and not any(record.get("fixed_split") for record in groups[key])]
                     if not candidates:
                         raise RuntimeError(f"cannot place class {class_id} in {split}")
                     donor = min(candidates, key=lambda key: len(groups[key]))
@@ -689,10 +800,10 @@ def copy_dataset(cfg: dict[str, Any], name: str, audit_report: dict[str, Any]) -
     group_assignments = split_groups(records, cfg, int(cfg["run"]["seed"]))
     max_originals = int(cfg["data"]["max_training_originals"])
     train_records = [record for record in records if group_assignments[record["group"]] == "train" and record["labels"]]
-    train_selection_mode = "all"
+    train_selection_mode = "all_reviewed_train_originals_balanced_sampler"
     selected_ids: set[str] | None = None
     by_class = {class_id: [record for record in train_records if any(int(label["class_id"]) == class_id for label in record["labels"])] for class_id in (0, 1)}
-    if by_class[0] and by_class[1]:
+    if max_originals > 0 and len(train_records) > max_originals and by_class[0] and by_class[1]:
         per_class = min(len(by_class[0]), len(by_class[1]), max_originals // 2)
         rng = random.Random(int(cfg["run"]["seed"]))
         selected: list[dict[str, Any]] = []
@@ -707,7 +818,12 @@ def copy_dataset(cfg: dict[str, Any], name: str, audit_report: dict[str, Any]) -
     class_counts = Counter()
     val_groups = sorted({record["group"] for record in records if group_assignments[record["group"]] == "val"})
     calibration_group_count = max(1, round(len(val_groups) * float(cfg["data"]["calibration_fraction_of_validation"]))) if val_groups else 0
-    calibration_groups = set(val_groups[:calibration_group_count])
+    fixed_calibration_groups = {
+        record["group"] for record in records
+        if record.get("fixed_split") == "calibration" and group_assignments.get(record["group"]) == "val"
+    }
+    calibration_groups = set(sorted(fixed_calibration_groups))
+    calibration_groups.update(group for group in val_groups if len(calibration_groups) < calibration_group_count)
     calibration: list[str] = []
     selection: list[str] = []
     holdout: list[str] = []
@@ -749,7 +865,7 @@ def copy_dataset(cfg: dict[str, Any], name: str, audit_report: dict[str, Any]) -
             augmentation_examples.append({"source": record["image"], "mode": mode, "seed": int(cfg["run"]["seed"]) + index * 1009, "path": str(example_path)})
     data_yaml = {"path": str(output.resolve()), "train": "images/train", "val": "images/selection", "test": "images/holdout", "names": {0: "metal_can", 1: "pet_bottle"}}
     atomic_write(output / "dataset.yaml", yaml.safe_dump(data_yaml, sort_keys=False))
-    manifest = {"schema": "greenguard-m1-rebuild-dataset-v1", "run_id": name, "created_at": utc_now(), "classes": CLASS_NAMES, "records": manifest_records, "selection_images": selection, "calibration_images": calibration, "holdout_images": holdout, "split_counts": dict(split_counts), "class_instance_counts": dict(class_counts), "group_assignments": group_assignments, "augmentation": cfg["augmentation"], "augmentation_examples": augmentation_examples, "dynamic_train_augmentation": True}
+    manifest = {"schema": "greenguard-m1-rebuild-dataset-v1", "run_id": name, "created_at": utc_now(), "classes": CLASS_NAMES, "records": manifest_records, "selection_images": selection, "calibration_images": calibration, "holdout_images": holdout, "split_counts": dict(split_counts), "class_instance_counts": dict(class_counts), "group_assignments": group_assignments, "augmentation": cfg["augmentation"], "augmentation_examples": augmentation_examples, "dynamic_train_augmentation": True, "training_sampling": {"mode": train_selection_mode, "seed": int(cfg["run"]["seed"]), "per_original_draw_cap": 3, "target_class_balance": "approximately_equal_per_epoch"}}
     atomic_write(output / "manifest.json", manifest)
     return {"status": "READY", "generated_root": str(output), "split_counts": dict(split_counts), "class_instance_counts": dict(class_counts), "base_records": len(records), "train_selection_mode": train_selection_mode, "manifest": str(output / "manifest.json")}
 
@@ -757,6 +873,11 @@ def copy_dataset(cfg: dict[str, Any], name: str, audit_report: dict[str, Any]) -
 def prepare(cfg: dict[str, Any], name: str, audit_name: str | None = None) -> dict[str, Any]:
     audit_path = report_dir(cfg, audit_name or name) / "audit_report.json"
     audit_report = json.loads(audit_path.read_text(encoding="utf-8")) if audit_path.is_file() else audit(cfg, name)
+    pending_machine = [record["image"] for record in audit_report["records"] if record["disposition"] == "quarantine_machine_review_required"]
+    if pending_machine:
+        result = {"status": "NEEDS_REVIEW", "reason": "whole-object machine review is incomplete", "pending_machine_images": len(pending_machine), "review_manifest": str(machine_review_path(cfg))}
+        atomic_write(report_dir(cfg, name) / "prepare_report.json", result)
+        return result
     eligible = [record for record in audit_report["records"] if record["disposition"] in {"eligible", "approved_negative"}]
     groups = {class_id: {record["group"] for record in eligible for label in record["labels"] if label["class_id"] == class_id} for class_id in (0, 1)}
     minimum = int(cfg["data"]["minimum_independent_groups_per_class"])
@@ -766,6 +887,56 @@ def prepare(cfg: dict[str, Any], name: str, audit_name: str | None = None) -> di
         return result
     result = copy_dataset(cfg, name, audit_report)
     atomic_write(report_dir(cfg, name) / "prepare_report.json", result)
+    return result
+
+
+def review(cfg: dict[str, Any], name: str) -> dict[str, Any]:
+    """Summarize human-review blockers without admitting any source rows."""
+    audit_path = report_dir(cfg, name) / "audit_report.json"
+    if not audit_path.is_file():
+        raise FileNotFoundError(f"audit report missing: {audit_path}")
+    report = json.loads(audit_path.read_text(encoding="utf-8"))
+    pending = [record for record in report.get("records", []) if record.get("disposition") in {"quarantine_machine_review_required", "quarantine_empty_unreviewed", "quarantine_conflicting_duplicate"}]
+    machine_pending = [record for record in report.get("records", []) if record.get("disposition") == "quarantine_machine_review_required"]
+    template_path = report_dir(cfg, name) / "machine_m1_review_template.jsonl"
+    if machine_pending and not machine_review_path(cfg).is_file():
+        template = "".join(json.dumps({"image": row["image"], "status": "pending", "labels": [], "reviewer": None, "session_id": row.get("group")}) + "\n" for row in machine_pending)
+        atomic_write(template_path, template)
+    result = {
+        "schema": "greenguard-m1-rebuild-review-v1",
+        "run_id": name,
+        "status": "READY_FOR_FREEZE" if not any(row.get("disposition") == "quarantine_machine_review_required" for row in pending) else "NEEDS_REVIEW",
+        "machine_review_manifest": str(machine_review_path(cfg)),
+        "machine_review_template": str(template_path) if machine_pending else None,
+        "pending_count": len(pending),
+        "pending_by_disposition": dict(Counter(row.get("disposition") for row in pending)),
+        "pending_images": [row.get("image") for row in pending[:500]],
+        "note": "Only explicit approved whole-object review records can admit live-machine rows; derived part unions are not accepted.",
+    }
+    atomic_write(report_dir(cfg, name) / "review_report.json", result)
+    return result
+
+
+def freeze(cfg: dict[str, Any], name: str) -> dict[str, Any]:
+    """Freeze the audit/prepare inputs before any training stage."""
+    audit_path = report_dir(cfg, name) / "audit_report.json"
+    prepare_path = report_dir(cfg, name) / "prepare_report.json"
+    if not audit_path.is_file() or not prepare_path.is_file():
+        raise FileNotFoundError("audit and prepare reports are required before freeze")
+    prepare_report = json.loads(prepare_path.read_text(encoding="utf-8"))
+    if prepare_report.get("status") != "READY":
+        result = {"status": "NEEDS_REVIEW", "reason": "prepare did not produce a READY dataset", "prepare": prepare_report}
+    else:
+        result = {
+            "schema": "greenguard-m1-rebuild-freeze-v1",
+            "status": "FROZEN",
+            "run_id": name,
+            "audit_sha256": sha256_file(audit_path),
+            "prepare_sha256": sha256_file(prepare_path),
+            "config_sha256": sha256_file(Path(cfg.get("_config_path", CONFIG_PATH))),
+            "frozen_at": utc_now(),
+        }
+    atomic_write(report_dir(cfg, name) / "freeze_report.json", result)
     return result
 
 
@@ -784,7 +955,109 @@ def environment() -> dict[str, Any]:
     return info
 
 
-def train(cfg: dict[str, Any], name: str, smoke: bool = False, resume_from: Path | None = None, batch_override: int | None = None) -> dict[str, Any]:
+class CappedBalancedGroupSampler:
+    """Deterministic class/group sampler used by the train dataloader.
+
+    The class is intentionally dependency-free so its draw policy can be
+    tested without importing Ultralytics. ``groups`` identifies derivative
+    siblings and capture sequences; ``class_indices`` maps each target class
+    to candidate image indices.
+    """
+
+    def __init__(self, class_indices: dict[int, list[int]], groups: dict[int, str], seed: int, draws_per_epoch: int = 6000, per_image_cap: int = 1, per_group_cap: int = 2, negative_indices: list[int] | None = None):
+        self.class_indices = {int(key): list(value) for key, value in class_indices.items()}
+        self.groups = {int(key): str(value) for key, value in groups.items()}
+        self.seed = int(seed)
+        self.draws_per_epoch = int(draws_per_epoch)
+        self.per_image_cap = int(per_image_cap)
+        self.per_group_cap = int(per_group_cap)
+        self.negative_indices = list(negative_indices or [])
+        self.epoch = 0
+
+    def __len__(self) -> int:
+        return self.draws_per_epoch + len(self.negative_indices)
+
+    def __iter__(self):
+        rng = random.Random(self.seed + self.epoch * 1_000_003)
+        self.epoch += 1
+        used_images: Counter[int] = Counter()
+        used_groups: Counter[str] = Counter()
+        queues = {class_id: list(indices) for class_id, indices in self.class_indices.items()}
+        for values in queues.values():
+            rng.shuffle(values)
+        result: list[int] = []
+        for draw in range(self.draws_per_epoch):
+            preferred = draw % 2
+            candidates = []
+            for class_id in (preferred, 1 - preferred):
+                candidates.extend(index for index in queues.get(class_id, []) if used_images[index] < self.per_image_cap and used_groups[self.groups.get(index, str(index))] < self.per_group_cap)
+                if candidates:
+                    break
+            if not candidates:
+                candidates = [index for indices in queues.values() for index in indices if used_images[index] < self.per_image_cap and used_groups[self.groups.get(index, str(index))] < self.per_group_cap]
+            if not candidates:
+                # Permit a second image from an existing group only when the
+                # requested epoch is longer than the unique pool.
+                candidates = [index for indices in queues.values() for index in indices if used_images[index] < self.per_image_cap + 1 and used_groups[self.groups.get(index, str(index))] < self.per_group_cap + 1]
+            if not candidates:
+                raise RuntimeError("balanced sampler exhausted its image/group caps")
+            selected = rng.choice(candidates)
+            result.append(selected)
+            used_images[selected] += 1
+            used_groups[self.groups.get(selected, str(selected))] += 1
+        # Approved training negatives are deliberately included once per
+        # epoch; they are not part of the can/PET balancing draw budget.
+        result.extend(self.negative_indices)
+        rng.shuffle(result)
+        return iter(result)
+
+
+def install_balanced_training_sampler(cfg: dict[str, Any], name: str) -> None:
+    """Install the tested group sampler only for the augmented train loader."""
+    import torch
+    from torch.utils.data import DataLoader
+    from ultralytics.models.yolo.detect import train as detect_train
+
+    if getattr(detect_train, "_greenguard_balanced_sampler_installed", False):
+        return
+    original_build_dataloader = detect_train.build_dataloader
+    manifest_path = generated_dir(cfg, name) / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    by_image = {str(Path(row["generated_image"]).as_posix()): row for row in manifest.get("records", []) if row.get("split") == "train"}
+
+    def build_dataloader(dataset: Any, batch: int, workers: int, shuffle: bool = True, rank: int = -1, drop_last: bool = False, pin_memory: bool = True, device: Any = "cuda"):
+        if shuffle and rank == -1 and bool(getattr(dataset, "augment", False)):
+            class_indices: dict[int, list[int]] = {0: [], 1: []}
+            groups: dict[int, str] = {}
+            negative_indices: list[int] = []
+            for index, image_path in enumerate(getattr(dataset, "im_files", [])):
+                key = Path(str(image_path)).as_posix()
+                row = by_image.get(key) or by_image.get(Path(key).as_posix().replace(str(generated_dir(cfg, name).as_posix()), generated_dir(cfg, name).name))
+                if row is None:
+                    for candidate in manifest.get("records", []):
+                        if Path(str(candidate.get("generated_image", ""))).name == Path(key).name:
+                            row = candidate
+                            break
+                labels = getattr(dataset, "labels", [])[index] if index < len(getattr(dataset, "labels", [])) else {}
+                values = np.asarray(labels.get("cls", []), dtype=np.int64).reshape(-1).tolist()
+                present = {int(value) for value in values if int(value) in CLASS_NAMES}
+                if not present and row is not None:
+                    present = {int(item["class_id"]) for item in row.get("labels", [])}
+                group = str(row.get("group", key)) if row is not None else key
+                groups[index] = group
+                if not present:
+                    negative_indices.append(index)
+                for class_id in present:
+                    class_indices[class_id].append(index)
+            sampler = CappedBalancedGroupSampler(class_indices, groups, int(cfg["run"]["seed"]), int(cfg["training"].get("draws_per_epoch", 6000)), negative_indices=negative_indices)
+            return DataLoader(dataset, batch_size=min(int(batch), len(dataset)), sampler=sampler, shuffle=False, num_workers=0, drop_last=drop_last, pin_memory=bool(pin_memory and torch.cuda.is_available()), collate_fn=getattr(dataset, "collate_fn", None))
+        return original_build_dataloader(dataset, batch=batch, workers=workers, shuffle=shuffle, rank=rank, drop_last=drop_last, pin_memory=pin_memory, device=device)
+
+    detect_train.build_dataloader = build_dataloader
+    detect_train._greenguard_balanced_sampler_installed = True
+
+
+def train(cfg: dict[str, Any], name: str, smoke: bool = False, screen: str | None = None, resume_from: Path | None = None, batch_override: int | None = None) -> dict[str, Any]:
     dataset = generated_dir(cfg, name)
     data_yaml = dataset / "dataset.yaml"
     if not data_yaml.is_file():
@@ -799,13 +1072,15 @@ def train(cfg: dict[str, Any], name: str, smoke: bool = False, resume_from: Path
         try:
             model = YOLO(str(resume_from) if resume_from else model_name)
             install_dynamic_photometric_transform(cfg)
+            if screen != "a":
+                install_balanced_training_sampler(cfg, name)
             weight_path = Path(getattr(model, "ckpt_path", model_name))
             if not weight_path.is_absolute():
                 weight_path = (MODEL_ROOT / weight_path).resolve()
-            run_name = name + ("_smoke_seed42" if smoke else f"_batch{batch}") + ("_resume" if resume_from else "")
+            run_name = name + ("_smoke_seed42" if smoke else f"_screen_{screen}" if screen else f"_batch{batch}") + ("_resume" if resume_from else "")
             train_args = {
                 "seed": int(cfg["run"]["seed"]),
-                "data": str(data_yaml), "task": "detect", "imgsz": int(cfg["run"]["image_size"]), "epochs": 1 if smoke else int(cfg["training"]["epochs"]), "patience": 1 if smoke else int(cfg["training"]["patience"]), "batch": batch, "workers": int(cfg["training"]["workers"]), "cache": cfg["training"]["cache"], "optimizer": cfg["training"]["optimizer"], "lr0": float(cfg["training"]["lr0"]), "lrf": float(cfg["training"]["lrf"]), "weight_decay": float(cfg["training"]["weight_decay"]), "warmup_epochs": float(cfg["training"]["warmup_epochs"]), "amp": bool(cfg["training"]["amp"]) and not smoke, "device": int(cfg["training"]["device"]), "project": str(MODEL_ROOT / "runs"), "name": run_name, "exist_ok": bool(resume_from), "pretrained": not bool(resume_from), "resume": str(resume_from) if resume_from else False, "deterministic": True, "close_mosaic": int(cfg["training"]["close_mosaic"]), "mosaic": 0.0, "mixup": 0.0, "copy_paste": 0.0, "fliplr": 0.0, "flipud": 0.0, "multi_scale": 0.0, "degrees": float(cfg["augmentation"]["train_native"]["degrees"]), "translate": float(cfg["augmentation"]["train_native"]["translate"]), "scale": float(cfg["augmentation"]["train_native"]["scale"]), "shear": 0.0, "perspective": 0.0, "hsv_h": 0.0, "hsv_s": float(cfg["augmentation"]["train_native"]["hsv_s"]), "hsv_v": float(cfg["augmentation"]["train_native"]["hsv_v"]), "plots": True, "verbose": True,
+                "data": str(data_yaml), "task": "detect", "imgsz": int(cfg["run"]["image_size"]), "epochs": 1 if smoke else int(cfg["training"].get("screen_epochs", 8) if screen else cfg["training"]["epochs"]), "patience": 1 if smoke else int(cfg["training"].get("screen_patience", 8) if screen else cfg["training"]["patience"]), "batch": batch, "workers": int(cfg["training"]["workers"]), "cache": cfg["training"]["cache"], "optimizer": cfg["training"]["optimizer"], "lr0": float(cfg["training"]["lr0"]), "lrf": float(cfg["training"]["lrf"]), "weight_decay": float(cfg["training"]["weight_decay"]), "warmup_epochs": float(cfg["training"]["warmup_epochs"]), "amp": bool(cfg["training"]["amp"]) and not smoke, "device": int(cfg["training"]["device"]), "project": str(MODEL_ROOT / "runs"), "name": run_name, "exist_ok": bool(resume_from), "pretrained": not bool(resume_from), "resume": str(resume_from) if resume_from else False, "deterministic": True, "close_mosaic": int(cfg["training"]["close_mosaic"]), "mosaic": 0.0, "mixup": 0.0, "copy_paste": 0.0, "fliplr": 0.0, "flipud": 0.0, "multi_scale": 0.0, "degrees": float(cfg["augmentation"]["train_native"]["degrees"]), "translate": float(cfg["augmentation"]["train_native"]["translate"]), "scale": float(cfg["augmentation"]["train_native"]["scale"]), "shear": 0.0, "perspective": 0.0, "hsv_h": 0.0, "hsv_s": float(cfg["augmentation"]["train_native"]["hsv_s"]), "hsv_v": float(cfg["augmentation"]["train_native"]["hsv_v"]), "plots": True, "verbose": True,
             }
             started = time.time()
             result = model.train(**train_args)
@@ -816,7 +1091,7 @@ def train(cfg: dict[str, Any], name: str, smoke: bool = False, resume_from: Path
             results_csv = save_dir / "results.csv"
             completed_epochs = max(0, sum(1 for _ in results_csv.open(encoding="utf-8")) - 1) if results_csv.is_file() else None
             report = {"schema": "greenguard-m1-rebuild-train-v1", "run_id": name, "status": "COMPLETED", "smoke": smoke, "resumed_from": str(resume_from) if resume_from else None, "batch": batch, "completed_epochs": completed_epochs, "elapsed_seconds": time.time() - started, "best_checkpoint": str(best), "best_sha256": sha256_file(best), "pretrained_model": model_name, "pretrained_weight": str(weight_path) if weight_path.is_file() else model_name, "pretrained_weight_sha256": sha256_file(weight_path) if weight_path.is_file() else None, "dataset_yaml": str(data_yaml), "dynamic_augmentation": True, "environment": environment()}
-            atomic_write(report_root / ("smoke_report.json" if smoke else "train_report.json"), report)
+            atomic_write(report_root / ("smoke_report.json" if smoke else f"screen_{screen}_report.json" if screen else "train_report.json"), report)
             return report
         except RuntimeError as exc:
             last_error = str(exc)
@@ -831,7 +1106,7 @@ def train(cfg: dict[str, Any], name: str, smoke: bool = False, resume_from: Path
             last_error = f"{type(exc).__name__}: {exc}"
             break
     report = {"schema": "greenguard-m1-rebuild-train-v1", "run_id": name, "status": "FAILED", "reason": last_error, "environment": environment()}
-    atomic_write(report_root / ("smoke_report.json" if smoke else "train_report.json"), report)
+    atomic_write(report_root / ("smoke_report.json" if smoke else f"screen_{screen}_report.json" if screen else "train_report.json"), report)
     return report
 
 
@@ -955,7 +1230,8 @@ def _average_precision(collected: list[dict[str, Any]], class_id: int, iou_thres
     return float(np.mean([max(precision[recall >= point], default=0.0) for point in np.linspace(0.0, 1.0, 101)]))
 
 
-def score_predictions(collected: list[dict[str, Any]], confidence: float, iou_threshold: float, min_area_frac: float = 0.02) -> dict[str, Any]:
+def score_predictions(collected: list[dict[str, Any]], confidence: float | dict[str, float], iou_threshold: float, min_area_frac: float = 0.02) -> dict[str, Any]:
+    thresholds = {class_id: float(confidence.get(CLASS_NAMES[class_id], confidence.get(str(class_id), 0.65))) if isinstance(confidence, dict) else float(confidence) for class_id in CLASS_NAMES}
     stats = {class_id: {"tp": 0, "fp": 0, "fn": 0} for class_id in CLASS_NAMES}
     confusion = {truth_name: {pred_name: 0 for pred_name in CLASS_NAMES.values()} for truth_name in CLASS_NAMES.values()}
     false_positives_by_source: Counter[str] = Counter()
@@ -970,7 +1246,7 @@ def score_predictions(collected: list[dict[str, Any]], confidence: float, iou_th
         truths = item["truths"]
         predictions = [
             prediction for prediction in item["predictions"]
-            if prediction["confidence"] >= confidence
+            if prediction["confidence"] >= thresholds.get(int(prediction["class_id"]), 0.65)
             and _area_fraction(prediction["box"], item["width"], item["height"]) >= min_area_frac
         ]
         if item["negative"]:
@@ -1010,7 +1286,7 @@ def score_predictions(collected: list[dict[str, Any]], confidence: float, iou_th
                 misses_by_source[str(item.get("source_name") or item.get("source") or "unknown")] += 1
     result: dict[str, Any] = {
         "images": scored_images,
-        "confidence": confidence,
+        "confidence": float(confidence) if not isinstance(confidence, dict) else {CLASS_NAMES[class_id]: thresholds[class_id] for class_id in CLASS_NAMES},
         "iou": iou_threshold,
         "min_area_frac": min_area_frac,
         "classes": {},
@@ -1102,6 +1378,42 @@ def choose_confidence(cfg: dict[str, Any], model_path: Path, records: list[dict[
     return fallback, fallback_metrics
 
 
+def choose_class_confidences(cfg: dict[str, Any], model_path: Path, records: list[dict[str, Any]]) -> tuple[dict[str, float], dict[str, Any]]:
+    """Calibrate each class independently without touching the holdout."""
+    collected = collect_predictions(model_path, records, seed=int(cfg["run"]["seed"]))
+    evaluation_cfg = cfg["evaluation"]
+    grid = [float(value) for value in evaluation_cfg["calibration_confidences"]]
+    thresholds: dict[str, float] = {}
+    decisions: dict[str, str] = {}
+    for class_id, class_name in CLASS_NAMES.items():
+        candidates: list[tuple[float, dict[str, Any]]] = []
+        for value in grid:
+            other = {name: 0.0 for name in CLASS_NAMES.values() if name != class_name}
+            other[class_name] = value
+            metrics = score_predictions(collected, other, float(evaluation_cfg["iou"]), min_area_frac=float(cfg["workflow"]["min_area_frac"]))
+            class_metrics = metrics["classes"][class_name]
+            if class_metrics["precision"] >= float(evaluation_cfg["minimum_precision"]):
+                candidates.append((value, class_metrics))
+        if candidates:
+            selected = max(candidates, key=lambda row: (row[1]["recall"], row[1]["precision"], -row[0]))
+            thresholds[class_name] = selected[0]
+            decisions[class_name] = "MAX_RECALL_WITH_PRECISION_FLOOR"
+        else:
+            fallback_rows = []
+            for value in grid:
+                other = {name: 0.0 for name in CLASS_NAMES.values() if name != class_name}
+                other[class_name] = value
+                metrics = score_predictions(collected, other, float(evaluation_cfg["iou"]), min_area_frac=float(cfg["workflow"]["min_area_frac"]))
+                fallback_rows.append((value, metrics["classes"][class_name]))
+            selected = max(fallback_rows, key=lambda row: (row[1]["precision"], row[1]["recall"], -row[0])) if fallback_rows else (0.65, {})
+            thresholds[class_name] = selected[0]
+            decisions[class_name] = "FALLBACK_HIGHEST_PRECISION_NO_THRESHOLD_MET_FLOOR"
+    combined = score_predictions(collected, thresholds, float(evaluation_cfg["iou"]), min_area_frac=float(cfg["workflow"]["min_area_frac"]))
+    combined["threshold_selection"] = decisions
+    combined["confidence"] = thresholds
+    return thresholds, combined
+
+
 def fixed_stress_transform(exposure: float, variant: str = "exposure") -> Callable[[np.ndarray, int, dict[str, Any]], np.ndarray]:
     """Return a deterministic transform for an evaluation-only stress case."""
     def transform(image: np.ndarray, index: int, item: dict[str, Any]) -> np.ndarray:
@@ -1130,7 +1442,7 @@ def evaluate(cfg: dict[str, Any], name: str) -> dict[str, Any]:
     holdout = [by_path[path] for path in manifest["holdout_images"]]
     evaluation_cfg = cfg["evaluation"]
     min_area_frac = float(cfg["workflow"]["min_area_frac"])
-    confidence, calibration_metrics = choose_confidence(cfg, checkpoint, calibration)
+    confidence, calibration_metrics = choose_class_confidences(cfg, checkpoint, calibration)
     candidate = evaluate_model(checkpoint, holdout, confidence, float(evaluation_cfg["iou"]), min_area_frac=min_area_frac, seed=int(cfg["run"]["seed"]))
     baseline_path = RUNTIME_ROOT / "models" / "m1_detect_640.onnx"
     baseline = evaluate_model(baseline_path, holdout, confidence, float(evaluation_cfg["iou"]), min_area_frac=min_area_frac, seed=int(cfg["run"]["seed"])) if baseline_path.is_file() else {"status": "NOT_MEASURED"}
@@ -1167,8 +1479,11 @@ def evaluate(cfg: dict[str, Any], name: str) -> dict[str, Any]:
             class_failures.append("recall_regressed_vs_baseline")
             failures.append(f"{class_name}_recall_regressed")
         acceptance[class_name] = {"status": "PASS" if not class_failures else "FAIL", "failures": class_failures, "candidate": metrics, "baseline": baseline_class or "NOT_MEASURED"}
-    if calibration_metrics.get("threshold_selection", "").startswith("FALLBACK"):
+    threshold_selection = calibration_metrics.get("threshold_selection", {})
+    if isinstance(threshold_selection, str) and threshold_selection.startswith("FALLBACK"):
         failures.append("no_calibration_threshold_met_precision_floor")
+    elif isinstance(threshold_selection, dict) and any(str(value).startswith("FALLBACK") for value in threshold_selection.values()):
+        failures.append("one_or_more_classes_lacked_precision_floor_threshold")
     if candidate["empty_machine"]["status"] != "MEASURED":
         failures.append("empty_machine_not_measured")
     elif candidate["empty_machine"]["accepted_detections"] != 0:
@@ -1228,12 +1543,16 @@ def export_model(cfg: dict[str, Any], name: str) -> dict[str, Any]:
     default_config_path = RUNTIME_ROOT / "config" / "default.json"
     runtime_config = json.loads(default_config_path.read_text(encoding="utf-8"))
     detector = runtime_config["m1"]["detector"]
+    calibrated_thresholds = evaluation.get("confidence", {"metal_can": 0.65, "pet_bottle": 0.65})
+    if not isinstance(calibrated_thresholds, dict):
+        calibrated_thresholds = {name: float(calibrated_thresholds) for name in CLASS_NAMES.values()}
     detector.update({
         "path": f"../training/model1/export/candidates/{name}/m1_rebuild_640.onnx",
         "classes": list(CLASS_NAMES.values()),
         "visible_class_ids": [0, 1],
         "ignored_class_ids": [],
-        "decision_conf": float(evaluation.get("confidence", 0.65)),
+        "decision_conf": float(max(calibrated_thresholds.values(), default=0.65)),
+        "decision_conf_by_class": {name: float(calibrated_thresholds.get(name, 0.65)) for name in CLASS_NAMES.values()},
         "candidate_only": True,
         "candidate_run": name,
         "candidate_sha256": candidate_sha256,
@@ -1258,7 +1577,8 @@ def export_model(cfg: dict[str, Any], name: str) -> dict[str, Any]:
         "checkpoint": str(checkpoint),
         "checkpoint_sha256": sha256_file(checkpoint),
         "runtime_config": str(runtime_config_path),
-        "decision_conf": float(evaluation.get("confidence", 0.65)),
+        "decision_conf": float(max(calibrated_thresholds.values(), default=0.65)),
+        "decision_conf_by_class": {name: float(calibrated_thresholds.get(name, 0.65)) for name in CLASS_NAMES.values()},
         "min_area_frac": float(cfg["workflow"]["min_area_frac"]),
         "active_baseline_m1_sha256": sha256_file(active_m1) if active_m1.is_file() else None,
         "active_model2_sha256": sha256_file(active_m2) if active_m2.is_file() else None,
@@ -1444,17 +1764,95 @@ def verify(cfg: dict[str, Any], name: str) -> dict[str, Any]:
     return result
 
 
+def activate(cfg: dict[str, Any], name: str) -> dict[str, Any]:
+    """Explicitly replace active M1 after structural/runtime checks.
+
+    This is intentionally separate from export/verify so the activation
+    override is visible in its own report and has a recoverable snapshot.
+    """
+    report_root = report_dir(cfg, name)
+    export_report_path = report_root / "export_report.json"
+    if not export_report_path.is_file():
+        raise FileNotFoundError("export_report.json is required before activation")
+    export_report = json.loads(export_report_path.read_text(encoding="utf-8"))
+    candidate = Path(export_report["onnx"])
+    manifest_path = candidate.parent / "candidate_manifest.json"
+    if not candidate.is_file() or not manifest_path.is_file():
+        result = {"schema": "greenguard-m1-rebuild-activation-v1", "run_id": name, "status": "NOT_ACTIVATED", "reason": "candidate export or manifest missing"}
+        atomic_write(report_root / "activation_report.json", result)
+        return result
+    candidate_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    candidate_hash = sha256_file(candidate)
+    if candidate_hash != str(candidate_manifest.get("onnx_sha256", "")).lower() or candidate_hash in load_rejected_hashes():
+        result = {"schema": "greenguard-m1-rebuild-activation-v1", "run_id": name, "status": "NOT_ACTIVATED", "reason": "candidate hash mismatch or rejected hash", "candidate_sha256": candidate_hash}
+        atomic_write(report_root / "activation_report.json", result)
+        return result
+    try:
+        import onnxruntime as ort
+        session = ort.InferenceSession(str(candidate), providers=["CPUExecutionProvider"])
+        output_shape = [int(value) for value in session.get_outputs()[0].shape if isinstance(value, int)]
+        if output_shape != [1, 6, 8400]:
+            raise RuntimeError(f"unexpected ONNX output shape: {output_shape}")
+    except Exception as exc:
+        result = {"schema": "greenguard-m1-rebuild-activation-v1", "run_id": name, "status": "NOT_ACTIVATED", "reason": f"runtime compatibility check failed: {exc}"}
+        atomic_write(report_root / "activation_report.json", result)
+        return result
+
+    active_model = RUNTIME_ROOT / "models" / "m1_detect_640.onnx"
+    active_config = RUNTIME_ROOT / "config" / "default.json"
+    active_manifest = RUNTIME_ROOT / "models" / "manifest.json"
+    backup = report_root / "activation_backup"
+    backup.mkdir(parents=True, exist_ok=True)
+    for source in (active_model, active_config, active_manifest):
+        if source.is_file():
+            shutil.copy2(source, backup / source.name)
+    previous_hash = sha256_file(active_model) if active_model.is_file() else None
+    runtime_config = json.loads(active_config.read_text(encoding="utf-8"))
+    thresholds = candidate_manifest.get("decision_conf_by_class", {})
+    if not isinstance(thresholds, dict):
+        thresholds = {name: candidate_manifest.get("decision_conf", 0.65) for name in CLASS_NAMES.values()}
+    runtime_config["m1"]["detector"].update({
+        "path": "models/m1_detect_640.onnx",
+        "classes": list(CLASS_NAMES.values()),
+        "visible_class_ids": [0, 1],
+        "decision_conf": float(max(float(value) for value in thresholds.values())),
+        "decision_conf_by_class": {name: float(thresholds.get(name, 0.65)) for name in CLASS_NAMES.values()},
+        "candidate_only": False,
+        "active_candidate_run": name,
+        "active_candidate_sha256": candidate_hash,
+    })
+    runtime_config.setdefault("candidate_validation", {})["status"] = "FAILED_ACCEPTANCE_ACTIVE_OVERRIDE" if candidate_manifest.get("status") == "FAILED_ACCEPTANCE" else "CAMERA_VALIDATION_REQUIRED_ACTIVE_OVERRIDE"
+    atomic_write(active_config, runtime_config)
+    shutil.copy2(candidate, active_model)
+    runtime_manifest = json.loads(active_manifest.read_text(encoding="utf-8"))
+    for entry in runtime_manifest.get("models", []):
+        if entry.get("family") == "m1":
+            entry.update({"source_path": str(candidate), "source_sha256": candidate_hash, "source_bytes": candidate.stat().st_size, "sha256": candidate_hash, "bytes": candidate.stat().st_size, "classes": list(CLASS_NAMES.values()), "image_size": 640, "source_run": name})
+    atomic_write(active_manifest, runtime_manifest)
+    status = "FAILED_ACCEPTANCE_ACTIVE_OVERRIDE" if candidate_manifest.get("status") == "FAILED_ACCEPTANCE" else "CAMERA_VALIDATION_REQUIRED_ACTIVE_OVERRIDE"
+    result = {"schema": "greenguard-m1-rebuild-activation-v1", "run_id": name, "status": status, "active_model": str(active_model), "active_sha256": sha256_file(active_model), "previous_sha256": previous_hash, "backup": str(backup), "active_model2_sha256": sha256_file(RUNTIME_ROOT / "models" / "m2_obb_640.onnx"), "rollback": f"copy the files in {backup} back to their runtime locations"}
+    atomic_write(report_root / "activation_report.json", result)
+    return result
+
+
 def dispatch(args: argparse.Namespace) -> int:
-    cfg = load_config(Path(args.config) if args.config else CONFIG_PATH)
+    config_path = (Path(args.config) if args.config else CONFIG_PATH).resolve()
+    cfg = load_config(config_path)
+    cfg["_config_path"] = str(config_path)
     name = run_id(cfg, args.run_id)
     if args.command == "audit": result = audit(cfg, name)
+    elif args.command == "review": result = review(cfg, name)
     elif args.command == "compact-audit": result = compact_audit(cfg, name)
     elif args.command == "prepare": result = prepare(cfg, name, audit_name=args.audit_run_id)
+    elif args.command == "freeze": result = freeze(cfg, name)
     elif args.command == "smoke": result = train(cfg, name, smoke=True, batch_override=args.batch)
+    elif args.command == "screen-a": result = train(cfg, name, screen="a", batch_override=args.batch)
+    elif args.command == "screen-b": result = train(cfg, name, screen="b", batch_override=args.batch)
     elif args.command == "train": result = train(cfg, name, resume_from=args.resume_from, batch_override=args.batch)
     elif args.command == "evaluate": result = evaluate(cfg, name)
     elif args.command == "export": result = export_model(cfg, name)
     elif args.command == "verify": result = verify(cfg, name)
+    elif args.command == "activate": result = activate(cfg, name)
     else: raise ValueError(args.command)
     printable = {key: value for key, value in result.items() if key != "records"}
     print(json.dumps(printable, indent=2, default=str))
@@ -1463,7 +1861,7 @@ def dispatch(args: argparse.Namespace) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="GreenGuard two-class Model 1 rebuild")
-    parser.add_argument("command", choices=["audit", "compact-audit", "prepare", "smoke", "train", "evaluate", "export", "verify"])
+    parser.add_argument("command", choices=["audit", "review", "compact-audit", "prepare", "freeze", "smoke", "screen-a", "screen-b", "train", "evaluate", "export", "verify", "activate"])
     parser.add_argument("--config", type=Path)
     parser.add_argument("--run-id")
     parser.add_argument("--batch", type=int)

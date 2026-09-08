@@ -20,6 +20,8 @@ from m1_rebuild import (  # noqa: E402
     score_predictions,
     source_mapping,
     split_groups,
+    CappedBalancedGroupSampler,
+    machine_fixed_split,
 )
 
 
@@ -95,10 +97,10 @@ def test_machine_capture_groups_are_atomic_and_reserved_for_holdout():
     assert group_key("true-negative", negative_a) == group_key("true-negative", negative_b)
 
     records = [
-        {"source": "dataset-live", "group": group_key("dataset-live", live_a), "labels": [{"class_id": 0}]},
-        {"source": "dataset-live", "group": group_key("dataset-live", live_b), "labels": [{"class_id": 0}]},
-        {"source": "true-negative", "group": group_key("true-negative", negative_a), "labels": []},
-        {"source": "true-negative", "group": group_key("true-negative", negative_b), "labels": []},
+        {"source": "dataset-live", "group": group_key("dataset-live", live_a), "fixed_split": "train", "labels": [{"class_id": 0}]},
+        {"source": "dataset-live", "group": group_key("dataset-live", live_b), "fixed_split": "train", "labels": [{"class_id": 0}]},
+        {"source": "true-negative", "group": group_key("true-negative", negative_a), "fixed_split": "holdout", "labels": []},
+        {"source": "true-negative", "group": group_key("true-negative", negative_b), "fixed_split": "holdout", "labels": []},
         {"source": "other", "group": "pet-a", "labels": [{"class_id": 1}]},
         {"source": "other", "group": "pet-b", "labels": [{"class_id": 1}]},
         {"source": "other", "group": "pet-c", "labels": [{"class_id": 1}]},
@@ -108,8 +110,49 @@ def test_machine_capture_groups_are_atomic_and_reserved_for_holdout():
     ]
     cfg = {"data": {"train_fraction": 0.5, "validation_fraction": 0.25, "holdout_fraction": 0.25, "require_class_in_each_split": True}}
     assignments = split_groups(records, cfg, 42)
-    assert assignments[group_key("dataset-live", live_a)] == "holdout"
+    assert assignments[group_key("dataset-live", live_a)] == "train"
     assert assignments[group_key("true-negative", negative_a)] == "holdout"
+
+
+def test_observed_machine_sessions_have_frozen_roles():
+    assert machine_fixed_split("dataset-live", "dataset-live:machine-capture-sequence") == "train"
+    assert machine_fixed_split("live-machine-dataset", "live-machine:GG1:can_1240_1241") == "selection"
+    assert machine_fixed_split("live-machine-dataset", "live-machine:GG1:can_1242_1243") == "holdout"
+    assert machine_fixed_split("live-machine-dataset", "live-machine:GG2:pet_1555") == "calibration"
+
+
+def test_group_sampler_is_deterministic_balanced_and_capped():
+    class_indices = {0: list(range(6)), 1: list(range(6, 12))}
+    groups = {index: f"g{index}" for index in range(12)}
+    first = list(CappedBalancedGroupSampler(class_indices, groups, 42, draws_per_epoch=12, per_image_cap=1, per_group_cap=1))
+    second = list(CappedBalancedGroupSampler(class_indices, groups, 42, draws_per_epoch=12, per_image_cap=1, per_group_cap=1))
+    assert first == second
+    assert len(first) == 12
+    assert sum(index < 6 for index in first) == 6
+    assert len(set(first)) == 12
+
+
+def test_group_sampler_uses_explicit_cap_when_pool_is_small():
+    sampler = CappedBalancedGroupSampler({0: [0], 1: [1]}, {0: "can", 1: "pet"}, 42, draws_per_epoch=4, per_image_cap=1, per_group_cap=2)
+    draws = list(sampler)
+    assert len(draws) == 4
+    assert draws.count(0) <= 2
+    assert draws.count(1) <= 2
+
+
+def test_group_sampler_includes_each_training_negative_once_per_epoch():
+    sampler = CappedBalancedGroupSampler(
+        {0: [0, 1], 1: [2, 3]},
+        {0: "can-a", 1: "can-b", 2: "pet-a", 3: "pet-b", 4: "negative"},
+        42,
+        draws_per_epoch=4,
+        per_image_cap=1,
+        per_group_cap=1,
+        negative_indices=[4],
+    )
+    draws = list(sampler)
+    assert len(draws) == 5
+    assert draws.count(4) == 1
 
 
 def test_missing_and_empty_labels_are_distinct_audit_inputs():

@@ -1,17 +1,17 @@
 # Model 1 rebuild and morning validation runbook
 
-This workflow creates a candidate two-class Model 1 for the measured GreenGuard
-camera environment. It reads incoming data without modifying it, starts from
-the general yolo11s.pt weights, and never writes the active
-pc-demo/models/m1_detect_640.onnx or any Model 2 artifact. The candidate is
-never activated automatically.
+This workflow creates a two-class Model 1 for the measured GreenGuard camera
+environment. It reads incoming data without modifying it, starts from the
+general yolo11s.pt weights, keeps Model 2 unchanged, and requires an explicit
+activation stage. Activation records a rollback snapshot and may replace
+active M1 under the owner-authorized override policy.
 
 ## Complete overnight command
 
 Run from Trash-detection/training/model1:
 
 ~~~powershell
-powershell -ExecutionPolicy Bypass -File scripts/run_m1_rebuild.ps1 -Full -MaxHours 10
+powershell -ExecutionPolicy Bypass -File scripts/run_m1_rebuild.ps1 -Full -MaxHours 12
 ~~~
 
 The script audits, prepares, smoke-tests, starts the report-only supervisor for
@@ -29,12 +29,17 @@ for a fresh attempt.
 ~~~powershell
 $RunId = "m1rebuild_20260907_seed42_yolo11s_v4"
 .\.venv\Scripts\python.exe scripts/m1_rebuild.py audit --run-id $RunId
+.\.venv\Scripts\python.exe scripts/m1_rebuild.py review --run-id $RunId
 .\.venv\Scripts\python.exe scripts/m1_rebuild.py prepare --run-id $RunId --audit-run-id $RunId
+.\.venv\Scripts\python.exe scripts/m1_rebuild.py freeze --run-id $RunId
 .\.venv\Scripts\python.exe scripts/m1_rebuild.py smoke --run-id $RunId --batch 16
+.\.venv\Scripts\python.exe scripts/m1_rebuild.py screen-a --run-id $RunId --batch 16
+.\.venv\Scripts\python.exe scripts/m1_rebuild.py screen-b --run-id $RunId --batch 16
 .\.venv\Scripts\python.exe scripts/m1_rebuild.py train --run-id $RunId
 .\.venv\Scripts\python.exe scripts/m1_rebuild.py evaluate --run-id $RunId
 .\.venv\Scripts\python.exe scripts/m1_rebuild.py export --run-id $RunId
 .\.venv\Scripts\python.exe scripts/m1_rebuild.py verify --run-id $RunId
+.\.venv\Scripts\python.exe scripts/m1_rebuild.py activate --run-id $RunId
 ~~~
 
 To continue a valid interrupted checkpoint explicitly:
@@ -46,7 +51,17 @@ To continue a valid interrupted checkpoint explicitly:
 The generated data manifest freezes image hashes, converted labels, groups,
 splits, calibration/selection membership, and augmentation examples. Dynamic
 augmentation creates no new independent source images; it is sampled during
-training and records its seed and mode in the training path.
+training and records its seed and mode in the training path. Current runs keep
+all reviewed train originals while they fit the configured cap and use a
+deterministic group-aware sampler. Roboflow variants rotate within their
+source group, perceptual matches remain review-only, and machine sessions use
+frozen train/selection/calibration/holdout roles. Missing whole-object machine
+review records block preparation; old part-union annotations are never used.
+When the machine review file is missing, the review stage writes
+`logs/rebuild/<run-id>/machine_m1_review_template.jsonl`; fill that file with
+visually checked whole-object HBBs at the configured
+`dataset/annotations/machine_m1_review.jsonl` path, then rerun audit through
+freeze with a new run ID.
 
 ## What the audit admits
 
@@ -78,7 +93,9 @@ Get-Content -Raw "..\..\pc-demo\config\m1_rebuild_$Candidate.json"
 CAMERA_VALIDATION_REQUIRED means offline gates passed but the owner’s fresh
 camera session is still required. FAILED_ACCEPTANCE means at least one
 offline gate, export/parity check, or required evidence item failed. Both are
-candidate-only states and leave the active baseline untouched.
+candidate-only states unless the explicit activation stage is run. Activation
+records an `*_ACTIVE_OVERRIDE` status and saves a rollback snapshot first;
+Model 2 is never changed.
 
 ## Candidate tests
 

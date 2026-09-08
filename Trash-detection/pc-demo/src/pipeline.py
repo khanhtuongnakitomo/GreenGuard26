@@ -33,6 +33,8 @@ class M1DetectionTrace:
     min_area_frac: float
     frame_shape: tuple[int, int]
     inference_ms: float
+    decision_conf_by_class: tuple[tuple[str, float], ...] = ()
+    effective_decision_conf: float | None = None
 
 
 def _decision_conf(det_cfg: dict[str, Any]) -> float:
@@ -64,13 +66,23 @@ def xyxy_to_poly(box: np.ndarray) -> np.ndarray:
     return np.asarray([[x1, y1], [x2, y1], [x2, y2], [x1, y2]], dtype=np.float32)
 
 
-def pick_top1_detector(polys, clss, confs, min_area_frac: float, frame_area: int, allowed_ids: set[int]):
+def pick_top1_detector(
+    polys,
+    clss,
+    confs,
+    min_area_frac: float,
+    frame_area: int,
+    allowed_ids: set[int],
+    decision_thresholds: dict[int, float] | None = None,
+):
     best_i, best_cf = -1, -1.0
     min_area = frame_area * min_area_frac
     for i, (poly, cls, cf) in enumerate(zip(polys, clss, confs)):
         if int(cls) not in allowed_ids:
             continue
         if box_area(poly) < min_area:
+            continue
+        if decision_thresholds is not None and float(cf) < float(decision_thresholds.get(int(cls), 0.0)):
             continue
         if float(cf) > best_cf:
             best_cf, best_i = float(cf), i
@@ -86,6 +98,16 @@ class M1Pipeline:
         self.det_imgsz = onnx_imgsz(self.det_path) or int(det_cfg.get("imgsz", 416))
         self.infer_conf = float(det_cfg.get("infer_conf", det_cfg.get("conf", 0.05)))
         self.decision_conf = _decision_conf(det_cfg)
+        configured_thresholds = det_cfg.get("decision_conf_by_class", {})
+        self.decision_conf_by_class = {}
+        if isinstance(configured_thresholds, dict):
+            for key, value in configured_thresholds.items():
+                try:
+                    class_id = int(key) if str(key).isdigit() else {name: index for index, name in M1_CLASS_NAMES.items()}.get(str(key))
+                    if class_id in {0, 1}:
+                        self.decision_conf_by_class[int(class_id)] = float(value)
+                except (TypeError, ValueError):
+                    continue
         self.min_area_frac = float(cfg["m1"].get("min_area_frac", 0.02))
         self.allowed_ids = {int(item) for item in det_cfg.get("visible_class_ids", [0, 1])}
         self.det = YOLO(str(self.det_path), task="detect")
@@ -104,13 +126,13 @@ class M1Pipeline:
         clss = result.boxes.cls.cpu().numpy().astype(int)
         confs = result.boxes.conf.cpu().numpy()
         polys = np.asarray([xyxy_to_poly(box) for box in boxes], dtype=np.float32)
-        best = pick_top1_detector(polys, clss, confs, self.min_area_frac, h * w, self.allowed_ids)
+        configured_thresholds = getattr(self, "decision_conf_by_class", {})
+        thresholds = {class_id: configured_thresholds.get(class_id, self.decision_conf) for class_id in self.allowed_ids}
+        best = pick_top1_detector(polys, clss, confs, self.min_area_frac, h * w, self.allowed_ids, thresholds)
         if best[0] is None:
             return M1FrameResult()
 
         poly, det_cf, best_index = best
-        if det_cf < self.decision_conf:
-            return M1FrameResult()
         class_id = int(clss[best_index])
         verdict = "pet" if class_id == 1 else "can"
         label, color = DISPLAY[verdict]
@@ -155,7 +177,9 @@ class M1Pipeline:
                 reason, selected = "AREA_TOO_SMALL", max(visible, key=lambda row: row["confidence"])
             else:
                 selected = max(area_ok, key=lambda row: row["confidence"])
-                if selected["confidence"] < self.decision_conf:
+                configured_thresholds = getattr(self, "decision_conf_by_class", {})
+                selected_threshold = configured_thresholds.get(int(selected["class_id"]), self.decision_conf)
+                if selected["confidence"] < selected_threshold:
                     reason = "BELOW_DECISION_CONF"
                 else:
                     reason = "ACCEPTED_METAL_CAN" if selected["class_id"] == 0 else "ACCEPTED_PET_BOTTLE"
@@ -168,6 +192,14 @@ class M1Pipeline:
             min_area_frac=self.min_area_frac,
             frame_shape=(h, w),
             inference_ms=(time.perf_counter() - start) * 1000.0,
+            decision_conf_by_class=tuple(
+                (M1_CLASS_NAMES.get(class_id, str(class_id)), float(getattr(self, "decision_conf_by_class", {}).get(class_id, self.decision_conf)))
+                for class_id in sorted(self.allowed_ids)
+            ),
+            effective_decision_conf=(
+                float(getattr(self, "decision_conf_by_class", {}).get(int(selected["class_id"]), self.decision_conf))
+                if selected is not None else None
+            ),
         )
 
 

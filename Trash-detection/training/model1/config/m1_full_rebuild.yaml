@@ -10,7 +10,7 @@ run:
   id_prefix: m1rebuild
   seed: 42
   image_size: 640
-  max_hours: 10
+  max_hours: 12
   max_restarts: 2
 
 sources:
@@ -46,6 +46,9 @@ data:
   max_training_originals: 13000
   max_variants_per_original: 0
   max_machine_oversample: 3
+  train_draws_per_epoch: 6000
+  machine_review_manifest: dataset/annotations/machine_m1_review.jsonl
+  machine_session_split_policy: frozen_observed_sessions_v1
   minimum_independent_groups_per_class: 3
   require_class_in_each_split: true
   include_only_reviewed_source_mappings: true
@@ -58,14 +61,14 @@ workflow:
 
 augmentation:
   seed: 42
-  jpeg_quality: [45, 95]
-  exposure_multiplier: [0.45, 1.60]
-  gamma: [0.65, 1.60]
-  contrast: [0.75, 1.25]
-  white_balance_gain: [0.85, 1.15]
-  noise_std: [0.0, 8.0]
-  blur_kernel: [3, 7]
-  glare_strength: [0.0, 0.28]
+  jpeg_quality: [60, 95]
+  exposure_multiplier: [0.55, 1.50]
+  gamma: [0.70, 1.50]
+  contrast: [0.80, 1.20]
+  white_balance_gain: [0.90, 1.10]
+  noise_std: [0.0, 6.0]
+  blur_kernel: [3, 5]
+  glare_strength: [0.0, 0.20]
   offline_modes: [dim, bright, optics]
   train_native:
     mosaic: 0.0
@@ -73,9 +76,9 @@ augmentation:
     copy_paste: 0.0
     fliplr: 0.0
     flipud: 0.0
-    degrees: 10.0
-    translate: 0.05
-    scale: 0.10
+    degrees: 7.0
+    translate: 0.04
+    scale: 0.08
     shear: 0.0
     perspective: 0.0
     hsv_h: 0.0
@@ -85,8 +88,11 @@ augmentation:
 training:
   pretrained_model: yolo11s.pt
   task: detect
-  epochs: 100
-  patience: 20
+  epochs: 80
+  patience: 15
+  screen_epochs: 8
+  screen_patience: 8
+  screen_draws_per_epoch: 6000
   batches: [16, 8, 4]
   workers: 0
   cache: disk

@@ -52,6 +52,14 @@ def test_decision_confidence_is_separate_from_inference_floor():
     assert result.poly is None
 
 
+def test_class_specific_threshold_can_accept_a_class_below_global_fallback():
+    pipeline = fake_pipeline()
+    pipeline.decision_conf_by_class = {0: 0.55, 1: 0.90}
+    result = pipeline.run(np.zeros((100, 100, 3), dtype=np.uint8))
+    assert result.poly is not None
+    assert result.is_pet is False
+
+
 def test_trace_keeps_raw_low_confidence_candidate_and_reason():
     trace = fake_pipeline().trace(np.zeros((100, 100, 3), dtype=np.uint8))
     assert trace.reason == "BELOW_DECISION_CONF"
@@ -77,6 +85,14 @@ def test_trace_serializes_public_acceptance():
     row = trace_to_dict(trace, session_id="s", trial_id="t", frame_index=1, timestamp="now", label="pet_bottle", item_id="i", lighting="bright", original_frame=(120, 100), model_hash="m", config_hash="c")
     assert row["model2_would_be_invoked"] is True
     json.dumps(row)
+
+
+def test_trace_records_effective_class_threshold():
+    pipeline = fake_pipeline()
+    pipeline.decision_conf_by_class = {0: 0.55, 1: 0.90}
+    trace = pipeline.trace(np.zeros((100, 100, 3), dtype=np.uint8))
+    assert trace.effective_decision_conf == pytest.approx(0.55)
+    assert dict(trace.decision_conf_by_class)["metal_can"] == pytest.approx(0.55)
 
 
 def _record(label, cls, confidence, frame_index):
