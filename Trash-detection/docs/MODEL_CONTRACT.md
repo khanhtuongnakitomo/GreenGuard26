@@ -1,121 +1,43 @@
 # Model contract
 
-Committed deployment ONNX files (packaged into `pc-demo/models` and
-`jetson-runtime/models` by `scripts/package_models.py`):
+Verify these active deployment artifacts before and after runtime refactors:
 
-| Role | Source export | Packaged name | Input | Output | Classes |
-|---|---|---|---|---|---|
-| M1 detector | `training/model1/export/detect_640` / `detect_416` | `m1_detect_640.onnx` / `m1_detect_416.onnx` | `[1,3,640,640]` / `[1,3,416,416]` | `[1,7,8400]` / `[1,7,3549]` | metal_can, pet_bottle, pp_cup |
-| M2 OBB (PC) | `training/model2/export/onnx_640` | `m2_obb_640.onnx` | `[1,3,640,640]` | `[1,8,8400]` | cap, label, ring |
-| M2 OBB (Jetson) | `training/model2/export/onnx_416` | `m2_obb_416.onnx` | `[1,3,416,416]` | `[1,8,3549]` | cap, label, ring |
+| Artifact | Input | Output | SHA-256 |
+|---|---|---|---|
+| PC M1 `pc-demo/models/m1_detect_640.onnx` | `[1,3,640,640]` | HBB detections | `CF7BAF1C4A917C7F8ECBD1E30BF92CA5E3A38869B99CCBFB6B94A0B95111EB24` |
+| PC M2 `pc-demo/models/m2_obb_640.onnx` | `[1,3,640,640]` | `[cx,cy,w,h,class_probs...,angle]` | `2DF4F8F9F7D941998029E65809EB53BBF401199EB4D0A8489E7B259503AD1449` |
+| Jetson M2 `jetson-runtime/models/m2_obb_416.onnx` | `[1,3,416,416]` | `[cx,cy,w,h,class_probs...,angle]` | `FDA4C7986ADCE3262686842DC751AFBEAE14BD6C059C794926E3A5872BE62FA7` |
 
-M1 is a single-stage HBB detector. Class IDs 0 and 1 map to the visible
-aluminum-can and PET-bottle verdicts. Class ID 2 (`pp_cup`) is intentionally
-ignored before top-1 selection and is never shown or sent to Model 2.
+The PC Model 1 public classes are `metal_can` and `pet_bottle`. Model 2
+classes are `cap`, `label`, and `ring`. Parse ONNX Model 2 probabilities from
+channels `4:4+class_count` and the final angle channel; do not apply another
+sigmoid.
 
-## Windows detection contract
+## Decision contract
 
-The integrated Windows PC line keeps the known-good Model 1 artifact. Model 1
-SHA-256 is `5069BFAE324DB8C1AEF1FBCE4B68AAAD217A80A95A6F6B83EACFA60CDB620038`.
-The promoted revamped Model 2 package is `2DF4F8F9F7D941998029E65809EB53BBF401199EB4D0A8489E7B259503AD1449`
-on PC and `FDA4C7986ADCE3262686842DC751AFBEAE14BD6C059C794926E3A5872BE62FA7`
-on Jetson. The original Model 2 hash remains available in the rollback
-manifest as the known-good pre-revamp baseline.
+- M1 candidate generation is separate from the decision floor.
+- Accepted M1 material observations fill exactly seven frames; four are needed
+  for a material quorum.
+- Aluminum produces `ALUMINUM_CAN` and skips M2.
+- PET waits `0.5` seconds, then consumes exactly seven M2 observations.
+- Any cap, label, or ring confidence `>= 0.50` is a bad M2 observation.
+- Missing M1/M2 is abstention. Four bad observations produce `PET_REJECT`;
+  four clean observations produce `PET_CLEAN`; no quorum produces no result.
+- A result is held for `1.5` seconds. One result event is allowed per item;
+  eight consecutive clear M1 frames re-arm the workflow.
 
-Model 1 has two confidence floors:
+Canonical internal values remain `0`, `1`, and `2` for aluminum, clean PET, and
+rejected PET. They are not wire bytes. The machine transport maps result names
+at the final boundary to raw ASCII bytes `1`, `2`, and `3`, with no newline,
+acknowledgement, retry, or extra byte.
 
-- `infer_conf=0.05` generates diagnostic candidates.
-- `decision_conf=0.65` is the public acceptance floor until owner camera-only
-  evidence supports a separate calibration.
+## Machine camera and transport
 
-Filtering is ordered as ignored/unknown class suppression, minimum area, then
-decision confidence. Only accepted `pet_bottle` frames may call Model 2.
-`pp_cup` can remain in the internal three-class ONNX shape, but it is never
-displayed, routed, or forwarded. The rejected v7 candidate hashes are listed
-in `validation/contracts/rejected_models.json` and packaging refuses them.
-
-## Output layouts
-
-M1 HBB channels are `[cx, cy, w, h, class_probs...]`; do not apply a second
-sigmoid. The class score is the maximum class probability.
-
-Channels-first or transposed to rows. For `nc` classes:
-
-```text
-[cx, cy, w, h, class_probs..., angle]
-```
-
-Do **not** apply a second sigmoid. Class score = max class probability; class id =
-argmax. Angle is radians for polygon reconstruction.
-
-## Preprocessing
-
-- **HBB and OBB:** Ultralytics letterbox fill 114, BGR→RGB, CHW float32, `/255`
-
-The PC M1 pipeline keeps two confidence values deliberately: `infer_conf=0.05` is the
-candidate-generation floor, while `decision_conf=0.65` is the public workflow
-acceptance floor after class visibility and minimum-area filtering. A low-score
-candidate must not be shown, passed to the PET gate, or invoke Model 2.
-
-## Nano B01 confidence difference
-
-The inspected `jetson-runtime/config/default.json` and `src/pipeline.py` use
-`conf=0.05` without the PC's separate decision floor. The runtime tests record
-this existing behavior with synthetic low-confidence detections. Do not treat
-passing host decoder tests as PC/Jetson decision parity. Aligning this behavior
-requires a separate change, blank/low-confidence/PP regression fixtures, and
-on-device smoke and soak checks; the September web refactor changes no models,
-thresholds, or detection code.
-
-## Gate defaults (PC decision floor; other values shared)
-
-| Setting | Value |
-|---|---|
-| M1 inference conf | 0.05 |
-| M1 decision conf | 0.65 until camera-only calibration |
-| Min area fraction | 0.02 |
-| M2 infer conf | 0.10 |
-| M2 violation conf | 0.50 |
-| Warmup | 0.5 s |
-| M1 material vote | exactly 7 observations; 4 of 7 quorum |
-| M2 quality vote | exactly 7 observations after warmup; 4 of 7 quorum |
-| Verdict hold | 1.5 s |
-| Clear frames to re-arm | 8 consecutive missing M1 tracks |
-| PET polygon EMA alpha | 0.35 |
-| Target FPS | 5 |
-
-## Public decision signals
-
-The workflow returns only these final detection signals:
-
-| Signal | Meaning |
-|---:|---|
-| `0` | aluminum can |
-| `1` | good PET |
-| `2` | bad PET |
-
-PP cups, unknown classes, and missing tracks are abstentions. A quorum is not
-resolved early: all seven observations are consumed. Missing Model 2 tracking
-is also an abstention and is never counted as good PET. A no-quorum window
-emits no signal and the item must clear before a new window can open.
-
-The Windows demo maps these values to one stdout line per completed item:
-`0\n`, `1\n`, or `2\n` in ASCII. The line is flushed immediately and appears
-only on the exact decision frame; result-hold and re-arm frames are silent.
-Process exit status is application status, not classification value `0`.
-
-## Parity tolerances (validation)
-
-| Check | Rule |
-|---|---|
-| Class ID / verdict | Exact |
-| Confidence | within `1e-4` of Ultralytics baseline (PC) |
-| Polygon IoU | ≥ 0.90 (PC) / ≥ 0.85 (Jetson TRT vs baseline) |
-| Gate decisions | Exact on synthetic unit sequences |
-
-Regenerate baseline:
-
-```powershell
-cd Trash-detection
-.\pc-demo\.venv\Scripts\python.exe validation\generate_reference.py
-```
+The machine runtime is fixed to camera index `1`; backend fallback may reopen
+that same index only. It has no source override or camera switch. It starts
+stopped, fails closed as `CAMERA 1 REQUIRED`, and never infers or sends while
+the camera is unavailable. An explicit configured COM port wins over discovery;
+otherwise exactly one USB serial device is required. Zero or multiple devices
+use terminal fallback. Idle selection and immediate pre-result selection are
+rechecked. A failed serial write closes the port and performs one terminal
+fallback without retry.

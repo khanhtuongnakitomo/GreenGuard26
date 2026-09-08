@@ -73,14 +73,8 @@ __pycache__/
 *.npy
 rebuild_pt.py
 
-# Reproducible Windows demo output (source and builder are tracked)
-Trash-detection/dist/
+# Diagnostic session output
 Trash-detection/validation/rvm-sessions/
-# Release-operator staging for the self-contained Windows build. The small
-# lock/provenance instructions remain tracked; copied runtimes and wheel
-# payloads stay local and are verified into the generated distribution.
-Trash-detection/windows-demo/portable-runtime/python/
-Trash-detection/windows-demo/portable-runtime/wheels/
 
 # Model weights (keep only release artifacts below)
 *.pt

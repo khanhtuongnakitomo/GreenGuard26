@@ -46,6 +46,13 @@
     "clear_frames": 8,
     "result_hold_s": 1.5
   },
+  "machine": {
+    "camera_index": 1,
+    "serial": {
+      "port": null,
+      "baudrate": 115200
+    }
+  },
   "ui": {
     "window_title": "GreenGuard Detection Demo",
     "display_scale": 1.5

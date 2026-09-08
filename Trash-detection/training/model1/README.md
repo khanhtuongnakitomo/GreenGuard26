@@ -1,163 +1,31 @@
-# Model 1 training tree and active PC contract
+# Model 1 training
 
-The active Windows PC workflow uses the packaged three-class HBB detector at
-`pc-demo/models/m1_detect_640.onnx` (`metal_can`, `pet_bottle`, `pp_cup`). It
-filters `pp_cup`, applies the 2% area rule, and requires 0.65 confidence before
-publishing a Model 1 result. The live entrypoint is `full_demo.bat` at the
-`Trash-detection` root.
+This tree is for reviewed data preparation, training, evaluation, and export.
+It is not a live Windows launcher. The Windows runtime is
+`../../pc-demo/`; its current PC package is the two-class HBB detector
+described by `../../pc-demo/models/manifest.json`.
 
-The files below are retained as a legacy/research OBB detector plus crop
-classifier training tree. Do not promote these exports into the active PC
-package unless a new HBB-compatible dataset, evaluation, and parity report
-have been completed.
+## Rebuild gate
 
-## Legacy training layout
+The strict rebuild workflow remains fail-closed until a reviewer-approved,
+grouped dataset manifest exists at the configured location. Do not infer label
+quality or production suitability from raw captures, generated images, or a
+candidate export. Preserve the active package and reject candidate hashes
+until parity, locked-test, negative-surface, and runtime checks are reviewed.
 
-YOLOv8n-OBB detector + **yolov8n-cls** crop classifier (Fix B).
+The current rebuild context and runbook are owner-controlled working material.
+They may contain historical evidence and are intentionally not part of this
+Windows runtime cleanup.
 
-| Stage | Model | Job |
-|---|---|---|
-| 1 | `export/onnx_416/model.onnx` | Find object in frame (OBB) |
-| 2 | `export/cls_onnx_224/model.onnx` | Classify crop: **pet** vs **can** |
+## Safe workflow
 
-One object in frame at a time. Demos run on **CPU** (~5 FPS target).
+1. Review provenance and labels before generating variants.
+2. Split by source/group before augmentation and keep validation/holdout
+   untouched.
+3. Train and evaluate a candidate without replacing `pc-demo/models`.
+4. Export required deployment sizes only after evaluation gates pass.
+5. Compare candidate hashes and runtime parity against active artifacts.
+6. Promote or roll back only in a separately authorized operation.
 
----
-
-## Install (from scratch)
-
-```powershell
-cd GreenGuard26\Trash-detection\training/model1
-
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-
-python scripts\env_check.py
-```
-
-GPU torch is only needed for **training** (see below).
-
----
-
-## Demo
-
-```powershell
-.\run_m1_demo.bat
-```
-
-Direct Python (more flags):
-
-```powershell
-.\.venv\Scripts\python.exe scripts\demo_live.py
-.\.venv\Scripts\python.exe scripts\demo_live.py --det-conf 0.05 --fps 5
-.\.venv\Scripts\python.exe scripts\demo_live.py --source 0
-.\.venv\Scripts\python.exe scripts\demo_live.py --save logs\m1_diag
-```
-
-| Key | Action |
-|---|---|
-| `Q` | Quit |
-| `S` | Snapshot → `logs\demo_snap.jpg` |
-
-**Flags:**
-
-| Flag | Default | Description |
-|---|---|---|
-| `--det-conf` | `0.05` | Detector conf (localization only) |
-| `--vote` | `5` | Frame majority vote |
-| `--min-area` | `0.02` | Min box area (fraction of frame) |
-| `--no-cls` | off | Skip classifier; use detector class id |
-| `--cls-model` | `auto` | Path to classifier `.pt` or `.onnx` |
-| `--fps` | `5` | Target FPS cap |
-
-Console should show:
-
-```text
-[demo] mode: two-stage (detect + classify)
-[m1 two-stage] classifier=.../export/cls_onnx_224/model.onnx
-```
-
----
-
-## Committed artifacts
-
-| File | Role |
-|---|---|
-| `export/onnx_416/model.onnx` | Detector (Jetson + PC @416) |
-| `export/cls_onnx_224/model.onnx` | PET/can classifier @224 |
-| `runs/seed42_n640/weights/best.pt` | Detector PyTorch weights |
-| `runs/cls_pet_can_seed42_n224/weights/best.pt` | Classifier PyTorch weights |
-
----
-
-## Retrain detector (bottle / aluminum OBB)
-
-Requires dataset under `../dataset/model1/` (not in Git). On a machine that
-has the Detection-rebuild dataset pipeline, or after you regenerate splits:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\run_training.ps1
-```
-
-Output: `runs/seed42_n640/weights/best.pt` (~80 epochs, ~1 h on RTX 3060).
-
-Export ONNX @416 for deploy:
-
-```powershell
-python scripts\export_onnx.py
-```
-
-*(Add export script if missing; weights can be exported via Ultralytics:*
-*`YOLO('runs/.../best.pt').export(format='onnx', imgsz=416)`)*
-
----
-
-## Retrain PET/can classifier (Fix B)
-
-Builds crops from OBB labels, trains `yolov8n-cls`, exports ONNX:
-
-```powershell
-.\run_m1_cls_train.bat
-```
-
-Smoke test (~2 min):
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\run_classifier_training.ps1 -Smoke
-```
-
-Pipeline steps:
-
-1. `scripts/make_crops.py` → `../dataset/model1/crops/{train,val}/{pet,can}/`
-2. `scripts/train_cls.py` → `runs/cls_pet_can_seed42_n224/`
-3. `scripts/export_classifier_onnx.py` → `export/cls_onnx_224/`
-4. `scripts/eval_cls_crops.py` — informational val accuracy only
-
-**Judge live webcam frames**, not crop val accuracy, for pass/fail.
-
----
-
-## Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| Falls back to `detector-only` | Run `git pull`; check `export/cls_onnx_224/model.onnx` exists |
-| Classifier ONNX error | Classifier must load with `task=classify` (handled in `m1_two_stage.py`) |
-| No detection on can | Lower `--det-conf 0.05`; if still nothing, localization needs more data |
-| Wrong class but box is correct | Classifier issue — retrain with `run_m1_cls_train.bat` or collect live frames |
-
----
-
-## Scripts
-
-| Script | Purpose |
-|---|---|
-| `demo_live.py` | Live M1 demo (two-stage) |
-| `m1_two_stage.py` | Shared detect → crop → classify logic |
-| `make_crops.py` | Build cls dataset from OBB splits |
-| `train_cls.py` | Train yolov8n-cls |
-| `export_classifier_onnx.py` | Export cls ONNX @224 |
-| `train.py` | Train OBB detector |
-| `run_training.ps1` | One-command detector training |
-| `run_classifier_training.ps1` | One-command cls pipeline |
+Do not lower runtime decision policy from unlabeled evidence. Run the actual PC
+and Jetson contract checks after any authorized model change.

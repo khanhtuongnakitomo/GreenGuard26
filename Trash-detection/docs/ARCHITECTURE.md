@@ -1,66 +1,63 @@
 # Architecture
 
-## Runtimes
+## Runtime boundaries
 
-| Runtime | Role | Inference |
+| Runtime | Role | Ownership |
 |---|---|---|
-| `pc-demo/` | Windows reference / booth PC | Ultralytics YOLO around ONNX (CPU) |
-| `jetson-runtime/` | Jetson Nano B01 deployment unit | TensorRT primary, ONNX Runtime CPU optional |
-| `training/` | Train / export / research only | Ultralytics + PyTorch |
+| `pc-demo/` | Windows diagnostic and fixed-camera machine runtime | ONNX inference, workflow, machine UI/transport |
+| `jetson-runtime/` | Jetson Nano B01 deployment unit | Independent TensorRT/ONNX runtime |
+| `training/` | Training, evaluation, and research | Never imported by either runtime |
 
-PC and Jetson do **not** import each other or `training/`. Model files are duplicated
-intentionally; `scripts/package_models.py` keeps SHA-256 manifests in sync.
+PC and Jetson remain independent. Model artifacts are duplicated at their
+deployment boundaries and checked by manifests. Machine transport is PC-only
+and does not change the Jetson package.
 
-## Pipeline
+## Shared data flow
 
 ```text
-CameraFrame
-  → M1 HBB detector (640 PC / 416 Jetson): metal_can | pet_bottle | pp_cup
-  → filter pp_cup, then top-1 visible class (min area ≥ 2% of frame,
-       PC decision confidence ≥ 0.65; see MODEL_CONTRACT.md for the Jetson difference)
-  → shared ExactWindowVoter collects exactly 7 M1 observations
-       → ≥4 aluminum: final signal 0; Model 2 is skipped
-       → ≥4 PET: 0.5s warmup, then Model 2 starts
-  → M2 OBB on the full frame
-       → keep centers inside the tracked/smoothed PET polygon
-       → one highest-confidence box per class (cap, label, ring)
-       → exactly 7 M2 observations: ≥4 clean => signal 1, ≥4 violation => signal 2
-  → no quorum emits no signal; one stdout line max per item; 8 clear frames re-arm
+camera frame
+  -> M1Pipeline: accepted aluminum or PET
+  -> CanonicalWorkflow: exactly 7 observations, quorum 4
+       aluminum -> ALUMINUM_CAN (internal 0)
+       PET -> 0.5 s warmup
+          -> M2Pipeline on full frame
+          -> centers inside PET polygon, one highest-confidence hit per class
+          -> exactly 7 observations, quorum 4
+               clean -> PET_CLEAN (internal 1)
+               defect -> PET_REJECT (internal 2)
 ```
 
-## Module split
+M2 cap, label, and ring confidence at or above `0.50` produces a bad
+observation. Missing M1 during M2 is abstention, never clean. No quorum emits
+no result. A result is held for `1.5` seconds, followed by removal and eight
+consecutive clear M1 frames before re-arm.
 
-Shared idea across both runtimes:
+## Windows entrypoints
 
-- `app.py` — camera loop, CLI, START/PAUSE
-- `pipeline.py` — model inference only
-- `gate.py` — inference result types and model-only temporal helpers
-- `decision_core.py` — canonical exact 7/4 M1+M2 workflow shared by PC full
-  mode and the Windows detection shell
-- `ui.py` — drawing helpers
+`src/app.py` is the diagnostic entrypoint for Model 1, Model 2, and full modes.
+It owns diagnostic overlays and camera-switch controls. The first three root
+BAT launchers call it and never construct a serial transport.
 
-Jetson adds:
+`src/machine_app.py` is the fixed-camera entrypoint. It opens camera index `1`
+only, starts stopped, and passes frames through `MachineWorkflow`. The machine
+renderer receives only the live frame and redacted state/result; it has no path
+to draw boxes, polygons, confidence, frame rate, counters, legends, camera
+selection, or diagnostics.
 
-- `preprocess.py` / `postprocess.py` — letterbox + exact OBB decode
-- `backends/` — TensorRT and ONNX Runtime
-- `camera.py` — latest-frame queue (size 1)
+`src/machine_workflow.py` wraps `CanonicalWorkflow` for Run/Pause lifecycle.
+An unfinished vote is invalidated on pause. If an item had begun, resume keeps
+the clear gate; if no item had begun, resume returns directly to
+`WAITING FOR OBJECT`. A canonical result produces one result-name event.
 
-## Controls
+`src/serial_transport.py` is the final machine boundary. It selects an
+explicit configured COM port first. Without one, it connects only when exactly
+one USB serial device is enumerated; zero or multiple devices use terminal
+fallback. Result names map to raw bytes: CANS/ALUMINUM_CAN `1`, GOOD/PET_CLEAN
+`2`, BAD/PET_REJECT `3`. Serial is 115200, no newline, flushed, with no ACK or
+retry. A write failure closes the connection and falls back once.
 
-- On-screen START / PAUSE
-- `S` / Space start, `P` pause, `Q` quit
-- `--source`, `--fps`, `--m1-conf`, `--m2-conf`, `--headless`, `--save`, `--max-frames`
+## Hardware boundary
 
-## Deployment note (Jetson)
-
-`jetson-runtime/` is the exact folder copied to Ubuntu. Scripts resolve paths from
-their own file location. No symlinks. No Ultralytics/PyTorch on device.
-
-## Windows detection boundary
-
-`windows-demo/` is a detection-only shell around the same
-`pc-demo/src/decision_core.py` state machine. It emits exactly one flushed ASCII
-stdout line (`0`, `1`, or `2`) on the exact result frame and sends diagnostics
-to stderr. It contains no machine communication, firmware, acknowledgements,
-emergency controls, reset, motor sequencing, or control configuration. A
-separate mechanical codebase owns all physical routing and safety behavior.
+Offline tests prove transitions, redaction, selection, byte shape, and failure
+handling with fakes. They do not prove camera-1 optics, Windows backend
+behavior on the kiosk, USB wiring, or lower-controller response.

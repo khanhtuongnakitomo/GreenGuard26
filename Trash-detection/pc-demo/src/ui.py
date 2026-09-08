@@ -56,7 +56,7 @@ def draw_button(frame, rect, label: str, active: bool, enabled: bool = True):
 def draw_controls(frame, detecting: bool, cam_label: str = "CAM 0"):
     h, w = frame.shape[:2]
     start_r, pause_r, cam_r = button_rects(w, h)
-    draw_button(frame, start_r, "START", active=detecting, enabled=not detecting)
+    draw_button(frame, start_r, "RUN", active=detecting, enabled=not detecting)
     draw_button(frame, pause_r, "PAUSE", active=not detecting, enabled=detecting)
     draw_cam_button(frame, cam_r, cam_label)
     return start_r, pause_r, cam_r
@@ -83,7 +83,7 @@ def draw_cam_button(frame, rect, label: str):
 
 
 def draw_paused_banner(frame: np.ndarray) -> None:
-    banner = "PAUSED — click START or press S / Space"
+    banner = "PAUSED — click RUN or press S / Space"
     (tw, th), _ = cv2.getTextSize(banner, cv2.FONT_HERSHEY_SIMPLEX, 0.85, 2)
     cv2.rectangle(
         frame,

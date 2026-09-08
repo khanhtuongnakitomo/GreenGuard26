@@ -1,75 +1,88 @@
-# GreenGuard PC demo
+# GreenGuard PC runtime
 
-Windows Ultralytics reference runtime. Independent of `training/` and
-`jetson-runtime/`.
+This is the only Windows inference runtime. It contains the ONNX-backed Model
+1 and Model 2 pipelines, shared `CanonicalWorkflow`, diagnostic UI, and the
+fixed-camera machine adapter.
 
 ## Setup
 
 ```powershell
 cd Trash-detection\pc-demo
-powershell -ExecutionPolicy Bypass -File setup.ps1
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
-Creates `.venv`, installs `requirements.txt`, packages ONNX via
-`..\scripts\package_models.py --target pc`, runs pytest, and a one-frame headless
-smoke test.
+The environment requires Ultralytics, OpenCV, ONNX Runtime, PyTorch, and
+`pyserial>=3.5,<4`. Packaged models are checked against `models/manifest.json`.
 
-Or from `Trash-detection/`:
+## Diagnostic modes
+
+From `Trash-detection/`, run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File setup.ps1
+.\demo_model1.bat
+.\demo_model2.bat
+.\full_demo.bat
 ```
 
-## Run
+These modes start paused. They show the diagnostic camera view, accepted
+detections, confidence, and Run/Pause/Switch Camera controls. Keys are
+`S`/Space to run, `P` to pause, `C` to switch camera, and `Q`/Esc to exit.
+They never construct a serial transport.
 
-The supported launchers are at the `Trash-detection/` root:
+Full mode uses the shared workflow: exactly seven M1 observations, 4/7
+material quorum, PET-only Model 2 after a 0.5-second warmup, exactly seven M2
+observations, 4/7 quality quorum, 1.5-second result hold, and eight clear
+frames to re-arm. M1 candidate generation is configured separately from the
+decision floor; do not use ad-hoc threshold overrides as a production policy.
+
+## Fixed-camera machine mode
 
 ```powershell
-.\demo_model1.bat --source 0 --auto-start
-.\demo_model2.bat --source 0 --auto-start
-.\full_demo.bat --source 0 --auto-start
+.\full-workflow-machine.bat
 ```
 
-The `--mode` values are `model1`, `model2`, and `full`. The active Model 1
-detector has two classes: aluminum beverage can and PET bottle. It uses a low
-inference floor (`0.05`) to retain candidates, then requires `0.84` confidence
-after area filtering before the candidate enters the workflow.
+`src/machine_app.py` opens camera index `1` only and fails closed with
+`CAMERA 1 REQUIRED` if it cannot read that camera. It starts with detection
+off. The machine UI contains only the live frame, state/result, and Run/Pause;
+it never draws detection geometry, confidence, frame rate, counters, legends,
+camera selection, or serial diagnostics.
 
-Useful flags: `--headless`, `--save <dir>`, `--max-frames N`, `--m1-conf`, `--m2-conf`,
-`--fps`. `--m1-conf` overrides the inference floor only; it does not lower the
-decision floor in the locked config.
+`src/machine_workflow.py` wraps the shared canonical workflow and exposes one
+result-name event per physical item. `src/serial_transport.py` rechecks the
+configured COM port or unique USB serial device during idle and again at a
+result. A serial write is one raw byte followed by flush. A failed write closes
+the port and writes that result once to terminal output; it never retries.
+Terminal fallback writes exactly one line (`1`, `2`, or `3`) to stdout and all
+diagnostics go to stderr.
 
-`m1-conf` is the candidate-generation floor. The public M1 decision floor is
-configured independently as `m1.detector.decision_conf` (0.84 for the currently
-activated candidate). Unknown classes are filtered before top-1 selection.
+Machine policy: four aluminum observations produce `CANS`; four PET
+observations enter the warmup and M2 window; cap/label/ring at least `0.50` is
+bad; missing M1/M2 is abstention; four bad produces `BAD`; four clean produces
+`GOOD`; and no quorum produces no command. The result is held for 1.5 seconds,
+then removal and eight clear frames are required.
 
-For camera evidence, run the repository launcher
-`..\diagnose_model1_rvm.bat`. It writes immutable session directories under
-`validation/rvm-sessions/` (when requested), and records raw detections,
-rejection reasons, camera metadata, model/config hashes, and separate
-original/overlay frames. Use `src\analyze_m1_rvm.py` to sweep thresholds; the
-analyzer never rewrites production configuration.
+Configure the machine boundary in `config/default.json`:
 
-## Layout
+```json
+"machine": {
+  "camera_index": 1,
+  "serial": { "port": null, "baudrate": 115200 }
+}
+```
 
-- `config/default.json` — locked gate defaults
-- `models/` — ONNX + `manifest.json`
-- `src/app.py` — entrypoint
-- `src/pipeline.py` — Ultralytics M1/M2
-- `src/gate.py` — model result types and model-only helpers
-- `src/decision_core.py` — canonical exact-seven observation workflow shared by
-  the PC full mode and the Windows RVM shell
-- `src/ui.py` — OpenCV overlays
+## Layout and tests
 
-## Tests
+- `src/app.py` — diagnostic Model 1, Model 2, and full runtime
+- `src/pipeline.py` — ONNX inference adapters
+- `src/decision_core.py` — shared exact-window workflow
+- `src/machine_app.py` — fixed-camera entrypoint
+- `src/machine_workflow.py` — lifecycle and result-name boundary
+- `src/machine_ui.py` — redacted machine renderer
+- `src/serial_transport.py` — one-byte serial/terminal transport
+- `src/ui.py` — diagnostic overlays and controls
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests -q
 ```
 
-Full mode uses exactly seven Model 1 observations. Four aluminum observations
-emit signal `0`; four PET observations enter the existing Model 2 warmup and
-then exactly seven quality observations. Four clean observations emit `1`, and
-four violation observations emit `2`. Missing/unknown observations abstain.
-The final signal is emitted once per item and eight clear frames are required
-before re-arming. Physical-machine control is outside this repository.
+Offline tests do not prove physical camera-1 or USB-controller behavior.

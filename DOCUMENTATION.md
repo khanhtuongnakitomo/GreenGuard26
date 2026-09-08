@@ -1,64 +1,25 @@
-# GreenGuard26 Documentation Map
+# GreenGuard26 documentation map
 
-Use this file to choose documentation by task. Do not read every document in
-the repository as project instructions: some files are component-specific,
-historical evidence, model metadata, or generated logs.
+Use implementation and these current contracts as the source of truth.
 
-## Read First For Detection Work
+## Detection work
 
-1. `AGENT_HANDOFF.md` - current operating context, active Model 2 line, and
-   explicit owner-approval boundaries.
-2. `Trash-detection/docs/MODEL_CONTRACT.md` - model inputs, OBB output layout,
-   preprocessing, gate defaults, and validation tolerances.
-3. `Trash-detection/docs/ARCHITECTURE.md` - runtime boundaries and the M1 to
-   classifier to PET-only M2 flow.
-4. `Trash-detection/README.md` - repository layout and top-level commands.
+1. `AGENT_HANDOFF.md` — current operating context and ownership boundaries.
+2. `Trash-detection/docs/MODEL_CONTRACT.md` — active model hashes and
+   decision/machine contracts.
+3. `Trash-detection/docs/ARCHITECTURE.md` — runtime boundaries and shared flow.
+4. `Trash-detection/README.md` — operator launchers and quick start.
+5. `Trash-detection/pc-demo/README.md` — Windows runtime and machine mode.
 
-Code and checked-in runtime configuration are the source of truth when they
-disagree with prose. Check `git status` and `git branch -vv` for branch state;
-this document does not define the current branch.
+## Component references
 
-## Read Only For The Component You Change
-
-- PC runtime: `Trash-detection/pc-demo/README.md`
-- Windows detection demo: `Trash-detection/windows-demo/README.md`, then
-  `CONTEXT.md` and `RUN_WINDOWS_DEMO.md`
 - Jetson deployment: `Trash-detection/jetson-runtime/README.md` and
-  `Trash-detection/jetson-runtime/DEVICE_VALIDATION.md`
-- Model 1 training: `Trash-detection/training/model1/README.md` and
-  `Trash-detection/training/model1/docs/ANNOTATION.md`
-- Model 2 training: `Trash-detection/training/model2/README.md`
-- Runtime parity: `Trash-detection/validation/README.md`
-- Dashboard work only: `Dashboard/README.md`, then the scoped instructions in
-  `Dashboard/frontend/AGENTS.md` and `Dashboard/frontend/CLAUDE.md`
+  `DEVICE_VALIDATION.md`.
+- Model 1 training: `Trash-detection/training/model1/README.md`.
+- Model 2 training: `Trash-detection/training/model2/README.md`.
+- Training overview: `Trash-detection/training/README.md`.
+- Runtime validation: `Trash-detection/validation/README.md`.
 
-## Current Model 2 Training
-
-Model 2 V6 is the current documented training line. From
-`Trash-detection/training/model2/`, use:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\run_m2_v6_training.ps1 -Smoke
-powershell -ExecutionPolicy Bypass -File scripts\run_m2_v6_training.ps1
-```
-
-The V6 script creates candidate ONNX exports. It does not authorize promotion
-to the PC or Jetson runtime model directories.
-
-## Historical Or Non-Instruction Material
-
-- `Trash-detection/docs/archive/` is archived conversation and planning
-  material. It is not a current implementation contract.
-- `Trash-detection/training/model1/reports/` contains dated training evidence,
-  not current product behavior or task instructions.
-- `Trash-detection/training/model2/jetson/` is archived M2-only research. Use
-  `Trash-detection/jetson-runtime/` for deployment.
-- `labels.txt`, `requirements.txt`, `logs/`, and `dataset/audits/` are model
-  metadata, dependencies, or generated evidence. Read them only when the task
-  calls for them.
-
-## Documentation Maintenance
-
-When changing behavior, update the component README and this map only if the
-reading order changes. Move superseded long-form notes into an archive and add
-an archive banner; do not leave historical plans looking like active guidance.
+Training and validation are not Windows operator entrypoints. Archived research
+notes may describe historical experiments; they do not override checked-in
+runtime code, configuration, or the contracts above.
