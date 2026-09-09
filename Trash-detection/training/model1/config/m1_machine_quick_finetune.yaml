@@ -1,0 +1,173 @@
+schema: greenguard-m1-machine-quick-finetune-v1
+
+classes:
+  names:
+    0: metal_can
+    1: pet_bottle
+
+run:
+  id_prefix: m1quickft
+  seed: 42
+  image_size: 640
+  wall_minutes: 90
+  deadline_reserve_minutes: 32
+  report_root: logs/rebuild
+  generated_root: dataset/generated
+  runs_root: runs
+  export_root: export/candidates
+
+sources:
+  new_data_root: dataset/incoming/New-data
+  previous_manifest: dataset/generated/m1retry_20260908_seed42_yolo11s_r4/manifest.json
+  source_checkpoint: runs/m1retry_20260908_seed42_yolo11s_r4_batch16/weights/best.pt
+  source_checkpoint_sha256: af2b6d2b11565f42d0c5c33cde8a0ef8236a1f8f46896df5aa251f0aa80597e7
+  rejected_v7_sha256: 6f519367def2ef7d78ba7e77c947f18f7c5df795a743f5df1800a2123f6e66db
+  active_model: ../../pc-demo/models/m1_detect_640.onnx
+  active_config: ../../pc-demo/config/default.json
+  active_manifest: ../../pc-demo/models/manifest.json
+  active_pc_m2: ../../pc-demo/models/m2_obb_640.onnx
+  active_jetson_m2: ../../jetson-runtime/models/m2_obb_416.onnx
+
+new_data:
+  raw_to_canonical:
+    0: 1
+    1: 0
+  image_directory: Images
+  label_directory: labels/train
+  negative_directory: true-negative
+  expected_counts:
+    can_train: 8
+    pet_clear_train: 13
+    pet_green_train: 8
+    pet_white_holdout: 6
+    negative_train: 2
+  groups:
+    can_train:
+      group: new-data:can_1358_1359
+      split: train
+      start: '13:58:00'
+      end: '13:59:59'
+      role: new_can
+    pet_clear_train:
+      group: new-data:pet_clear_1400_1401
+      split: train
+      start: '14:00:00'
+      end: '14:01:30'
+      role: new_pet
+    pet_green_train:
+      group: new-data:pet_green_1401_1402
+      split: train
+      start: '14:01:56'
+      end: '14:02:30'
+      role: new_pet
+    pet_white_holdout:
+      group: new-data:pet_white_1402_1403
+      split: holdout
+      start: '14:02:45'
+      end: '14:03:11'
+      role: new_pet_holdout
+    negative_train:
+      group: new-data:negative_1403
+      split: train
+      role: negative
+
+replay:
+  epoch_presentations: 768
+  quotas:
+    new_can: 64
+    new_pet: 96
+    old_machine_can: 80
+    old_machine_pet: 80
+    generic_can: 208
+    generic_pet: 208
+    negative: 32
+  max_generic_groups_per_class: 1000
+  max_new_can_draws_per_image: 8
+  max_negative_draws_per_image: 8
+  max_machine_group_multiplier: 3
+  rotate_variants: true
+
+augmentation:
+  seed: 42
+  mode_ratios:
+    original: 0.50
+    dim: 0.20
+    bright: 0.20
+    optics: 0.10
+  dim:
+    exposure: [0.65, 0.90]
+    gamma: [1.05, 1.30]
+    noise_std: [0.0, 4.0]
+  bright:
+    exposure: [1.10, 1.35]
+    gamma: [0.80, 0.98]
+    glare_fraction_of_box: 0.10
+  optics:
+    white_balance_gain: [0.90, 1.10]
+    jpeg_quality: [70, 95]
+    noise_std: [0.0, 6.0]
+    blur_kernel: [3, 3]
+    rotation_degrees: 3.0
+    translation_fraction: 0.02
+    scale: [0.96, 1.04]
+  disable:
+    mosaic: 0.0
+    mixup: 0.0
+    copy_paste: 0.0
+    fliplr: 0.0
+    flipud: 0.0
+    perspective: 0.0
+    multi_scale: 0.0
+
+training:
+  task: detect
+  image_size: 640
+  workers: 0
+  cache: disk
+  optimizer: AdamW
+  weight_decay: 0.0005
+  warmup_epochs: 0.5
+  batches: [16, 8, 4]
+  smoke_images: 128
+  smoke_epochs: 1
+  phase_a:
+    epochs: 4
+    patience: 4
+    lr0: 0.0002
+    lrf: 0.20
+    freeze: 10
+    amp: true
+  phase_b:
+    epochs: 16
+    patience: 5
+    lr0: 0.00005
+    lrf: 0.20
+    freeze: 0
+    amp: true
+  resume: false
+  deterministic: true
+
+evaluation:
+  iou: 0.50
+  min_area_frac: 0.02
+  calibration_min: 0.20
+  calibration_max: 0.95
+  calibration_step: 0.01
+  minimum_precision: 0.98
+  minimum_recall: 0.90
+  maximum_recall_regression: 0.02
+  stress_exposures: [0.25, 0.45, 1.0, 1.60, 2.0]
+
+export:
+  format: onnx
+  opset: 17
+  dynamic: false
+  half: false
+  simplify: true
+  nms: false
+  expected_output: [1, 6, 8400]
+
+publication:
+  always_replace: true
+  require_structural_runtime_compatibility: true
+  git_handled_by_caller: true

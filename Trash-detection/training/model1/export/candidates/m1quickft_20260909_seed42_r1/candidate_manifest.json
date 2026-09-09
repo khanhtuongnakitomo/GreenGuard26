@@ -1,0 +1,32 @@
+{
+  "activation_policy": "always_replace_only_when_structurally_runtime_compatible",
+  "checkpoint": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\runs\\m1quickft_20260909_seed42_r1_phase_b_batch16\\weights\\best.pt",
+  "checkpoint_sha256": "a2e924032645e27a84a0f440ede3f32165af1da1e02848a76921e6d734f7c13d",
+  "classes": {
+    "0": "metal_can",
+    "1": "pet_bottle"
+  },
+  "decision_conf_by_class": {
+    "metal_can": 0.81,
+    "pet_bottle": 0.72
+  },
+  "image_size": 640,
+  "labels": [
+    "metal_can",
+    "pet_bottle"
+  ],
+  "onnx": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\export\\candidates\\m1quickft_20260909_seed42_r1\\m1_machine_quick_640.onnx",
+  "onnx_sha256": "58e6d6d4492554913a4105ff2a3f7f961acf77f970016803561b7eed2b50a852",
+  "run_id": "m1quickft_20260909_seed42_r1",
+  "schema": "greenguard-m1-machine-quick-candidate-v1",
+  "source_checkpoint_sha256": "af2b6d2b11565f42d0c5c33cde8a0ef8236a1f8f46896df5aa251f0aa80597e7",
+  "status": "FAILED_ACCEPTANCE",
+  "task": "detect",
+  "workflow_contract": {
+    "clear_frames_to_rearm": 8,
+    "observations": 7,
+    "one_result_per_item": true,
+    "pet_only_m2": true,
+    "quorum": 4
+  }
+}

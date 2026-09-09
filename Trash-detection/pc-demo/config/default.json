@@ -22,17 +22,17 @@
   "m1": {
     "box_smooth": 0.35,
     "detector": {
-      "active_candidate_run": "m1retry_20260908_seed42_yolo11s_r4",
-      "active_candidate_sha256": "4945d6a406bfbdb0ef58290c93e4f56af8797b21c957003ed15a6b172c94d8e6",
+      "active_candidate_run": "m1quickft_20260909_seed42_r1",
+      "active_candidate_sha256": "58e6d6d4492554913a4105ff2a3f7f961acf77f970016803561b7eed2b50a852",
       "candidate_only": false,
       "classes": [
         "metal_can",
         "pet_bottle"
       ],
-      "decision_conf": 0.8,
+      "decision_conf": 0.81,
       "decision_conf_by_class": {
-        "metal_can": 0.8,
-        "pet_bottle": 0.75
+        "metal_can": 0.81,
+        "pet_bottle": 0.72
       },
       "ignored_class_ids": [],
       "imgsz": 640,

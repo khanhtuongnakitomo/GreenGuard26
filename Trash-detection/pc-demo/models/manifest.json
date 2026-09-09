@@ -1,7 +1,7 @@
 {
   "models": [
     {
-      "bytes": 37929495,
+      "bytes": 37929489,
       "classes": [
         "metal_can",
         "pet_bottle"
@@ -22,12 +22,12 @@
         8400
       ],
       "path": "models/m1_detect_640.onnx",
-      "sha256": "4945d6a406bfbdb0ef58290c93e4f56af8797b21c957003ed15a6b172c94d8e6",
-      "source_bytes": 37929495,
-      "source_commit": "4a6d140c71310ac9a78350292a64a3a5d856b75b",
-      "source_path": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\export\\candidates\\m1retry_20260908_seed42_yolo11s_r4\\m1_rebuild_640.onnx",
-      "source_run": "m1retry_20260908_seed42_yolo11s_r4",
-      "source_sha256": "4945d6a406bfbdb0ef58290c93e4f56af8797b21c957003ed15a6b172c94d8e6",
+      "sha256": "58e6d6d4492554913a4105ff2a3f7f961acf77f970016803561b7eed2b50a852",
+      "source_bytes": 37929489,
+      "source_commit": "5c9b1f5ed4026a9c6e35953083d4a04e03c780f7",
+      "source_path": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\export\\candidates\\m1quickft_20260909_seed42_r1\\m1_machine_quick_640.onnx",
+      "source_run": "m1quickft_20260909_seed42_r1",
+      "source_sha256": "58e6d6d4492554913a4105ff2a3f7f961acf77f970016803561b7eed2b50a852",
       "task": "detect"
     },
     {
