@@ -31,7 +31,7 @@ namespace GreenGuard {
 }
 "@
 }
-[GreenGuard.ExecutionState]::SetThreadExecutionState([uint32]0x80000003) | Out-Null
+[GreenGuard.ExecutionState]::SetThreadExecutionState([Convert]::ToUInt32("80000003", 16)) | Out-Null
 try {
     Set-Location -LiteralPath $repoRoot
     Write-Host "Starting Model 1 efficient challenger run $RunId"
@@ -71,5 +71,5 @@ try {
     $finalExit = if ($trainingExit -ne 0) { $trainingExit } else { $publishExit }
     exit $finalExit
 } finally {
-    [GreenGuard.ExecutionState]::SetThreadExecutionState([uint32]0x80000000) | Out-Null
+    [GreenGuard.ExecutionState]::SetThreadExecutionState([Convert]::ToUInt32("80000000", 16)) | Out-Null
 }
