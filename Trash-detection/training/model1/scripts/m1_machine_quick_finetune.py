@@ -568,6 +568,11 @@ class MachineReplaySampler:
         return sum(self.quotas.values())
 
     def _image_cap(self, role: str, count: int) -> int:
+        if role.startswith("generic"):
+            # Generic connected groups often contain several Roboflow
+            # variants. A one-image cap can make the configured quota
+            # mathematically impossible when the group cap is two.
+            return max(2, math.ceil(self.quotas[role] / max(count, 1)))
         if role == "new_can":
             return int(self.config["replay"].get("max_new_can_draws_per_image", 8))
         if role == "negative":
@@ -610,16 +615,15 @@ class MachineReplaySampler:
             if ordered:
                 offset = (epoch_number + ROLE_QUOTAS.index(role)) % len(ordered)
                 ordered = ordered[offset:] + ordered[:offset]
-            group_order = []
+            grouped_indices: dict[str, list[int]] = defaultdict(list)
             for index in ordered:
-                group = str(self.records[index].get("group", index))
-                if group not in group_order:
-                    group_order.append(group)
+                grouped_indices[str(self.records[index].get("group", index))].append(index)
+            group_order = list(grouped_indices)
             coverage_target = min(quota, len(group_order))
             for group in group_order:
                 if len([row for row in trace if row["role"] == role]) >= coverage_target:
                     break
-                candidates = [index for index in ordered if str(self.records[index].get("group", index)) == group and image_uses[index] < image_cap and group_uses[group] < group_cap]
+                candidates = [index for index in grouped_indices[group] if image_uses[index] < image_cap and group_uses[group] < group_cap]
                 if not candidates:
                     continue
                 selected = candidates[(epoch_number + ROLE_QUOTAS.index(role)) % len(candidates)]
@@ -636,16 +640,13 @@ class MachineReplaySampler:
                     group
                     for group in group_order
                     if group_uses[group] < group_cap
-                    and any(
-                        str(self.records[index].get("group", index)) == group and image_uses[index] < image_cap
-                        for index in ordered
-                    )
+                    and any(image_uses[index] < image_cap for index in grouped_indices[group])
                 ]
                 if not available_groups:
                     raise RuntimeError(f"replay caps exhausted for role {role} at draw {role_draws}/{quota}")
                 group = available_groups[group_cursor % len(available_groups)]
                 group_cursor += 1
-                candidates = [index for index in ordered if str(self.records[index].get("group", index)) == group and image_uses[index] < image_cap]
+                candidates = [index for index in grouped_indices[group] if image_uses[index] < image_cap]
                 if not candidates:
                     continue
                 selected = candidates[rng.randrange(len(candidates))]
@@ -655,7 +656,10 @@ class MachineReplaySampler:
                 role_draws += 1
                 trace.append({"draw": len(result) - 1, "role": role, "record": selected, "source": self.records[selected].get("source"), "group": group})
         rng.shuffle(result)
-        trace.sort(key=lambda row: result.index(row["record"]) if row["record"] in result else row["draw"])
+        # Keep the deterministic pre-shuffle draw order. Calling
+        # ``result.index`` for every row made a 4k-draw epoch quadratic and
+        # could consume the entire overnight budget before training started.
+        trace.sort(key=lambda row: row["draw"])
         if self.trace_path:
             self.trace_path.parent.mkdir(parents=True, exist_ok=True)
             with self.trace_path.open("a", encoding="utf-8", newline="\n") as handle:
