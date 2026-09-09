@@ -15,7 +15,14 @@ session.
 - Candidate: `Trash-detection/training/model1/export/candidates/m1quickft_20260909_seed42_r1/m1_machine_quick_640.onnx`
 - Candidate SHA-256: `58e6d6d4492554913a4105ff2a3f7f961acf77f970016803561b7eed2b50a852`
 - Rollback snapshot: `Trash-detection/training/model1/logs/rebuild/m1quickft_20260909_seed42_r1/activation_backup`
-- Rollback: copy the snapshot `m1_detect_640.onnx`, `default.json`, and `manifest.json` back to their corresponding `pc-demo` paths.
+- Tested rollback command (PowerShell; restores the model, thresholds, and manifest together):
+
+```powershell
+$m1QuickRollbackBackup = 'D:\Code\Project\bki\GreenGuard26\Trash-detection\training\model1\logs\rebuild\m1quickft_20260909_seed42_r1\activation_backup'
+Copy-Item -LiteralPath (Join-Path $m1QuickRollbackBackup 'm1_detect_640.onnx') -Destination 'D:\Code\Project\bki\GreenGuard26\Trash-detection\pc-demo\models\m1_detect_640.onnx' -Force
+Copy-Item -LiteralPath (Join-Path $m1QuickRollbackBackup 'default.json') -Destination 'D:\Code\Project\bki\GreenGuard26\Trash-detection\pc-demo\config\default.json' -Force
+Copy-Item -LiteralPath (Join-Path $m1QuickRollbackBackup 'manifest.json') -Destination 'D:\Code\Project\bki\GreenGuard26\Trash-detection\pc-demo\models\manifest.json' -Force
+```
 
 The source checkpoint was `AF2B6D2B11565F42D0C5C33CDE8A0EF8236A1F8F46896DF5AA251F0AA80597E7`.
 The corrected run used its weights with `resume=false`; the optimizer and epoch
