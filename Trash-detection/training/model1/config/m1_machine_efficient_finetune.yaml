@@ -55,6 +55,7 @@ replay:
     negative: 64
   max_generic_groups_per_class: 1000
   max_new_can_draws_per_image: 8
+  max_new_pet_draws_per_image: 12
   max_negative_draws_per_image: 16
   max_machine_group_multiplier: 3
   rotate_variants: true

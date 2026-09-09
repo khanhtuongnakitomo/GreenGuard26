@@ -573,6 +573,9 @@ class MachineReplaySampler:
         if role == "negative":
             return int(self.config["replay"].get("max_negative_draws_per_image", 8))
         if role == "new_pet":
+            configured = self.config["replay"].get("max_new_pet_draws_per_image")
+            if configured is not None:
+                return max(1, int(configured))
             # The two approved PET groups are uneven (13 and 8 images). One
             # extra draw above the even-pool average is required for the
             # smaller group to supply its atomic half of the 96-draw quota.
