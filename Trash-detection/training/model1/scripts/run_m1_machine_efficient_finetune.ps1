@@ -10,11 +10,11 @@ param(
 $ErrorActionPreference = "Stop"
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\..\.."))
 $modelRoot = Join-Path $repoRoot "Trash-detection\training\model1"
-$python = Join-Path $repoRoot "Trash-detection\pc-demo\.venv\Scripts\python.exe"
+$python = Join-Path $modelRoot ".venv\Scripts\python.exe"
 $runner = Join-Path $modelRoot "scripts\m1_machine_quick_finetune.py"
 $config = Join-Path $modelRoot "config\m1_machine_efficient_finetune.yaml"
 
-if (-not (Test-Path -LiteralPath $python)) { throw "PC runtime Python is missing: $python" }
+if (-not (Test-Path -LiteralPath $python)) { throw "CUDA training Python is missing: $python" }
 if (-not (Test-Path -LiteralPath $runner)) { throw "Training runner is missing: $runner" }
 if (-not (Test-Path -LiteralPath $config)) { throw "Efficient configuration is missing: $config" }
 if ($WallMinutes -le 0 -or $TargetMinutes -le 0 -or $TargetMinutes -gt $WallMinutes) { throw "TargetMinutes must be positive and no greater than WallMinutes" }
