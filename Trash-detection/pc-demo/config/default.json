@@ -1,60 +1,80 @@
 {
-  "m1": {
-    "detector": {
-      "path": "models/m1_detect_640.onnx",
-      "imgsz": 640,
-      "task": "detect",
-      "classes": ["metal_can", "pet_bottle"],
-      "visible_class_ids": [0, 1],
-      "ignored_class_ids": [],
-      "infer_conf": 0.05,
-      "decision_conf": 0.84
-    },
-    "min_area_frac": 0.02,
-    "miss_hold": 3,
-    "box_smooth": 0.35
-  },
-  "m2": {
-    "path": "models/m2_obb_640.onnx",
-    "imgsz": 640,
-    "infer_conf": 0.10,
-    "violation_conf": 0.50,
-    "classes": ["cap", "label", "ring"]
-  },
-  "gate": {
-    "warmup_s": 0.5,
-    "verdict_hold_s": 1.5,
-    "vote_window": 7,
-    "vote_need": 4
+  "candidate_validation": {
+    "status": "FAILED_ACCEPTANCE_ACTIVE_OVERRIDE"
   },
   "decision_contract": {
-    "version": "seven-observation-v1",
-    "window_size": 7,
+    "clear_frames_to_rearm": 8,
     "quorum": 4,
     "signals": {
       "ALUMINUM_CAN": 0,
       "PET_CLEAN": 1,
       "PET_REJECT": 2
     },
-    "clear_frames_to_rearm": 8
+    "version": "seven-observation-v1",
+    "window_size": 7
   },
-  "runtime": {
-    "target_fps": 5.0,
-    "device": "cpu",
-    "decision_window": 7,
-    "decision_quorum": 4,
-    "clear_frames": 8,
-    "result_hold_s": 1.5
+  "gate": {
+    "verdict_hold_s": 1.5,
+    "vote_need": 4,
+    "vote_window": 7,
+    "warmup_s": 0.5
+  },
+  "m1": {
+    "box_smooth": 0.35,
+    "detector": {
+      "active_candidate_run": "m1retry_20260908_seed42_yolo11s_r4",
+      "active_candidate_sha256": "4945d6a406bfbdb0ef58290c93e4f56af8797b21c957003ed15a6b172c94d8e6",
+      "candidate_only": false,
+      "classes": [
+        "metal_can",
+        "pet_bottle"
+      ],
+      "decision_conf": 0.8,
+      "decision_conf_by_class": {
+        "metal_can": 0.8,
+        "pet_bottle": 0.75
+      },
+      "ignored_class_ids": [],
+      "imgsz": 640,
+      "infer_conf": 0.05,
+      "path": "models/m1_detect_640.onnx",
+      "task": "detect",
+      "visible_class_ids": [
+        0,
+        1
+      ]
+    },
+    "min_area_frac": 0.02,
+    "miss_hold": 3
+  },
+  "m2": {
+    "classes": [
+      "cap",
+      "label",
+      "ring"
+    ],
+    "imgsz": 640,
+    "infer_conf": 0.1,
+    "path": "models/m2_obb_640.onnx",
+    "violation_conf": 0.5
   },
   "machine": {
     "camera_index": 1,
     "serial": {
-      "port": null,
-      "baudrate": 115200
+      "baudrate": 115200,
+      "port": null
     }
   },
+  "runtime": {
+    "clear_frames": 8,
+    "decision_quorum": 4,
+    "decision_window": 7,
+    "device": "cpu",
+    "result_hold_s": 1.5,
+    "target_fps": 5.0
+  },
   "ui": {
-    "window_title": "GreenGuard Detection Demo",
-    "display_scale": 1.5
+    "display_scale": 1.5,
+    "window_title": "GreenGuard Detection Demo"
   }
 }

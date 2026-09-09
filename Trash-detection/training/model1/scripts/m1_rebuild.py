@@ -239,10 +239,17 @@ def group_key(source: str, image: Path) -> str:
         match = re.match(r"WIN_(\d{8}_\d{2}_\d{2})_", stem, re.IGNORECASE)
         session = match.group(1) if match else "reviewed-empty-scene"
         return f"true-negative:{session}"
-    if "live-machine" in relative:
+    if "live-machine" in relative or "re-annotated-data" in relative:
         match = re.search(r"live-machine-dataset[\\/]([^\\/]+)[\\/]images[\\/]WIN_\d{8}_(\d{2})_(\d{2})_(\d{2})", relative, re.IGNORECASE)
         if match:
             machine, hour, minute, second = match.groups()
+        else:
+            match = re.search(r"re-annotated-data[\\/]images[\\/]WIN_\d{8}_(\d{2})_(\d{2})_(\d{2})", relative, re.IGNORECASE)
+            if not match:
+                return "live-machine:unknown-capture-session"
+            hour, minute, second = match.groups()
+            machine = "GG1" if hour == "12" else "GG2"
+        if match:
             minute_value = int(minute)
             # These are the observed capture sessions. A session is never
             # split by filename; its boundaries come from capture timing.
@@ -277,6 +284,14 @@ def group_key(source: str, image: Path) -> str:
             return f"live-machine:{machine.upper()}:{session}"
         return "live-machine:unknown-capture-session"
     return f"{source}:{stem}"
+
+
+def reannotated_machine_class(image: Path) -> int:
+    """Map the reviewed flattened export by its verified capture session."""
+    match = re.search(r"WIN_\d{8}_(\d{2})_(\d{2})_\d{2}", image.name, re.IGNORECASE)
+    if match and match.group(1) == "12" and 40 <= int(match.group(2)) <= 43:
+        return 0
+    return 1
 
 
 def machine_fixed_split(source: str, group: str) -> str | None:
@@ -326,7 +341,7 @@ def load_machine_review(path: Path) -> dict[str, dict[str, Any]]:
 
 
 def machine_image_paths(cfg: dict[str, Any]) -> list[Path]:
-    roots = [root for _model, source, root in source_roots(cfg) if source == "live-machine-dataset"]
+    roots = [root for _model, source, root in source_roots(cfg) if source in {"live-machine-dataset", "re-annotated-machine"}]
     return [image for root in roots if root.is_dir() for image in image_files(root)]
 
 
@@ -380,7 +395,7 @@ def annotate(cfg: dict[str, Any], name: str) -> dict[str, Any]:
             "status": "pending",
             "labels": [],
             "reviewer": None,
-            "session_id": group_key("live-machine-dataset", image),
+            "session_id": group_key("re-annotated-machine", image),
             "item_id": None,
             "trial_id": None,
             "review_basis": "manual whole-object visual review required",
@@ -429,7 +444,11 @@ def source_roots(cfg: dict[str, Any]) -> list[tuple[str, str, Path]]:
         roots.append(("model1", source, MODEL_ROOT / cfg["sources"]["model1_root"] / source))
     for source in cfg["sources"]["include_model2"]:
         roots.append(("model2", source, MODEL_ROOT / cfg["sources"]["model2_root"] / source))
-    roots.append(("model1", "live-machine-dataset", MODEL_ROOT / cfg["sources"]["model1_root"] / "live-machine-dataset"))
+    reannotated = MODEL_ROOT / cfg["sources"]["model1_root"] / cfg["sources"].get("reannotated_machine_root", "re-annotated-data")
+    if reannotated.is_dir():
+        roots.append(("model1", "re-annotated-machine", reannotated))
+    else:
+        roots.append(("model1", "live-machine-dataset", MODEL_ROOT / cfg["sources"]["model1_root"] / "live-machine-dataset"))
     return roots
 
 
@@ -447,6 +466,12 @@ def make_record(model: str, source: str, image: Path, root: Path, cfg: dict[str,
     invalid_box = False
     review_basis = f"configured source adapter: {explanation}"
     machine_review = cfg.get("_machine_review", {}).get(image_relative) if source == "live-machine-dataset" else None
+    if source == "re-annotated-machine":
+        if any(record["class_id"] != 0 for record in records):
+            errors.append("unexpected_reannotated_source_class")
+        mapping = {0: reannotated_machine_class(image)}
+        excluded_ids = set(names) - {0}
+        review_basis = "re-annotated whole-object OBB; class mapped by verified capture session"
     if source == "live-machine-dataset":
         # Part-only machine labels are never converted by this adapter. A
         # separate, explicit review record must contain manually verified
@@ -1137,8 +1162,25 @@ def install_balanced_training_sampler(cfg: dict[str, Any], name: str) -> None:
 def train(cfg: dict[str, Any], name: str, smoke: bool = False, screen: str | None = None, resume_from: Path | None = None, batch_override: int | None = None) -> dict[str, Any]:
     dataset = generated_dir(cfg, name)
     data_yaml = dataset / "dataset.yaml"
+    report_root = report_dir(cfg, name)
     if not data_yaml.is_file():
         raise RuntimeError(f"prepared dataset missing: {data_yaml}")
+    if smoke:
+        manifest = json.loads((dataset / "manifest.json").read_text(encoding="utf-8"))
+        train_rows = [row for row in manifest.get("records", []) if row.get("split") == "train"]
+        by_class: dict[int, list[dict[str, Any]]] = {0: [], 1: []}
+        for row in sorted(train_rows, key=lambda item: str(item.get("generated_image", ""))):
+            present = {int(label["class_id"]) for label in row.get("labels", []) if int(label["class_id"]) in CLASS_NAMES}
+            for class_id in present:
+                by_class[class_id].append(row)
+        smoke_rows = by_class[0][:128] + by_class[1][:128]
+        if len(smoke_rows) < 256:
+            raise RuntimeError(f"fixed smoke subset requires 256 balanced images, found {len(smoke_rows)}")
+        smoke_list = report_root / "smoke_train.txt"
+        atomic_write(smoke_list, "\n".join(str((REPO_ROOT / row["generated_image"]).resolve()) for row in smoke_rows) + "\n")
+        smoke_yaml = report_root / "smoke_dataset.yaml"
+        atomic_write(smoke_yaml, yaml.safe_dump({"path": str(REPO_ROOT), "train": str(smoke_list), "val": str(dataset / "images" / "selection"), "names": CLASS_NAMES}, sort_keys=False))
+        data_yaml = smoke_yaml
     from ultralytics import YOLO
 
     model_name = str(cfg["training"]["pretrained_model"])
@@ -1149,12 +1191,14 @@ def train(cfg: dict[str, Any], name: str, smoke: bool = False, screen: str | Non
         try:
             model = YOLO(str(resume_from) if resume_from else model_name)
             install_dynamic_photometric_transform(cfg)
-            if screen != "a":
+            if not smoke and screen != "a":
                 install_balanced_training_sampler(cfg, name)
             weight_path = Path(getattr(model, "ckpt_path", model_name))
             if not weight_path.is_absolute():
                 weight_path = (MODEL_ROOT / weight_path).resolve()
             run_name = name + ("_smoke_seed42" if smoke else f"_screen_{screen}" if screen else f"_batch{batch}") + ("_resume" if resume_from else "")
+            if smoke and (MODEL_ROOT / "runs" / run_name).exists():
+                run_name += "_retry"
             train_args = {
                 "seed": int(cfg["run"]["seed"]),
                 "data": str(data_yaml), "task": "detect", "imgsz": int(cfg["run"]["image_size"]), "epochs": 1 if smoke else int(cfg["training"].get("screen_epochs", 8) if screen else cfg["training"]["epochs"]), "patience": 1 if smoke else int(cfg["training"].get("screen_patience", 8) if screen else cfg["training"]["patience"]), "batch": batch, "workers": int(cfg["training"]["workers"]), "cache": cfg["training"]["cache"], "optimizer": cfg["training"]["optimizer"], "lr0": float(cfg["training"]["lr0"]), "lrf": float(cfg["training"]["lrf"]), "weight_decay": float(cfg["training"]["weight_decay"]), "warmup_epochs": float(cfg["training"]["warmup_epochs"]), "amp": bool(cfg["training"]["amp"]) and not smoke, "device": int(cfg["training"]["device"]), "project": str(MODEL_ROOT / "runs"), "name": run_name, "exist_ok": bool(resume_from), "pretrained": not bool(resume_from), "resume": str(resume_from) if resume_from else False, "deterministic": True, "close_mosaic": int(cfg["training"]["close_mosaic"]), "mosaic": 0.0, "mixup": 0.0, "copy_paste": 0.0, "fliplr": 0.0, "flipud": 0.0, "multi_scale": 0.0, "degrees": float(cfg["augmentation"]["train_native"]["degrees"]), "translate": float(cfg["augmentation"]["train_native"]["translate"]), "scale": float(cfg["augmentation"]["train_native"]["scale"]), "shear": 0.0, "perspective": 0.0, "hsv_h": 0.0, "hsv_s": float(cfg["augmentation"]["train_native"]["hsv_s"]), "hsv_v": float(cfg["augmentation"]["train_native"]["hsv_v"]), "plots": True, "verbose": True,

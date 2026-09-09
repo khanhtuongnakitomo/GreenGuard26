@@ -15,6 +15,7 @@ run:
 
 sources:
   model1_root: dataset/incoming
+  reannotated_machine_root: re-annotated-data
   model2_root: ../model2/dataset/incoming
   image_extensions: [.jpg, .jpeg, .png, .bmp, .webp]
   include_model1:

@@ -22,11 +22,19 @@ from m1_rebuild import (  # noqa: E402
     split_groups,
     CappedBalancedGroupSampler,
     machine_fixed_split,
+    reannotated_machine_class,
 )
 
 
 def test_model1_has_exact_two_classes():
     assert CLASS_NAMES == {0: "metal_can", 1: "pet_bottle"}
+
+
+def test_reannotated_machine_class_uses_verified_capture_sessions():
+    assert reannotated_machine_class(Path("WIN_20260829_12_40_15_Pro.jpg")) == 0
+    assert reannotated_machine_class(Path("WIN_20260829_12_43_40_Pro.jpg")) == 0
+    assert reannotated_machine_class(Path("WIN_20260829_15_55_08_Pro.jpg")) == 1
+    assert reannotated_machine_class(Path("WIN_20260829_16_06_55_Pro.jpg")) == 1
 
 
 def test_obb_whole_object_is_converted_to_enclosing_hbb():

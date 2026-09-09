@@ -1,26 +1,14 @@
 {
-  "target": "pc",
-  "source_commit": "f1c5a70642bfdc38f20bc7cf39c2d1e82c3581c2",
-  "packaged_at_utc": "2026-08-29T00:53:05Z",
-  "package_scope": "m2",
-  "provenance": {
-    "run_name": "m2revamped_20260829_seed42_n640",
-    "dataset_source_hash": "E37529CB725BD893A37BF1F925DE327B4DBDF493F2E16BEE349093F749209D23",
-    "evaluation_report": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\logs\\revamped\\m2revamped_20260829_seed42_n640\\reports\\revamped_evaluation_report.json",
-    "promote_invoked_at": "2026-08-29T00:53:05Z"
-  },
   "models": [
     {
-      "filename": "m1_detect_640.onnx",
-      "path": "models/m1_detect_640.onnx",
+      "bytes": 37929495,
+      "classes": [
+        "metal_can",
+        "pet_bottle"
+      ],
       "family": "m1",
-      "task": "detect",
-      "source_path": "Trash-detection/training/model1/export/detect_640/model.onnx",
-      "source_commit": "4a6d140c71310ac9a78350292a64a3a5d856b75b",
-      "source_sha256": "cf7baf1c4a917c7f8ecbd1e30bf92ca5e3a38869b99ccbfb6b94a0b95111eb24",
-      "source_bytes": 37929497,
-      "sha256": "cf7baf1c4a917c7f8ecbd1e30bf92ca5e3a38869b99ccbfb6b94a0b95111eb24",
-      "bytes": 37929497,
+      "filename": "m1_detect_640.onnx",
+      "image_size": 640,
       "input_name": "images",
       "input_shape": [
         1,
@@ -33,23 +21,25 @@
         6,
         8400
       ],
-      "classes": [
-        "metal_can",
-        "pet_bottle"
-      ],
-      "image_size": 640
+      "path": "models/m1_detect_640.onnx",
+      "sha256": "4945d6a406bfbdb0ef58290c93e4f56af8797b21c957003ed15a6b172c94d8e6",
+      "source_bytes": 37929495,
+      "source_commit": "4a6d140c71310ac9a78350292a64a3a5d856b75b",
+      "source_path": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\export\\candidates\\m1retry_20260908_seed42_yolo11s_r4\\m1_rebuild_640.onnx",
+      "source_run": "m1retry_20260908_seed42_yolo11s_r4",
+      "source_sha256": "4945d6a406bfbdb0ef58290c93e4f56af8797b21c957003ed15a6b172c94d8e6",
+      "task": "detect"
     },
     {
-      "filename": "m2_obb_640.onnx",
-      "path": "models/m2_obb_640.onnx",
-      "family": "m2",
-      "task": "obb",
-      "source_path": "Trash-detection/training/model2/export/candidates/m2revamped_20260829_seed42_n640/onnx_640/model.onnx",
-      "source_commit": "f1c5a70642bfdc38f20bc7cf39c2d1e82c3581c2",
-      "source_sha256": "2df4f8f9f7d941998029e65809eb53bbf401199eb4d0a8489e7b259503ad1449",
-      "source_bytes": 12497144,
-      "sha256": "2df4f8f9f7d941998029e65809eb53bbf401199eb4d0a8489e7b259503ad1449",
       "bytes": 12497144,
+      "classes": [
+        "cap",
+        "label",
+        "ring"
+      ],
+      "family": "m2",
+      "filename": "m2_obb_640.onnx",
+      "image_size": 640,
       "input_name": "images",
       "input_shape": [
         1,
@@ -62,12 +52,23 @@
         8,
         8400
       ],
-      "classes": [
-        "cap",
-        "label",
-        "ring"
-      ],
-      "image_size": 640
+      "path": "models/m2_obb_640.onnx",
+      "sha256": "2df4f8f9f7d941998029e65809eb53bbf401199eb4d0a8489e7b259503ad1449",
+      "source_bytes": 12497144,
+      "source_commit": "f1c5a70642bfdc38f20bc7cf39c2d1e82c3581c2",
+      "source_path": "Trash-detection/training/model2/export/candidates/m2revamped_20260829_seed42_n640/onnx_640/model.onnx",
+      "source_sha256": "2df4f8f9f7d941998029e65809eb53bbf401199eb4d0a8489e7b259503ad1449",
+      "task": "obb"
     }
-  ]
+  ],
+  "package_scope": "m2",
+  "packaged_at_utc": "2026-08-29T00:53:05Z",
+  "provenance": {
+    "dataset_source_hash": "E37529CB725BD893A37BF1F925DE327B4DBDF493F2E16BEE349093F749209D23",
+    "evaluation_report": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model2\\logs\\revamped\\m2revamped_20260829_seed42_n640\\reports\\revamped_evaluation_report.json",
+    "promote_invoked_at": "2026-08-29T00:53:05Z",
+    "run_name": "m2revamped_20260829_seed42_n640"
+  },
+  "source_commit": "f1c5a70642bfdc38f20bc7cf39c2d1e82c3581c2",
+  "target": "pc"
 }
