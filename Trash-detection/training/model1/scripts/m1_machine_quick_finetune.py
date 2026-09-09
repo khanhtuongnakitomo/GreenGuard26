@@ -626,15 +626,30 @@ class MachineReplaySampler:
                 trace.append({"draw": len(result) - 1, "role": role, "record": selected, "source": self.records[selected].get("source"), "group": group})
             if len([row for row in trace if row["role"] == role]) < coverage_target:
                 raise RuntimeError(f"replay group coverage exhausted for role {role}")
-            for draw_number in range(len([row for row in trace if row["role"] == role]), quota):
-                candidates = [index for index in ordered if image_uses[index] < image_cap and group_uses[str(self.records[index].get("group", index))] < group_cap]
+            role_draws = len([row for row in trace if row["role"] == role])
+            group_cursor = 0
+            while role_draws < quota:
+                available_groups = [
+                    group
+                    for group in group_order
+                    if group_uses[group] < group_cap
+                    and any(
+                        str(self.records[index].get("group", index)) == group and image_uses[index] < image_cap
+                        for index in ordered
+                    )
+                ]
+                if not available_groups:
+                    raise RuntimeError(f"replay caps exhausted for role {role} at draw {role_draws}/{quota}")
+                group = available_groups[group_cursor % len(available_groups)]
+                group_cursor += 1
+                candidates = [index for index in ordered if str(self.records[index].get("group", index)) == group and image_uses[index] < image_cap]
                 if not candidates:
-                    raise RuntimeError(f"replay caps exhausted for role {role} at draw {draw_number}/{quota}")
+                    continue
                 selected = candidates[rng.randrange(len(candidates))]
                 result.append(selected)
-                group = str(self.records[selected].get("group", selected))
                 image_uses[selected] += 1
                 group_uses[group] += 1
+                role_draws += 1
                 trace.append({"draw": len(result) - 1, "role": role, "record": selected, "source": self.records[selected].get("source"), "group": group})
         rng.shuffle(result)
         trace.sort(key=lambda row: result.index(row["record"]) if row["record"] in result else row["draw"])
