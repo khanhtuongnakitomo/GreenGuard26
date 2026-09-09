@@ -1,8 +1,9 @@
 # GreenGuard Trash-detection
 
-Windows detection has one runtime under `pc-demo/`. The three diagnostic
-launchers share the same inference and canonical workflow modules. The fourth
-launcher adds the fixed-camera RVM machine boundary.
+Windows detection has one runtime under `pc-demo/`. The diagnostic launchers
+share the same inference modules. The fixed-camera launcher adds the RVM
+machine boundary, while the candidate and comparison launchers remain
+isolated from production configuration.
 
 ## Operator launchers
 
@@ -10,14 +11,35 @@ These are the only operator launchers at this directory root:
 
 ```powershell
 .\demo_model1.bat
+.\demo_model1_candidate.bat
+.\compare_model1.bat
 .\demo_model2.bat
 .\full_demo.bat
 .\full-workflow-machine.bat
 ```
 
-The first three start paused and retain diagnostic camera view, detections,
-confidence, Run/Pause, and Switch Camera controls. `S`/Space runs, `P` pauses,
-`C` switches camera, and `Q`/Esc exits. They do not initialize serial.
+`demo_model1.bat`, `demo_model1_candidate.bat`, and `demo_model2.bat` start
+paused and retain diagnostic camera view, detections, confidence, Run/Pause,
+and Switch Camera controls. `full_demo.bat` provides the complete diagnostic
+workflow. `compare_model1.bat` shows active and challenger Model 1 on the same
+captured frame with independent seven-frame votes. `S`/Space runs, `P` pauses,
+`C` switches camera, and `Q`/Esc exits. Diagnostic launchers do not initialize
+serial. The candidate launcher displays `CANDIDATE — NOT ACTIVE` and never
+changes the active model.
+
+The candidate package is produced by the machine-domain fine-tune runner. Its
+long run is deliberately separate from the active runtime:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\training\model1\scripts\run_m1_machine_efficient_finetune.ps1 `
+  -RunId m1efficientft_20260909_seed42_r1 -WallMinutes 480 -TargetMinutes 420 `
+  -PackageCandidate -Publish
+```
+
+The run targets seven hours and has an eight-hour hard limit, including a
+protected verification and publication tail. Generated datasets, checkpoints,
+caches, and full logs remain local; only the compact candidate package and
+report are publishable.
 
 The machine launcher opens camera `1` only and starts in `WAITING TO START`.
 Its UI contains only the live camera, state/result, and Run/Pause. It accepts no

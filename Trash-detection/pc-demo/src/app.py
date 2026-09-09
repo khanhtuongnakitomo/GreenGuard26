@@ -35,6 +35,7 @@ MAX_CAM_INDEX = 7  # highest camera index to try when cycling
 def parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="GreenGuard PC demo")
     ap.add_argument("--config", default="default")
+    ap.add_argument("--manifest", default=None, help="optional model manifest override")
     ap.add_argument("--mode", choices=["full", "model1", "model2"], default="full")
     ap.add_argument("--source", default="0")
     ap.add_argument("--fps", type=float, default=None)
@@ -72,7 +73,8 @@ def _try_open_next_camera(current_idx: int, result: dict) -> None:
 def main() -> int:
     args = parse_args()
     cfg = load_config(args.config)
-    validate_manifest(load_manifest())
+    manifest_reference = args.manifest or cfg.get("manifest")
+    validate_manifest(load_manifest(manifest_reference))
 
     target_fps = float(args.fps if args.fps is not None else cfg["runtime"]["target_fps"])
     interval = 1.0 / max(target_fps, 0.1)

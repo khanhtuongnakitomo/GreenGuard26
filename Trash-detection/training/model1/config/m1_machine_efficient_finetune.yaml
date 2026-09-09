@@ -1,0 +1,146 @@
+schema: greenguard-m1-machine-efficient-finetune-v1
+
+classes:
+  names:
+    0: metal_can
+    1: pet_bottle
+
+run:
+  id_prefix: m1efficientft
+  seed: 42
+  image_size: 640
+  wall_minutes: 480
+  target_minutes: 420
+  deadline_reserve_minutes: 120
+  report_root: logs/rebuild
+  generated_root: dataset/generated
+  runs_root: runs
+  export_root: export/candidates
+
+sources:
+  new_data_root: dataset/incoming/New-data
+  previous_manifest: dataset/generated/m1retry_20260908_seed42_yolo11s_r4/manifest.json
+  source_checkpoint: runs/m1quickft_20260909_seed42_r1_phase_b_batch16/weights/best.pt
+  source_checkpoint_sha256: a2e924032645e27a84a0f440ede3f32165af1da1e02848a76921e6d734f7c13d
+  rejected_v7_sha256: 6f519367def2ef7d78ba7e77c947f18f7c5df795a743f5df1800a2123f6e66db
+  active_model: ../../pc-demo/models/m1_detect_640.onnx
+  active_config: ../../pc-demo/config/default.json
+  active_manifest: ../../pc-demo/models/manifest.json
+  active_pc_m2: ../../pc-demo/models/m2_obb_640.onnx
+  active_jetson_m2: ../../jetson-runtime/models/m2_obb_416.onnx
+
+new_data:
+  raw_to_canonical:
+    0: 1
+    1: 0
+  image_directory: Images
+  label_directory: labels/train
+  negative_directory: true-negative
+  expected_counts:
+    can_train: 8
+    pet_clear_train: 13
+    pet_green_train: 8
+    pet_white_holdout: 6
+    negative_train: 2
+
+replay:
+  epoch_presentations: 4096
+  quotas:
+    new_can: 64
+    new_pet: 192
+    old_machine_can: 96
+    old_machine_pet: 192
+    generic_can: 1744
+    generic_pet: 1744
+    negative: 64
+  max_generic_groups_per_class: 1000
+  max_new_can_draws_per_image: 8
+  max_negative_draws_per_image: 16
+  max_machine_group_multiplier: 3
+  rotate_variants: true
+
+augmentation:
+  seed: 42
+  mode_ratios:
+    original: 0.50
+    dim: 0.20
+    bright: 0.20
+    optics: 0.10
+  dim:
+    exposure: [0.55, 0.90]
+    gamma: [1.05, 1.45]
+    noise_std: [0.0, 6.0]
+  bright:
+    exposure: [1.10, 1.50]
+    gamma: [0.70, 0.95]
+    glare_fraction_of_box: 0.15
+  optics:
+    white_balance_gain: [0.88, 1.12]
+    jpeg_quality: [60, 95]
+    noise_std: [0.0, 6.0]
+    blur_kernel: [3, 5]
+    rotation_degrees: 3.0
+    translation_fraction: 0.02
+    scale: [0.96, 1.04]
+  disable:
+    mosaic: 0.0
+    mixup: 0.0
+    copy_paste: 0.0
+    fliplr: 0.0
+    flipud: 0.0
+    perspective: 0.0
+    multi_scale: 0.0
+
+training:
+  task: detect
+  image_size: 640
+  workers: 0
+  cache: disk
+  optimizer: AdamW
+  weight_decay: 0.0005
+  warmup_epochs: 1.0
+  batches: [16, 8, 4]
+  smoke_images: 256
+  smoke_epochs: 1
+  phase_a:
+    epochs: 4
+    patience: 4
+    lr0: 0.0001
+    lrf: 0.20
+    freeze: 10
+    amp: true
+  phase_b:
+    epochs: 32
+    patience: 8
+    lr0: 0.00003
+    lrf: 0.10
+    freeze: 0
+    amp: true
+  resume: false
+  deterministic: true
+
+evaluation:
+  iou: 0.50
+  min_area_frac: 0.02
+  calibration_min: 0.20
+  calibration_max: 0.95
+  calibration_step: 0.01
+  minimum_precision: 0.98
+  minimum_recall: 0.90
+  maximum_recall_regression: 0.02
+  stress_exposures: [0.25, 0.45, 1.0, 1.60, 2.0]
+
+export:
+  format: onnx
+  opset: 17
+  dynamic: false
+  half: false
+  simplify: false
+  nms: false
+  expected_output: [1, 6, 8400]
+
+publication:
+  always_replace: false
+  candidate_only: true
+  require_structural_runtime_compatibility: true
+  git_handled_by_caller: true

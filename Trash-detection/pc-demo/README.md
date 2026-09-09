@@ -20,14 +20,20 @@ From `Trash-detection/`, run:
 
 ```powershell
 .\demo_model1.bat
+.\demo_model1_candidate.bat
+.\compare_model1.bat
 .\demo_model2.bat
 .\full_demo.bat
 ```
 
 These modes start paused. They show the diagnostic camera view, accepted
-detections, confidence, and Run/Pause/Switch Camera controls. Keys are
+detections, confidence, and Run/Pause/Switch Camera controls. The candidate
+launcher loads only `config/m1_candidate.json` and shows `CANDIDATE — NOT
+ACTIVE`. The comparison launcher sends each captured frame to both M1 models
+and keeps independent seven-observation votes. Keys are
 `S`/Space to run, `P` to pause, `C` to switch camera, and `Q`/Esc to exit.
-They never construct a serial transport.
+They never construct Model 2 or a serial transport. Existing `demo_model1.bat`
+continues to load the active manifest and active Model 1.
 
 Full mode uses the shared workflow: exactly seven M1 observations, 4/7
 material quorum, PET-only Model 2 after a 0.5-second warmup, exactly seven M2
@@ -80,6 +86,13 @@ Configure the machine boundary in `config/default.json`:
 - `src/machine_ui.py` — redacted machine renderer
 - `src/serial_transport.py` — one-byte serial/terminal transport
 - `src/ui.py` — diagnostic overlays and controls
+- `src/compare_model1.py` — same-frame active/challenger Model 1 comparison
+
+The candidate package is intentionally separate from `models/manifest.json`:
+`models/m1_candidate_manifest.json` and `models/candidates/m1_efficient_current.onnx`
+are used only by the candidate launcher. A structurally valid candidate still
+requires fresh camera validation before promotion and is never activated by
+the fine-tune runner.
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests -q

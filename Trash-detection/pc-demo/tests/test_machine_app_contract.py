@@ -117,9 +117,19 @@ def test_machine_ui_contains_only_allowed_operator_text(monkeypatch):
 def test_public_testing_launchers_share_pc_app_and_do_not_initialize_serial():
     root = Path(__file__).resolve().parents[2]
     launchers = {path.name for path in root.glob("*.bat")}
-    assert launchers == {"demo_model1.bat", "demo_model2.bat", "full_demo.bat", "full-workflow-machine.bat"}
+    assert launchers == {
+        "demo_model1.bat",
+        "demo_model1_candidate.bat",
+        "compare_model1.bat",
+        "demo_model2.bat",
+        "full_demo.bat",
+        "full-workflow-machine.bat",
+    }
     for name in ("demo_model1.bat", "demo_model2.bat", "full_demo.bat"):
         text = (root / name).read_text(encoding="utf-8").lower()
         assert "pc-demo" in text
         assert "src\\app.py" in text
+        assert "serial" not in text
+    for name in ("demo_model1_candidate.bat", "compare_model1.bat"):
+        text = (root / name).read_text(encoding="utf-8").lower()
         assert "serial" not in text

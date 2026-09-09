@@ -32,8 +32,10 @@ def resolve_path(rel: str) -> Path:
     return candidate
 
 
-def load_manifest() -> dict:
-    path = ROOT / "models" / "manifest.json"
+def load_manifest(reference: str | Path | None = None) -> dict:
+    path = ROOT / "models" / "manifest.json" if reference is None else Path(reference)
+    if not path.is_absolute():
+        path = ROOT / path
     if not path.is_file():
         return {}
     return json.loads(path.read_text(encoding="utf-8"))
