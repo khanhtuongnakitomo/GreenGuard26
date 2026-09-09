@@ -21,6 +21,7 @@ From `Trash-detection/`, run:
 ```powershell
 .\demo_model1.bat
 .\demo_model1_candidate.bat
+.\demo-model1-b.bat
 .\compare_model1.bat
 .\demo_model2.bat
 .\full_demo.bat
@@ -28,12 +29,15 @@ From `Trash-detection/`, run:
 
 These modes start paused. They show the diagnostic camera view, accepted
 detections, confidence, and Run/Pause/Switch Camera controls. The candidate
-launcher loads only `config/m1_candidate.json` and shows `CANDIDATE — NOT
-ACTIVE`. The comparison launcher sends each captured frame to both M1 models
-and keeps independent seven-observation votes. Keys are
+launcher and `demo-model1-b.bat` load only `config/m1_candidate.json` and show
+`CANDIDATE — NOT ACTIVE`. `demo-model1-b.bat` is a standalone second Model 1
+tester; it does not construct Model 2 or enter the full workflow. The
+comparison launcher sends each captured frame to both M1 models and keeps
+independent seven-observation votes. Keys are
 `S`/Space to run, `P` to pause, `C` to switch camera, and `Q`/Esc to exit.
-They never construct Model 2 or a serial transport. Existing `demo_model1.bat`
-continues to load the active manifest and active Model 1.
+The Model 1-only launchers and comparison launcher never construct Model 2 or a
+serial transport. Existing `demo_model1.bat` continues to load the active
+manifest and active Model 1.
 
 Full mode uses the shared workflow: exactly seven M1 observations, 4/7
 material quorum, PET-only Model 2 after a 0.5-second warmup, exactly seven M2

@@ -12,20 +12,24 @@ These are the only operator launchers at this directory root:
 ```powershell
 .\demo_model1.bat
 .\demo_model1_candidate.bat
+.\demo-model1-b.bat
 .\compare_model1.bat
 .\demo_model2.bat
 .\full_demo.bat
 .\full-workflow-machine.bat
 ```
 
-`demo_model1.bat`, `demo_model1_candidate.bat`, and `demo_model2.bat` start
+`demo_model1.bat`, `demo_model1_candidate.bat`, `demo-model1-b.bat`, and
+`demo_model2.bat` start
 paused and retain diagnostic camera view, detections, confidence, Run/Pause,
-and Switch Camera controls. `full_demo.bat` provides the complete diagnostic
-workflow. `compare_model1.bat` shows active and challenger Model 1 on the same
-captured frame with independent seven-frame votes. `S`/Space runs, `P` pauses,
-`C` switches camera, and `Q`/Esc exits. Diagnostic launchers do not initialize
-serial. The candidate launcher displays `CANDIDATE — NOT ACTIVE` and never
-changes the active model.
+and Switch Camera controls. `demo-model1-b.bat` is a second standalone Model 1
+tester that loads the packaged challenger through `m1_candidate.json`; it is
+not connected to Model 2, serial output, or the full workflow. `full_demo.bat`
+provides the complete diagnostic workflow. `compare_model1.bat` shows active
+and challenger Model 1 on the same captured frame with independent seven-frame
+votes. `S`/Space runs, `P` pauses, `C` switches camera, and `Q`/Esc exits.
+Diagnostic launchers do not initialize serial. The candidate launchers display
+`CANDIDATE — NOT ACTIVE` and never change the active model.
 
 The candidate package is produced by the machine-domain fine-tune runner. Its
 long run is deliberately separate from the active runtime:

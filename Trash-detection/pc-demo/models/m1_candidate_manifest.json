@@ -1,0 +1,43 @@
+{
+  "models": [
+    {
+      "active_model_untouched": true,
+      "bytes": 37929493,
+      "classes": [
+        "metal_can",
+        "pet_bottle"
+      ],
+      "decision_conf_by_class": {
+        "metal_can": 0.88,
+        "pet_bottle": 0.74
+      },
+      "family": "m1_candidate",
+      "filename": "m1_efficient_current.onnx",
+      "image_size": 640,
+      "input_name": "images",
+      "input_shape": [
+        1,
+        3,
+        640,
+        640
+      ],
+      "output_shape": [
+        1,
+        6,
+        8400
+      ],
+      "path": "models/candidates/m1_efficient_current.onnx",
+      "physical_camera_status": "NOT_MEASURED",
+      "run_id": "m1efficientft_20260909_seed42_r3",
+      "schema": "greenguard-m1-candidate-manifest-v1",
+      "sha256": "14de7a4bea542f28c8bef3971bb59f7b907e6b691b407d4823e32a3126e76b5c",
+      "source_checkpoint": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\runs\\m1efficientft_20260909_seed42_r3_phase_b_batch16\\weights\\best.pt",
+      "source_checkpoint_sha256": null,
+      "source_export": "D:\\Code\\Project\\bki\\GreenGuard26\\Trash-detection\\training\\model1\\export\\candidates\\m1efficientft_20260909_seed42_r3\\m1_machine_quick_640.onnx",
+      "status": "FAILED_PARITY_CANDIDATE",
+      "task": "detect"
+    }
+  ],
+  "package_scope": "candidate",
+  "target": "pc"
+}

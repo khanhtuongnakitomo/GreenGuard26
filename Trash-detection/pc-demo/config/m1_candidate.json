@@ -1,33 +1,44 @@
 {
-  "manifest": "models/m1_candidate_manifest.json",
   "candidate_validation": {
-    "status": "NOT_READY"
+    "onnx_sha256": "14de7a4bea542f28c8bef3971bb59f7b907e6b691b407d4823e32a3126e76b5c",
+    "physical_camera_status": "NOT_MEASURED",
+    "run_id": "m1efficientft_20260909_seed42_r3",
+    "status": "FAILED_PARITY_CANDIDATE"
   },
   "m1": {
-    "min_area_frac": 0.02,
+    "box_smooth": 0.35,
     "detector": {
+      "candidate_only": true,
+      "candidate_run": "m1efficientft_20260909_seed42_r3",
+      "candidate_sha256": "14de7a4bea542f28c8bef3971bb59f7b907e6b691b407d4823e32a3126e76b5c",
+      "classes": [
+        "metal_can",
+        "pet_bottle"
+      ],
+      "decision_conf": 0.88,
+      "decision_conf_by_class": {
+        "metal_can": 0.88,
+        "pet_bottle": 0.74
+      },
+      "infer_conf": 0.05,
       "path": "models/candidates/m1_efficient_current.onnx",
       "task": "detect",
-      "classes": ["metal_can", "pet_bottle"],
-      "visible_class_ids": [0, 1],
-      "infer_conf": 0.05,
-      "decision_conf": 0.65,
-      "decision_conf_by_class": {
-        "metal_can": 0.65,
-        "pet_bottle": 0.65
-      },
-      "candidate_only": true
+      "visible_class_ids": [
+        0,
+        1
+      ]
     },
-    "box_smooth": 0.35,
+    "min_area_frac": 0.02,
     "miss_hold": 3
   },
+  "manifest": "models/m1_candidate_manifest.json",
   "runtime": {
-    "device": "cpu",
-    "target_fps": 5.0,
-    "decision_window": 7,
-    "decision_quorum": 4,
     "clear_frames": 8,
-    "result_hold_s": 1.5
+    "decision_quorum": 4,
+    "decision_window": 7,
+    "device": "cpu",
+    "result_hold_s": 1.5,
+    "target_fps": 5.0
   },
   "ui": {
     "display_scale": 1.5,

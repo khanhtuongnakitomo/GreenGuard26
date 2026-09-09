@@ -120,6 +120,7 @@ def test_public_testing_launchers_share_pc_app_and_do_not_initialize_serial():
     assert launchers == {
         "demo_model1.bat",
         "demo_model1_candidate.bat",
+        "demo-model1-b.bat",
         "compare_model1.bat",
         "demo_model2.bat",
         "full_demo.bat",
@@ -130,6 +131,16 @@ def test_public_testing_launchers_share_pc_app_and_do_not_initialize_serial():
         assert "pc-demo" in text
         assert "src\\app.py" in text
         assert "serial" not in text
-    for name in ("demo_model1_candidate.bat", "compare_model1.bat"):
+    for name in ("demo_model1_candidate.bat", "demo-model1-b.bat", "compare_model1.bat"):
         text = (root / name).read_text(encoding="utf-8").lower()
         assert "serial" not in text
+
+
+def test_model1_b_is_a_standalone_challenger_launcher():
+    root = Path(__file__).resolve().parents[2]
+    text = (root / "demo-model1-b.bat").read_text(encoding="utf-8").lower()
+    assert "src\\app.py --mode model1 --config m1_candidate" in text
+    assert "models\\candidates\\m1_efficient_current.onnx" in text
+    assert "mode full" not in text
+    assert "mode model2" not in text
+    assert "serial" not in text
