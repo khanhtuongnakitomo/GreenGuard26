@@ -126,4 +126,4 @@ export interface DailyAverage {
 }
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
-export type DashboardRoute = 'dashboard' | 'analytics' | 'smartbins' | 'reports' | 'alerts';
+export type DashboardRoute = 'dashboard' | 'analytics' | 'smartbins' | 'reports' | 'alerts' | 'vouchers';

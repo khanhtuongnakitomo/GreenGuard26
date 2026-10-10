@@ -7,7 +7,7 @@ import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   LayoutDashboard, BarChart2, Trash2, FileText, Bell,
-  Headphones, Settings, HelpCircle, LogOut,
+  Headphones, Settings, HelpCircle, TicketPercent,
 } from 'lucide-react-native';
 import { Colors } from '@/theme/colors';
 import { DashboardRoute } from '@/types/dashboard.types';
@@ -24,6 +24,7 @@ const MAIN_NAV: NavItem[] = [
   { route: 'smartbins', label: 'Smart Bins', Icon: Trash2          },
   { route: 'reports',   label: 'Reports',    Icon: FileText        },
   { route: 'alerts',    label: 'Alerts',     Icon: Bell            },
+  { route: 'vouchers',  label: 'Vouchers',   Icon: TicketPercent   },
 ];
 
 const BOTTOM_NAV: NavItem[] = [
@@ -44,7 +45,7 @@ export const DashboardSidebar = memo<Props>(({ activeRoute, onNavigate }) => {
 
   const NavButton = ({ item }: { item: NavItem }) => {
     const isActive = item.route === activeRoute;
-    const isDashRoute = ['dashboard','analytics','smartbins','reports','alerts'].includes(item.route);
+    const isDashRoute = ['dashboard','analytics','smartbins','reports','alerts','vouchers'].includes(item.route);
     return (
       <TouchableOpacity
         style={[styles.navItem, isActive && styles.navItemActive]}
@@ -87,18 +88,17 @@ export const DashboardSidebar = memo<Props>(({ activeRoute, onNavigate }) => {
         {BOTTOM_NAV.map(item => <NavButton key={item.route} item={item} />)}
       </ScrollView>
 
-      {/* Admin profile */}
+      {/* Neutral workspace label; account state is shown only after real auth in the voucher screen. */}
       <View style={[styles.profile, { paddingBottom: Math.max(insets.bottom, 14) }]}>
         <View style={styles.profileDivider} />
         <View style={styles.profileRow}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>M</Text>
+            <Text style={styles.avatarText}>G</Text>
           </View>
           <View style={styles.profileMeta}>
-            <Text style={styles.profileName}>Mark</Text>
-            <Text style={styles.profileRole}>Admin</Text>
+            <Text style={styles.profileName}>GreenGuard</Text>
+            <Text style={styles.profileRole}>Workspace</Text>
           </View>
-          <LogOut size={14} color={Colors.sidebarText} />
         </View>
       </View>
     </View>

@@ -4,6 +4,7 @@ import MachineModel from '../models/Machine';
 import ContributionSessionModel from '../models/ContributionSession';
 import UserModel from '../models/User';
 import { calculateImpact, materialType, type ImpactSession } from '../services/impact';
+import { projectDetection, projectMachine, projectSession, projectUser } from '../services/publicProjection';
 
 function getRangeDate(range?: string): Date {
   const now = new Date();
@@ -234,13 +235,13 @@ export async function getMachineLifetime(req: Request, res: Response) {
   const purityRate = totalPet > 0 ? Number(((totalItems.pet_clean / totalPet) * 100).toFixed(1)) : null;
 
   res.json({
-    machine,
+    machine: projectMachine(machine),
     totalSessions: sessions.length,
     totalItems,
     totalPointsAwarded,
     purityRate,
     uptimePct: null, // Requires uptime history; current status cannot measure it.
-    recentSessions: sessions.slice(0, 15)
+    recentSessions: sessions.slice(0, 15).map(projectSession)
   });
 }
 
@@ -263,7 +264,7 @@ export async function getUserLifetime(req: Request, res: Response) {
   const cleanRatio = totalPet > 0 ? Number((((totals.pet_clean ?? 0) / totalPet) * 100).toFixed(1)) : null;
 
   res.json({
-    user,
+    user: projectUser(user),
     totals,
     lifetimePoints: user.lifetimeEarnedPoints || totals.points || 0,
     cleanRatio
@@ -296,10 +297,10 @@ export function streamDashboardEvents(req: Request, res: Response) {
       lastCheck = now;
 
       for (const d of newDetections) {
-        res.write(`data: ${JSON.stringify({ type: 'detection', data: d })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: 'detection', data: projectDetection(d) })}\n\n`);
       }
       for (const c of newClaims) {
-        res.write(`data: ${JSON.stringify({ type: 'claim', data: c })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: 'claim', data: projectSession(c) })}\n\n`);
       }
     } catch {
       // Ignored during connection drop

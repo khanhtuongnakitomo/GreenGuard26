@@ -1,12 +1,13 @@
 import { Request, Response } from 'express';
 import MachineModel from '../models/Machine';
+import { projectMachine } from '../services/publicProjection';
 
 // ─── GET /api/machines ────────────────────────────────────────────
 // Dashboard lấy tất cả machines
 export const getMachines = async (req: Request, res: Response): Promise<void> => {
   try {
     const machines = await MachineModel.find().lean();
-    res.json(machines);
+    res.json(machines.map(projectMachine));
   } catch (err) {
     res.status(500).json({ success: false, message: (err as Error).message });
   }
@@ -24,7 +25,7 @@ export const getMachine = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    res.json(machine);
+    res.json(projectMachine(machine));
   } catch (err) {
     res.status(500).json({ success: false, message: (err as Error).message });
   }

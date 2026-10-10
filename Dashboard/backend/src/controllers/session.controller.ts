@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import ContributionSessionModel from '../models/ContributionSession';
 import MachineModel from '../models/Machine';
+import { projectSession } from '../services/publicProjection';
 
 // ─── GET /api/sessions ────────────────────────────────────────────────────
 // Dashboard lấy lịch sử session, hỗ trợ filter + pagination
@@ -48,7 +49,7 @@ export const getSessions = async (req: Request, res: Response): Promise<void> =>
       ContributionSessionModel.countDocuments(filter),
     ]);
 
-    res.json({ data, total, limit: Number(limit), offset: Number(offset) });
+    res.json({ data: data.map(projectSession), total, limit: Number(limit), offset: Number(offset) });
   } catch (err) {
     res.status(500).json({ success: false, message: (err as Error).message });
   }
@@ -76,7 +77,7 @@ export const getLatestSession = async (req: Request, res: Response): Promise<voi
       .sort({ createdAt: -1 })
       .lean();
       
-    res.json(latest ?? null);
+    res.json(projectSession(latest ?? null));
   } catch (err) {
     res.status(500).json({ success: false, message: (err as Error).message });
   }

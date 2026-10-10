@@ -14,6 +14,7 @@ import DashboardScreen  from '@/screens/DashboardScreen';
 import AnalyticsScreen  from '@/screens/AnalyticsScreen';
 import SmartBinsScreen  from '@/screens/SmartBinsScreen';
 import ReportsScreen    from '@/screens/ReportsScreen';
+import VouchersScreen from '@/screens/VouchersScreen';
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ export default function App() {
     analytics:  AnalyticsScreen,
     smartbins:  SmartBinsScreen,
     reports:    ReportsScreen,
+    vouchers: VouchersScreen,
     alerts:     DashboardScreen, // fallback
   }[route];
 
