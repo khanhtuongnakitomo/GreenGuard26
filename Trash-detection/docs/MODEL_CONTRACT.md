@@ -4,7 +4,7 @@ Verify these active deployment artifacts before and after runtime refactors:
 
 | Artifact | Input | Output | SHA-256 |
 |---|---|---|---|
-| PC M1 `pc-demo/models/m1_detect_640.onnx` | `[1,3,640,640]` | HBB detections | `CF7BAF1C4A917C7F8ECBD1E30BF92CA5E3A38869B99CCBFB6B94A0B95111EB24` |
+| PC M1 `pc-demo/models/m1_detect_640.onnx` | `[1,3,640,640]` | HBB detections | `58E6D6D4492554913A4105FF2A3F7F961ACF77F970016803561B7EED2B50A852` |
 | PC M2 `pc-demo/models/m2_obb_640.onnx` | `[1,3,640,640]` | `[cx,cy,w,h,class_probs...,angle]` | `2DF4F8F9F7D941998029E65809EB53BBF401199EB4D0A8489E7B259503AD1449` |
 | Jetson M2 `jetson-runtime/models/m2_obb_416.onnx` | `[1,3,416,416]` | `[cx,cy,w,h,class_probs...,angle]` | `FDA4C7986ADCE3262686842DC751AFBEAE14BD6C059C794926E3A5872BE62FA7` |
 
@@ -12,6 +12,14 @@ The PC Model 1 public classes are `metal_can` and `pet_bottle`. Model 2
 classes are `cap`, `label`, and `ring`. Parse ONNX Model 2 probabilities from
 channels `4:4+class_count` and the final angle channel; do not apply another
 sigmoid.
+
+PC M1 is the `m1quickft_20260909_seed42_r1` artifact selected by
+`pc-demo/config/default.json`; its configuration records
+`FAILED_ACCEPTANCE_ACTIVE_OVERRIDE`. The hash above was checked against the
+actual packaged file and active manifest on 2026-10-24. Selection as the active
+artifact does not establish acceptance or physical-camera validation. Start
+with the [master context](../../GREENGUARD_MASTER_CONTEXT.md) for project-wide
+status and evidence boundaries.
 
 ## Decision contract
 

@@ -4,6 +4,8 @@
 
 GreenGuard26 connects camera-based material detection, machine workflow boundaries, and an operations dashboard. It is part of a recycling ecosystem with the separate GreenPoint rewards application.
 
+**Start here:** [GreenGuard master context — Vietnamese](GREENGUARD_MASTER_CONTEXT.md) covers the product, circular business model, hardware, AI, GreenPoint, deployment boundaries, experiments, team and competition context. It is the central project reference and replaces the older general context and handoff documents. The [BKI proposal](competition/final/Proposal%20BKI.docx) is retained alongside it as the original source document.
+
 ## Project at a glance
 
 | Area | Implementation |
@@ -37,7 +39,7 @@ Diagnostic and candidate launchers remain separate from machine-connected operat
 
 ## Explore and run
 
-Start with the [documentation map](DOCUMENTATION.md), then choose the component you want to inspect:
+Start with the [master context](GREENGUARD_MASTER_CONTEXT.md), then choose the component you want to inspect:
 
 | Component | Guide |
 | --- | --- |

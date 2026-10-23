@@ -1,7 +1,7 @@
 # Results — GreenGuard Model 1 rebuild (OBB, 4 classes)
 
 > **HISTORICAL EVIDENCE.** This dated Model 1 report is not current product
-> behavior or an instruction for new work. Start with `DOCUMENTATION.md`.
+> behavior or an instruction for new work. Start with [the master context](../../../../GREENGUARD_MASTER_CONTEXT.md).
 
 All numbers measured on 2026-08-22 from files on disk; evidence paths inline.
 Model: YOLOv8n-obb, trained per kit Phase G (150 ep, imgsz 640, AdamW, 2 seeds).

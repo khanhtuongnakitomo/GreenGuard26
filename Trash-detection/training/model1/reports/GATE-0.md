@@ -1,7 +1,7 @@
 # GATE-0 — Guidelines approved
 
 > **HISTORICAL EVIDENCE.** This dated Model 1 report is not current product
-> behavior or an instruction for new work. Start with `DOCUMENTATION.md`.
+> behavior or an instruction for new work. Start with [the master context](../../../../GREENGUARD_MASTER_CONTEXT.md).
 
 > **Note 2026-08-22 (pre-sign-off revision):** guideline updated to v3 — canonical
 > classes are now `0=bottle, 1=cap, 2=wrapper, 3=aluminum` (owner decision), format

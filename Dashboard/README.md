@@ -1,5 +1,7 @@
 # GreenGuard Dashboard
 
+Project-wide context: [GreenGuard master context](../GREENGUARD_MASTER_CONTEXT.md).
+
 Operator dashboard: Expo 57 / React Native Web / TypeScript frontend and an
 Express / TypeScript / Mongoose backend. `frontend/App.tsx` selects Dashboard,
 Analytics, Smart Bins and Reports using local navigation state.

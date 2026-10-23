@@ -1,7 +1,7 @@
 # GATE-3 — Training quality
 
 > **HISTORICAL EVIDENCE.** This dated Model 1 report is not current product
-> behavior or an instruction for new work. Start with `DOCUMENTATION.md`.
+> behavior or an instruction for new work. Start with [the master context](../../../../GREENGUARD_MASTER_CONTEXT.md).
 
 **Status: PARTIAL FAIL — awaiting human decision** — 2026-08-22, after Phase G.
 Evidence: `logs/train_seed42.log`, `logs/train_seed7.log`, `logs/eval_val.log`,

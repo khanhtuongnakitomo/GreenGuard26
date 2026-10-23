@@ -1,7 +1,7 @@
 # GATE-2 — Splits & locked test set
 
 > **HISTORICAL EVIDENCE.** This dated Model 1 report is not current product
-> behavior or an instruction for new work. Start with `DOCUMENTATION.md`.
+> behavior or an instruction for new work. Start with [the master context](../../../../GREENGUARD_MASTER_CONTEXT.md).
 
 **Status: AWAITING HUMAN SIGN-OFF (Tường)** — 2026-08-22, after Phase F.
 (Simplified scope per v2 plan: owner-provided pre-annotated data — no

@@ -1,5 +1,7 @@
 # GreenGuard Trash-detection
 
+Project-wide context: [GreenGuard master context](../GREENGUARD_MASTER_CONTEXT.md).
+
 Windows detection has one runtime under `pc-demo/`. The diagnostic launchers
 share the same inference modules. The fixed-camera launcher adds the RVM
 machine boundary, while the candidate and comparison launchers remain

@@ -1,7 +1,7 @@
 # GATE-4 — Edge deployment (off-device portion)
 
 > **HISTORICAL EVIDENCE.** This dated Model 1 report is not current product
-> behavior or an instruction for new work. Start with `DOCUMENTATION.md`.
+> behavior or an instruction for new work. Start with [the master context](../../../../GREENGUARD_MASTER_CONTEXT.md).
 
 **Status: PARTIAL — awaiting human decisions** — 2026-08-22, after Phases H + I.
 On-device FPS + live smoke test (Phase K) still pending — they complete this gate.
