@@ -4,19 +4,19 @@
   },
   "decision_contract": {
     "clear_frames_to_rearm": 8,
-    "quorum": 4,
+    "quorum": 3,
     "signals": {
       "ALUMINUM_CAN": 0,
       "PET_CLEAN": 1,
       "PET_REJECT": 2
     },
-    "version": "seven-observation-v1",
-    "window_size": 7
+    "version": "three-confirmation-v1",
+    "window_size": 3
   },
   "gate": {
     "verdict_hold_s": 1.5,
-    "vote_need": 4,
-    "vote_window": 7,
+    "vote_need": 3,
+    "vote_window": 3,
     "warmup_s": 0.5
   },
   "m1": {
@@ -31,8 +31,8 @@
       ],
       "decision_conf": 0.81,
       "decision_conf_by_class": {
-        "metal_can": 0.81,
-        "pet_bottle": 0.72
+        "metal_can": 0.4,
+        "pet_bottle": 0.5
       },
       "ignored_class_ids": [],
       "imgsz": 640,
@@ -56,7 +56,12 @@
     "imgsz": 640,
     "infer_conf": 0.1,
     "path": "models/m2_obb_640.onnx",
-    "violation_conf": 0.5
+    "violation_conf": 0.5,
+    "violation_conf_by_class": {
+      "cap": 0.5,
+      "label": 0.5,
+      "ring": 0.2
+    }
   },
   "machine": {
     "camera_index": 1,
@@ -67,8 +72,8 @@
   },
   "runtime": {
     "clear_frames": 8,
-    "decision_quorum": 4,
-    "decision_window": 7,
+    "decision_quorum": 3,
+    "decision_window": 3,
     "device": "cpu",
     "result_hold_s": 1.5,
     "target_fps": 5.0

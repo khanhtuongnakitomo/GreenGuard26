@@ -44,6 +44,14 @@ export const Colors = {
   chartLine: '#22C55E',
   chartLineArea: 'rgba(34,197,94,0.12)',
 
+  // ─── Detected Materials ─────────────────────────────────────────────────
+  materialGoodPet: '#16A34A',
+  materialGoodPetBg: '#DCFCE7',
+  materialBadPet: '#DC2626',
+  materialBadPetBg: '#FEE2E2',
+  materialCan: '#2563EB',
+  materialCanBg: '#DBEAFE',
+
   // ─── Waste Type Pie ────────────────────────────────────────────────────────
   dashPlastic: '#4ADE80',
   dashMetal: '#22C55E',

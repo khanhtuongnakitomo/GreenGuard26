@@ -6,8 +6,9 @@ const detections = require('../src/models/DetectionEvent.ts').default;
 const machines = require('../src/models/Machine.ts').default;
 const controller = require('../src/controllers/dashboard.controller.ts');
 const contribution = (createdAt, itemType, quantity) => ({createdAt, items:[{itemType,quantity}]});
-const query = data => ({sort(){return this;},limit(){return this;},select(){return this;},lean:async()=>data,then:resolve=>Promise.resolve(data).then(resolve)});
+const query = data => ({sort(){return this;},limit(){return this;},select(){return this;},populate(){return this;},lean:async()=>data,then:resolve=>Promise.resolve(data).then(resolve)});
 const capture = async fn => { let body; await fn({query:{}}, {json:value=>{body=value;}}); return body; };
+const captureWithQuery = async (fn, requestQuery) => { let body; await fn({query:requestQuery}, {json:value=>{body=value;}}); return body; };
 
 test('impact separates months and uses recycling time in UTC at boundaries', () => {
   const result = calculateImpact([
@@ -64,4 +65,48 @@ test('measured zero FPS and confidence are distinct from missing measurements', 
   assert.equal(overview.avgFps,0);
   assert.equal(overview.avgConfidence,0);
   assert.equal(overview.acceptRate,0);
+});
+
+test('bad PET is counted as a rejected detection while remaining in the waste breakdown', async () => {
+  detections.find=()=>query([
+    {capturedAt:new Date(),detectedType:'pet_clean',confidence:0.9},
+    {capturedAt:new Date(),detectedType:'pet_bad',confidence:0.8},
+    {capturedAt:new Date(),detectedType:'aluminum',confidence:0.95},
+  ]);
+  machines.find=()=>Promise.resolve([]);
+  sessions.countDocuments=async()=>0;
+  const overview=await capture(controller.getOverview);
+  assert.equal(overview.acceptRate,66.7);
+  assert.deepEqual(overview.wasteBreakdown,{pet_clean:1,pet_bad:1,aluminum:1});
+  assert.equal(overview.classificationTrend[0].pet_clean,1);
+  assert.equal(overview.classificationTrend[0].pet_bad,1);
+  assert.equal(overview.classificationTrend[0].aluminum,1);
+});
+
+test('overview supports 7-day, 30-day, and all-time measurements', async () => {
+  let filter;
+  detections.find = value => { filter=value; return query([]); };
+  machines.find=()=>Promise.resolve([]);
+  sessions.countDocuments=async()=>0;
+
+  const week = await captureWithQuery(controller.getOverview, {range:'week'});
+  assert.equal(week.range, 'week');
+  assert.equal(week.totalDetections, 0);
+  assert.ok(filter.capturedAt.$gte instanceof Date);
+
+  const month = await captureWithQuery(controller.getOverview, {range:'month'});
+  assert.equal(month.range, 'month');
+  assert.ok(filter.capturedAt.$gte instanceof Date);
+
+  const all = await captureWithQuery(controller.getOverview, {range:'all'});
+  assert.equal(all.range, 'all');
+  assert.deepEqual(filter, {});
+});
+
+test('live feed marks pet_bad as reject for the dashboard', async () => {
+  detections.find=()=>query([{capturedAt:new Date(),machineCode:'0001',detectedType:'pet_bad',confidence:0.8}]);
+  sessions.find=()=>query([]);
+  const feed=await capture(controller.getLiveFeed);
+  assert.equal(feed[0].detectedType,'pet_bad');
+  assert.equal(feed[0].decision,'reject');
 });

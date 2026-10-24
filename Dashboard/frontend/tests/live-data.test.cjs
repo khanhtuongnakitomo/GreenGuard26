@@ -11,6 +11,8 @@ const success = async()=>({ok:true,json:async()=>({marker:'live'})});
 test('live mode starts without demonstration data', () => {
   assert.equal(dashboardQuery().initialData, undefined);
   assert.equal(analyticsQuery().initialData, undefined);
+  assert.equal(dashboardQuery().refetchInterval, false);
+  assert.equal(analyticsQuery().refetchInterval, false);
 });
 
 test('initial outage stays unavailable; recovery returns actual data', async () => {
@@ -23,12 +25,24 @@ test('initial outage stays unavailable; recovery returns actual data', async () 
   qc.clear();
 });
 
+test('range-specific dashboard snapshots request and cache the selected period', async () => {
+  const urls = [];
+  global.fetch = async url => {
+    urls.push(String(url));
+    return success();
+  };
+  const options = dashboardQuery('month');
+  await options.queryFn({signal:new AbortController().signal});
+  assert.deepEqual(options.queryKey, ['dashboard', 'snapshot', 'month', false]);
+  assert.ok(urls.some(url => url.includes('/api/dashboard/overview?range=month')));
+});
+
 test('partial outage retains the last complete snapshot and records error', async () => {
   const qc = new QueryClient();
   global.fetch = success;
   const previous = await qc.fetchQuery(dashboardQuery());
   global.fetch = async url=> {
-    if (url.includes('/live')) throw new Error('feed offline');
+    if (url.includes('/machines')) throw new Error('machines offline');
     return {ok:true,json:async()=>({marker:'new'})};
   };
   await assert.rejects(qc.fetchQuery(dashboardQuery()));

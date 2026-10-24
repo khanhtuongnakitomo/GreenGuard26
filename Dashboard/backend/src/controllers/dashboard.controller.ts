@@ -6,13 +6,22 @@ import UserModel from '../models/User';
 import { calculateImpact, materialType, type ImpactSession } from '../services/impact';
 import { projectDetection, projectMachine, projectSession, projectUser } from '../services/publicProjection';
 
-function getRangeDate(range?: string): Date {
+type OverviewRange = 'today' | 'week' | 'month' | 'all';
+
+function normalizeOverviewRange(range?: string): OverviewRange {
+  return range === 'week' || range === 'month' || range === 'all' ? range : 'today';
+}
+
+function getRangeDate(range: OverviewRange): Date | undefined {
   const now = new Date();
   if (range === 'week') {
     return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   }
   if (range === 'month') {
     return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
+  if (range === 'all') {
+    return undefined;
   }
   // Default: today (start of day)
   const start = new Date(now);
@@ -21,13 +30,13 @@ function getRangeDate(range?: string): Date {
 }
 
 export async function getOverview(req: Request, res: Response) {
-  const range = (req.query.range as string) || 'today';
+  const range = normalizeOverviewRange(req.query.range as string);
   const since = getRangeDate(range);
 
   // 1. Detection aggregates
-  const detections = await DetectionEventModel.find({
-    capturedAt: { $gte: since }
-  }).sort({ capturedAt: 1 }).lean();
+  const detections = await DetectionEventModel.find(
+    since ? { capturedAt: { $gte: since } } : {}
+  ).sort({ capturedAt: 1 }).lean();
 
   const totalDetections = detections.length;
   let nonRejects = 0;
@@ -50,11 +59,11 @@ export async function getOverview(req: Request, res: Response) {
       totalFps += d.fps;
       fpsCount++;
     }
-    if (d.detectedType !== 'reject') {
+    if (d.detectedType === 'pet_clean' || d.detectedType === 'aluminum') {
       nonRejects++;
-      if (d.detectedType in wasteBreakdown) {
-        wasteBreakdown[d.detectedType as keyof typeof wasteBreakdown]++;
-      }
+    }
+    if (d.detectedType in wasteBreakdown) {
+      wasteBreakdown[d.detectedType as keyof typeof wasteBreakdown]++;
     }
   }
 
@@ -77,17 +86,43 @@ export async function getOverview(req: Request, res: Response) {
   const unclaimedSessions = await ContributionSessionModel.countDocuments({ status: 'unclaimed' });
 
   // 4. Classification trend
-  const trendMap: Record<string, number> = {};
+  const trendMap: Record<string, {
+    value: number;
+    pet_clean: number;
+    pet_bad: number;
+    aluminum: number;
+  }> = {};
   for (const d of detections) {
-    const timeKey = new Date(d.capturedAt).toISOString().slice(0, 16);
-    trendMap[timeKey] = (trendMap[timeKey] || 0) + 1;
+    const capturedAt = new Date(d.capturedAt).toISOString();
+    const timeKey = range === 'today'
+      ? capturedAt.slice(0, 13) // one bar per hour
+      : range === 'all'
+        ? capturedAt.slice(0, 7) // one bar per month
+        : capturedAt.slice(0, 10); // one bar per day
+    const bucket = trendMap[timeKey] ?? {
+      value: 0,
+      pet_clean: 0,
+      pet_bad: 0,
+      aluminum: 0
+    };
+    bucket.value++;
+    if (d.detectedType === 'pet_clean') bucket.pet_clean++;
+    if (d.detectedType === 'pet_bad') bucket.pet_bad++;
+    if (d.detectedType === 'aluminum') bucket.aluminum++;
+    trendMap[timeKey] = bucket;
   }
 
   const classificationTrend = Object.entries(trendMap)
-    .slice(-12)
-    .map(([label, value]) => ({ label: range === 'today' ? label.slice(11) : label.replace('T', ' '), value }));
+    .map(([label, bucket]) => ({
+      label: range === 'today' ? `${label.slice(11)}:00` : range === 'all' ? label : label.slice(5),
+      ...bucket
+    }));
 
   res.json({
+    range,
+    totalDetections,
+    // Retained for older dashboard clients. For ranged requests it contains
+    // the same total as totalDetections.
     todayDetections: totalDetections,
     acceptRate,
     avgConfidence,
@@ -101,8 +136,83 @@ export async function getOverview(req: Request, res: Response) {
   });
 }
 
+type LiveFeedEntry = {
+  kind: 'detection' | 'claim';
+  time: string;
+  machineCode: string;
+  detectedType?: string;
+  confidence?: number;
+  decision?: 'accept' | 'reject';
+  snapshotUrl?: string;
+  userName?: string;
+  points?: number;
+  items?: Array<{ itemType: string; quantity: number }>;
+};
+
+function detectionFeedEntry(d: any): LiveFeedEntry {
+  return {
+    kind: 'detection',
+    time: (d.capturedAt || d.createdAt || new Date()).toISOString(),
+    machineCode: d.machineCode || '0001',
+    detectedType: d.detectedType,
+    confidence: d.confidence,
+    decision: d.detectedType === 'pet_bad' || d.detectedType === 'reject' ? 'reject' : 'accept',
+    snapshotUrl: d.snapshotUrl
+  };
+}
+
+function claimFeedEntry(s: any): LiveFeedEntry {
+  const user = s.claimedBy as any;
+  const machine = s.machineId as any;
+  return {
+    kind: 'claim',
+    time: (s.claimedAt || s.createdAt || new Date()).toISOString(),
+    machineCode: machine?.machineCode || s.machineName || '0001',
+    userName: user?.displayName || 'Green User',
+    points: s.totalPoints,
+    items: s.items.map((i: any) => ({ itemType: i.itemType, quantity: i.quantity }))
+  };
+}
+
+function pageNumber(value: unknown, fallback: number, maximum: number) {
+  const parsed = typeof value === 'string' ? Number(value) : NaN;
+  return Number.isFinite(parsed) ? Math.min(maximum, Math.max(0, Math.floor(parsed))) : fallback;
+}
+
+/** A paginated single-source feed for the Dashboard history panels. */
+export async function getFeedPage(req: Request, res: Response) {
+  const kind = req.query.kind;
+  if (kind !== 'detection' && kind !== 'claim') {
+    return res.status(400).json({ message: 'kind must be detection or claim' });
+  }
+
+  const limit = Math.max(1, pageNumber(req.query.limit, 10, 50));
+  const offset = pageNumber(req.query.offset, 0, Number.MAX_SAFE_INTEGER);
+
+  if (kind === 'detection') {
+    const [entries, total] = await Promise.all([
+      DetectionEventModel.find().sort({ capturedAt: -1 }).skip(offset).limit(limit),
+      DetectionEventModel.countDocuments()
+    ]);
+    const data = entries.map(detectionFeedEntry);
+    return res.json({ data, total, limit, offset, hasMore: offset + data.length < total });
+  }
+
+  const [entries, total] = await Promise.all([
+    ContributionSessionModel.find({ status: 'claimed' })
+      .populate('claimedBy', 'displayName avatar')
+      .populate('machineId', 'machineCode name')
+      .sort({ claimedAt: -1 })
+      .skip(offset)
+      .limit(limit),
+    ContributionSessionModel.countDocuments({ status: 'claimed' })
+  ]);
+  const data = entries.map(claimFeedEntry);
+  return res.json({ data, total, limit, offset, hasMore: offset + data.length < total });
+}
+
 export async function getLiveFeed(req: Request, res: Response) {
-  const limit = Math.min(100, req.query.limit ? Number(req.query.limit) : 50);
+  const limit = Math.max(1, pageNumber(req.query.limit, 50, 100));
 
   const [recentDetections, recentSessions] = await Promise.all([
     DetectionEventModel.find().sort({ capturedAt: -1 }).limit(limit),
@@ -113,47 +223,17 @@ export async function getLiveFeed(req: Request, res: Response) {
       .limit(limit)
   ]);
 
-  const feed: Array<{
-    kind: 'detection' | 'claim';
-    time: string;
-    machineCode: string;
-    detectedType?: string;
-    confidence?: number;
-    decision?: 'accept' | 'reject';
-    snapshotUrl?: string;
-    userName?: string;
-    points?: number;
-    items?: Array<{ itemType: string; quantity: number }>;
-  }> = [];
+  const feed: LiveFeedEntry[] = [];
 
-  for (const d of recentDetections) {
-    feed.push({
-      kind: 'detection',
-      time: (d.capturedAt || d.createdAt || new Date()).toISOString(),
-      machineCode: d.machineCode || '0001',
-      detectedType: d.detectedType,
-      confidence: d.confidence,
-      decision: d.detectedType === 'reject' ? 'reject' : 'accept',
-      snapshotUrl: d.snapshotUrl
-    });
-  }
+  for (const d of recentDetections) feed.push(detectionFeedEntry(d));
 
-  for (const s of recentSessions) {
-    const user = s.claimedBy as any;
-    const machine = s.machineId as any;
-    feed.push({
-      kind: 'claim',
-      time: (s.claimedAt || s.createdAt || new Date()).toISOString(),
-      machineCode: machine?.machineCode || s.machineName || '0001',
-      userName: user?.displayName || 'Green User',
-      points: s.totalPoints,
-      items: s.items.map((i: any) => ({ itemType: i.itemType, quantity: i.quantity }))
-    });
-  }
+  for (const s of recentSessions) feed.push(claimFeedEntry(s));
 
   feed.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
 
-  res.json(feed.slice(0, limit));
+  // Each source was limited independently above, so a burst of detections
+  // cannot hide the latest claimed sessions from the Dashboard.
+  res.json(feed);
 }
 
 export async function getQualityMetrics(_req: Request, res: Response) {

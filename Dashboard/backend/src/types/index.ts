@@ -1,5 +1,5 @@
 export type ItemType = 'pet_clean' | 'pet_bad' | 'aluminum' | 'plastic_bottle' | 'can' | 'carton';
-export type SessionStatus = 'unclaimed' | 'claimed' | 'expired' | 'cancelled';
+export type SessionStatus = 'collecting' | 'unclaimed' | 'claimed' | 'expired' | 'cancelled';
 export type MachineStatus = 'online' | 'offline' | 'maintenance' | 'disabled';
 
 export interface SessionItem {
@@ -13,14 +13,19 @@ export interface SessionResponse {
   _id: string;
   sessionCode: string;
   machineId: string;
+  machineCode?: string;
   machineName: string;
   items: SessionItem[];
   totalItems: number;
   totalPoints: number;
+  finalizationMode?: 'manual' | 'inactivity';
   status: SessionStatus;
   claimedBy?: string;
   claimedAt?: string;
   expiresAt: string;
+  lastDetectionAt?: string;
+  closedAt?: string;
+  qrPayload?: string;
   createdAt: string;
 }
 

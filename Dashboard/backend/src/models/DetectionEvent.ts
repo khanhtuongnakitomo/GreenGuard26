@@ -1,12 +1,9 @@
-/**
- * READ-ONLY SCHEMA MIRROR — Contract belongs to GreenPoint-Backend.
- * Do not perform mutations or change schema structure here.
- */
+/** Detection log written by the local demo ingestion endpoint. */
 import mongoose, { Schema } from 'mongoose';
 
 const DetectionEventSchema = new Schema(
   {
-    eventId: { type: String, required: true },
+    eventId: { type: String, required: true, unique: true, index: true },
     machineId: { type: Schema.Types.ObjectId, ref: 'Machine', required: true },
     machineCode: { type: String, required: true },
     detectedType: {
@@ -15,6 +12,7 @@ const DetectionEventSchema = new Schema(
       required: true
     },
     confidence: { type: Number, required: true },
+    sessionCode: { type: String, index: true },
     fps: Number,
     latencyMs: Number,
     snapshotUrl: String,

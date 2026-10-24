@@ -12,11 +12,15 @@ import {
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3003';
 
-// The presentation build is useful without a running backend. Set this to
-// "false" when the dashboard should read from the live BFF instead.
-export const DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE !== 'false';
+// Live telemetry is the safe default. Presentation data is available only
+// when a launcher explicitly sets EXPO_PUBLIC_DEMO_MODE=true.
+export const DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE === 'true';
+
+export type DashboardRange = 'today' | 'week' | 'month' | 'all';
 
 export interface OverviewData {
+  range?: DashboardRange;
+  totalDetections?: number;
   todayDetections: number;
   acceptRate: number | null;
   avgConfidence: number | null;
@@ -30,7 +34,13 @@ export interface OverviewData {
     pet_bad: number;
     aluminum: number;
   };
-  classificationTrend: Array<{ label: string; value: number }>;
+  classificationTrend: Array<{
+    label: string;
+    value: number;
+    pet_clean?: number;
+    pet_bad?: number;
+    aluminum?: number;
+  }>;
 }
 
 export interface LiveFeedItem {
@@ -44,6 +54,31 @@ export interface LiveFeedItem {
   userName?: string;
   points?: number;
   items?: Array<{ itemType: string; quantity: number }>;
+}
+
+export interface RecyclingSessionItem {
+  itemType: 'pet_clean' | 'pet_bad' | 'aluminum';
+  quantity: number;
+  pointsPerItem: number;
+  avgConfidence?: number;
+}
+
+export interface RecyclingSession {
+  _id: string;
+  sessionCode: string;
+  machineCode?: string;
+  machineName?: string;
+  items: RecyclingSessionItem[];
+  totalItems: number;
+  totalPoints: number;
+  status: 'collecting' | 'unclaimed' | 'claimed' | 'expired' | 'cancelled';
+  finalizationMode?: 'manual' | 'inactivity';
+  createdAt: string;
+  lastDetectionAt?: string;
+  closedAt?: string;
+  expiresAt: string;
+  timeoutAt?: string | null;
+  qrPayload?: string;
 }
 
 export interface QualityData {
@@ -79,13 +114,35 @@ export async function fetchJson<T>(path: string, signal?: AbortSignal): Promise<
   }
 }
 
-export async function fetchOverview(range = 'today', signal?: AbortSignal): Promise<OverviewData> {
+export type FeedKind = LiveFeedItem['kind'];
+
+export interface FeedPage {
+  data: LiveFeedItem[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
+export function getDashboardEventStreamUrl(): string {
+  return `${BASE_URL}/api/dashboard/stream`;
+}
+
+export async function fetchOverview(range: DashboardRange = 'today', signal?: AbortSignal): Promise<OverviewData> {
   if (DEMO_MODE) return DEMO_OVERVIEW;
   return fetchJson(`/api/dashboard/overview?range=${encodeURIComponent(range)}`, signal);
 }
 export async function fetchLiveFeed(limit = 50, signal?: AbortSignal): Promise<LiveFeedItem[]> {
   if (DEMO_MODE) return DEMO_LIVE_FEED.slice(0, limit);
   return fetchJson(`/api/dashboard/live?limit=${limit}`, signal);
+}
+export async function fetchFeedPage(kind: FeedKind, limit = 10, offset = 0, signal?: AbortSignal): Promise<FeedPage> {
+  if (DEMO_MODE) {
+    const all = DEMO_LIVE_FEED.filter((entry) => entry.kind === kind);
+    const data = all.slice(offset, offset + limit);
+    return { data, total: all.length, limit, offset, hasMore: offset + data.length < all.length };
+  }
+  return fetchJson(`/api/dashboard/feed?kind=${encodeURIComponent(kind)}&limit=${limit}&offset=${offset}`, signal);
 }
 export async function fetchQuality(signal?: AbortSignal): Promise<QualityData> {
   if (DEMO_MODE) return DEMO_QUALITY;
@@ -98,4 +155,8 @@ export async function fetchImpact(signal?: AbortSignal): Promise<ImpactData> {
 export async function fetchMachines(signal?: AbortSignal): Promise<any[]> {
   if (DEMO_MODE) return DEMO_MACHINES;
   return fetchJson('/api/machines', signal);
+}
+export async function fetchLatestSession(machineCode = '0001', signal?: AbortSignal): Promise<RecyclingSession | null> {
+  if (DEMO_MODE) return null;
+  return fetchJson(`/api/sessions/latest?machineCode=${encodeURIComponent(machineCode)}`, signal);
 }

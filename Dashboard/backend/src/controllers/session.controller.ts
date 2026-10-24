@@ -2,6 +2,25 @@ import { Request, Response } from 'express';
 import ContributionSessionModel from '../models/ContributionSession';
 import MachineModel from '../models/Machine';
 import { projectSession } from '../services/publicProjection';
+import { finalizeMachineSession, sessionSummary } from '../services/demoSession';
+
+export const finalizeCurrentSession = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const machineCode = String(req.body?.machineCode ?? '').trim();
+    if (!machineCode) {
+      res.status(400).json({ success: false, message: 'machineCode is required' });
+      return;
+    }
+    const session = await finalizeMachineSession(machineCode);
+    if (!session) {
+      res.status(409).json({ success: false, message: 'No active session with items is available to finalize' });
+      return;
+    }
+    res.json({ success: true, session: sessionSummary(session) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: (err as Error).message });
+  }
+};
 
 // ─── GET /api/sessions ────────────────────────────────────────────────────
 // Dashboard lấy lịch sử session, hỗ trợ filter + pagination
@@ -72,12 +91,12 @@ export const getLatestSession = async (req: Request, res: Response): Promise<voi
         }
     }
 
-    const latest = await ContributionSessionModel.findOne(filter)
+    const latest: any = await ContributionSessionModel.findOne(filter)
       .populate("machineId")
       .sort({ createdAt: -1 })
       .lean();
       
-    res.json(projectSession(latest ?? null));
+    res.json(sessionSummary(latest));
   } catch (err) {
     res.status(500).json({ success: false, message: (err as Error).message });
   }

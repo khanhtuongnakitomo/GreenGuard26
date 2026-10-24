@@ -25,6 +25,7 @@ From `Trash-detection/`, run:
 .\compare_model1.bat
 .\demo_model2.bat
 .\full_demo.bat
+.\full_demo_model1_b.bat
 ```
 
 These modes start paused. They show the diagnostic camera view, accepted
@@ -39,11 +40,39 @@ The Model 1-only launchers and comparison launcher never construct Model 2 or a
 serial transport. Existing `demo_model1.bat` continues to load the active
 manifest and active Model 1.
 
-Full mode uses the shared workflow: exactly seven M1 observations, 4/7
-material quorum, PET-only Model 2 after a 0.5-second warmup, exactly seven M2
-observations, 4/7 quality quorum, 1.5-second result hold, and eight clear
+The two `full_demo` launchers use the isolated `parallel-preview` mode. They run
+Model 1 and Model 2 concurrently during each three-confirmation window, show one Model
+1 confidence row plus cap/label/ring rows, and display `ALUMINUM`, `GOOD PET`,
+or `BAD PET` with `SIGNAL 0/1/2 — NOT SENT`. Model 1-B is visibly marked
+`CANDIDATE — FAILED PARITY / NOT ACTIVE`. These launchers ignore Dashboard
+environment variables and never construct Dashboard or serial transport. The
+preview holds a result for 1.5 seconds and requires eight clear Model 1 frames
+before re-arming. Any Model 2 hit at its threshold immediately resolves `BAD
+PET`, even when Model 1 has not accepted PET; cap/label use `0.50` and ring uses
+`0.20`.
+
+Full production mode uses the shared workflow: exactly three M1 confirmations,
+PET-only Model 2 after a 0.5-second warmup, exactly three M2 quality
+confirmations, 1.5-second result hold, and eight clear
 frames to re-arm. M1 candidate generation is configured separately from the
 decision floor; do not use ad-hoc threshold overrides as a production policy.
+
+## Demo-day REST mode
+
+Start `Dashboard\run-dashboard.bat` first, then run `demo-day.bat terminal` or
+`demo-day.bat esp COM7` from this directory. With no mode, Demo-day shows an
+interactive menu. It checks the live Dashboard API and web app, opens the
+Dashboard, then calls `full_demo.bat` with the opt-in `--publish-dashboard`
+flag. It defaults to API `http://127.0.0.1:3003`, web `http://127.0.0.1:8081`,
+and machine `0001`. A configured MongoDB URI in `Dashboard/backend/.env` is
+required before the backend can start.
+
+Each completed preview result creates one REST event. Repeated frames during the
+1.5-second result hold are deduplicated. The screen says `DASHBOARD ONLY` in this
+mode when no controller is selected; terminal mode prints one ASCII signal line,
+and ESP mode sends one ASCII byte at 115200 baud. The mapping is `1` aluminum,
+`2` good PET, and `3` bad PET. Ordinary `full_demo.bat` remains preview-only
+and continues to say `NOT SENT`.
 
 ## Fixed-camera machine mode
 
@@ -65,10 +94,10 @@ the port and writes that result once to terminal output; it never retries.
 Terminal fallback writes exactly one line (`1`, `2`, or `3`) to stdout and all
 diagnostics go to stderr.
 
-Machine policy: four aluminum observations produce `CANS`; four PET
-observations enter the warmup and M2 window; cap/label/ring at least `0.50` is
-bad; missing M1/M2 is abstention; four bad produces `BAD`; four clean produces
-`GOOD`; and no quorum produces no command. The result is held for 1.5 seconds,
+Machine policy: three aluminum observations produce `CANS`; three PET
+observations enter the warmup and M2 window; cap/label at least `0.50` or ring
+at least `0.20` is bad; missing M1/M2 is abstention; three bad produces `BAD`;
+three clean produces `GOOD`; and no quorum produces no command. The result is held for 1.5 seconds,
 then removal and eight clear frames are required.
 
 Configure the machine boundary in `config/default.json`:

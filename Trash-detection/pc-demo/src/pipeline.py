@@ -37,6 +37,19 @@ class M1DetectionTrace:
     effective_decision_conf: float | None = None
 
 
+@dataclass(frozen=True)
+class M1PreviewResult:
+    """Raw, area-valid M1 evidence plus the threshold decision for preview mode."""
+
+    poly: np.ndarray | None = None
+    is_pet: bool = False
+    confidence: float = 0.0
+    accepted: bool = False
+    label: str = "NONE"
+    color: tuple[int, int, int] = (160, 160, 160)
+    threshold: float = 0.0
+
+
 def _decision_conf(det_cfg: dict[str, Any]) -> float:
     if "decision_conf" in det_cfg:
         return float(det_cfg["decision_conf"])
@@ -140,8 +153,48 @@ class M1Pipeline:
         return M1FrameResult(
             poly=poly.astype(np.int32),
             is_pet=verdict == "pet",
+            confidence=float(det_cf),
             color=color,
             legend=legend,
+        )
+
+    def run_preview(self, frame: np.ndarray, det_conf: float | None = None) -> M1PreviewResult:
+        """Return the strongest area-valid candidate, including below-floor evidence.
+
+        The production ``run`` method deliberately hides below-threshold boxes.  The
+        preview needs to show that confidence without allowing it to vote, so it uses
+        one inference and returns both the raw candidate and its acceptance state.
+        """
+        conf = self.infer_conf if det_conf is None else det_conf
+        h, w = frame.shape[:2]
+        result = self.det.predict(frame, imgsz=self.det_imgsz, conf=conf, device=DEVICE, verbose=False)[0]
+        if result.boxes is None or not len(result.boxes):
+            return M1PreviewResult()
+        boxes = result.boxes.xyxy.cpu().numpy()
+        clss = result.boxes.cls.cpu().numpy().astype(int)
+        confs = result.boxes.conf.cpu().numpy()
+        polys = np.asarray([xyxy_to_poly(box) for box in boxes], dtype=np.float32)
+        candidates = [
+            i for i, (poly, cls) in enumerate(zip(polys, clss))
+            if int(cls) in self.allowed_ids and box_area(poly) >= h * w * self.min_area_frac
+        ]
+        if not candidates:
+            return M1PreviewResult()
+        best_index = max(candidates, key=lambda i: (float(confs[i]), -i))
+        class_id = int(clss[best_index])
+        is_pet = class_id == 1
+        label = "PET" if is_pet else "ALUMINUM"
+        color = DISPLAY["pet" if is_pet else "can"][1]
+        threshold = float(self.decision_conf_by_class.get(class_id, self.decision_conf))
+        confidence = float(confs[best_index])
+        return M1PreviewResult(
+            poly=polys[best_index].astype(np.int32),
+            is_pet=is_pet,
+            confidence=confidence,
+            accepted=confidence >= threshold,
+            label=label,
+            color=color,
+            threshold=threshold,
         )
 
     def trace(self, frame: np.ndarray, det_conf: float | None = None) -> M1DetectionTrace:
@@ -235,3 +288,23 @@ class M2Pipeline:
             cf = float(confs[inside][ii])
             hits.append(M2Hit(name=M2_NAMES.get(ci, str(ci)), confidence=cf, polygon=poly.astype(np.float32), class_id=ci))
         return hits
+
+    def run_all(self, frame: np.ndarray, infer_conf: float | None = None) -> list[M2Hit]:
+        """Return one strongest hit per M2 class anywhere in the camera frame."""
+        conf = self.infer_conf if infer_conf is None else infer_conf
+        result = self.model.predict(frame, imgsz=self.imgsz, conf=conf, device=DEVICE, verbose=False)[0]
+        if result.obb is None or not len(result.obb):
+            return []
+        polys = result.obb.xyxyxyxy.cpu().numpy()
+        confs = result.obb.conf.cpu().numpy()
+        clss = result.obb.cls.cpu().numpy().astype(int)
+        top = pick_top1_per_class(polys, clss, confs, (0, 1, 2))
+        return [
+            M2Hit(
+                name=M2_NAMES.get(class_id, str(class_id)),
+                confidence=float(confs[index]),
+                polygon=polys[index].astype(np.float32),
+                class_id=class_id,
+            )
+            for class_id, index in top.items()
+        ]

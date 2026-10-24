@@ -1,7 +1,4 @@
-/**
- * READ-ONLY SCHEMA MIRROR — Contract belongs to GreenPoint-Backend.
- * Do not perform mutations or change schema structure here.
- */
+/** Machine record used by Dashboard reads and local demo ingestion. */
 import mongoose, { Schema } from 'mongoose';
 
 const BinCapacitySchema = new Schema(
@@ -14,7 +11,7 @@ const BinCapacitySchema = new Schema(
 
 const MachineSchema = new Schema(
   {
-    machineCode: { type: String, required: true },
+    machineCode: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
     locationName: { type: String, required: true },
     locationType: { type: String, default: 'other' },

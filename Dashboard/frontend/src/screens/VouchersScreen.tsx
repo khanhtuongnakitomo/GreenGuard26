@@ -4,14 +4,18 @@ import { useFonts } from 'expo-font';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BadgeCheck, CircleAlert, LogOut, Plus, RefreshCw, ShieldCheck, TicketPercent, Trash2, UploadCloud } from 'lucide-react-native';
-import { DashboardSidebar, SIDEBAR_WIDTH } from '@/components/DashboardSidebar';
+import { DashboardSidebar, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from '@/components/DashboardSidebar';
 import { DashboardTopNav } from '@/components/DashboardTopNav';
 import VoucherFilePicker from '@/components/VoucherFilePicker';
 import { Colors } from '@/theme/colors';
 import { DashboardRoute } from '@/types/dashboard.types';
 import { AdminPartner, AdminReward, AdminSession, normalizeExpiryDate, RewardInput, VoucherApiError, voucherAdminApi } from '@/services/voucherAdmin';
 
-interface Props { onNavigate: (route: DashboardRoute) => void; }
+interface Props {
+  onNavigate: (route: DashboardRoute) => void;
+  sidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
+}
 type TextProps = React.ComponentProps<typeof NativeText>;
 const Text = ({ style, ...props }: TextProps) => {
   const textStyle = StyleSheet.flatten(style);
@@ -37,7 +41,8 @@ const toInput = (form: typeof emptyForm): RewardInput => ({
 });
 const getPartnerName = (partner: AdminReward['partnerId']) => typeof partner === 'string' ? partner : partner?.name || '';
 
-export default function VouchersScreen({ onNavigate }: Props) {
+export default function VouchersScreen({ onNavigate, sidebarCollapsed, onToggleSidebar }: Props) {
+  const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
   useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
   const { width } = useWindowDimensions();
   const compact = width < 980;
@@ -252,8 +257,8 @@ export default function VouchersScreen({ onNavigate }: Props) {
 
   return (
     <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
-      {mobile ? null : <DashboardSidebar activeRoute="vouchers" onNavigate={onNavigate} />}
-      <View style={[s.main, mobile && s.mainMobile]}>
+      {mobile ? null : <DashboardSidebar activeRoute="vouchers" onNavigate={onNavigate} collapsed={sidebarCollapsed} onToggle={onToggleSidebar} />}
+      <View style={[s.main, { marginLeft: sidebarWidth }, mobile && s.mainMobile]}>
         <DashboardTopNav title="Vouchers" subtitle="Create rewards and issue unique barcode vouchers" />
         <ScrollView style={s.scroll} contentContainerStyle={[s.content, compact && s.contentCompact]} showsVerticalScrollIndicator={false}>
           {mobile ? <View style={s.mobileHeading}><TouchableOpacity accessibilityRole="button" accessibilityLabel="Return to Dashboard" onPress={() => onNavigate('dashboard')} style={s.backButton}><Text style={s.backText}>‹  Dashboard</Text></TouchableOpacity><Text style={s.mobileTitle}>Vouchers</Text></View> : null}

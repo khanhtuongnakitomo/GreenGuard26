@@ -7,7 +7,7 @@ import { View, Text, ScrollView, StyleSheet, Dimensions, TouchableOpacity } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BarChart, LineChart, PieChart } from 'react-native-gifted-charts';
 
-import { DashboardSidebar } from '@/components/DashboardSidebar';
+import { DashboardSidebar, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from '@/components/DashboardSidebar';
 import { DashboardTopNav } from '@/components/DashboardTopNav';
 import { KPICard } from '@/components/KPICard';
 import { SectionCard } from '@/components/SectionCard';
@@ -24,6 +24,8 @@ const CONTENT_W = SW - SIDEBAR_W;
 
 interface Props {
   onNavigate: (route: DashboardRoute) => void;
+  sidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
 }
 
 // ─── Waste Pie ───────────────────────────────────────────────────────────────
@@ -34,8 +36,8 @@ const WastePie = memo(({ waste }: { waste: { pet_clean: number; pet_bad: number;
   const alumPct = waste.pet_clean + waste.pet_bad + waste.aluminum === 0 ? 0 : Math.max(0, 100 - cleanPct - badPct);
 
   const slices = [
-    { label: 'PET Sạch', percentage: cleanPct, color: '#10B981' },
-    { label: 'PET Còn nắp/nhãn', percentage: badPct, color: '#F59E0B' },
+    { label: 'PET tốt', percentage: cleanPct, color: '#10B981' },
+    { label: 'PET tệ', percentage: badPct, color: '#F59E0B' },
     { label: 'Lon nhôm', percentage: alumPct, color: '#06B6D4' },
   ];
 
@@ -90,12 +92,13 @@ const pieS = StyleSheet.create({
   itemPct: { fontSize: 12, fontWeight: '600' as const, color: Colors.textPrimary },
 });
 
-export default function AnalyticsScreen({ onNavigate }: Props) {
+export default function AnalyticsScreen({ onNavigate, sidebarCollapsed, onToggleSidebar }: Props) {
+  const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
   const snapshot = useQuery(analyticsQuery());
   if (!snapshot.data) return (
     <SafeAreaView style={S.safe} edges={['top', 'bottom']}>
-      <DashboardSidebar activeRoute="analytics" onNavigate={onNavigate} />
-      <View style={S.main}>
+      <DashboardSidebar activeRoute="analytics" onNavigate={onNavigate} collapsed={sidebarCollapsed} onToggle={onToggleSidebar} />
+      <View style={[S.main, { marginLeft: sidebarWidth }]}>
         <DashboardTopNav title="Phân tích chuyên sâu (Analytics)" subtitle="Dữ liệu trực tiếp" />
         <DataStatus demo={false} error={snapshot.isError} />
       </View>
@@ -108,7 +111,7 @@ export default function AnalyticsScreen({ onNavigate }: Props) {
       id: 'ak1',
       label: 'Tổng nhận diện',
       value: `${overview.todayDetections}`,
-      subLabel: `${overview?.wasteBreakdown?.pet_clean ?? 0} PET Sạch`,
+      subLabel: `${overview?.wasteBreakdown?.pet_clean ?? 0} PET tốt`,
       iconType: 'trash',
       iconColor: Colors.kpiGreen,
       iconBg: Colors.kpiGreenBg,
@@ -149,8 +152,8 @@ export default function AnalyticsScreen({ onNavigate }: Props) {
 
   return (
     <SafeAreaView style={S.safe} edges={['top', 'bottom']}>
-      <DashboardSidebar activeRoute="analytics" onNavigate={onNavigate} />
-      <View style={S.main}>
+      <DashboardSidebar activeRoute="analytics" onNavigate={onNavigate} collapsed={sidebarCollapsed} onToggle={onToggleSidebar} />
+      <View style={[S.main, { marginLeft: sidebarWidth }]}>
         <DashboardTopNav title="Phân tích chuyên sâu (Analytics)" subtitle="Hiệu năng Model AI & Chỉ số nguyên vật liệu" />
 
         <DataStatus demo={DEMO_MODE} error={snapshot.isError} updatedAt={snapshot.dataUpdatedAt} />
@@ -215,12 +218,12 @@ export default function AnalyticsScreen({ onNavigate }: Props) {
               <View style={{ paddingVertical: 10, gap: 10 }}>
                 <View style={S.avgRow}>
                   <View style={[S.avgDot, { backgroundColor: '#10B981' }]} />
-                  <Text style={S.avgLabel}>PET Sạch (Đạt chuẩn 100% tái chế):</Text>
+                  <Text style={S.avgLabel}>PET tốt (Đạt chuẩn 100% tái chế):</Text>
                   <Text style={S.avgPct}>{waste.pet_clean} items</Text>
                 </View>
                 <View style={S.avgRow}>
                   <View style={[S.avgDot, { backgroundColor: '#F59E0B' }]} />
-                  <Text style={S.avgLabel}>PET Còn nắp/nhãn (Cần xử lý thêm):</Text>
+                  <Text style={S.avgLabel}>PET tệ (Cần xử lý thêm):</Text>
                   <Text style={S.avgPct}>{waste.pet_bad} items</Text>
                 </View>
                 <View style={S.avgRow}>
@@ -241,7 +244,7 @@ export default function AnalyticsScreen({ onNavigate }: Props) {
 
 const S = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.dashboardBg },
-  main: { flex: 1, marginLeft: SIDEBAR_W },
+  main: { flex: 1 },
   scroll: { flex: 1 },
   content: { padding: 16, gap: 12 },
   kpiRow: { flexDirection: 'row', gap: 8 },

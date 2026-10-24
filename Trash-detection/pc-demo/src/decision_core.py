@@ -1,4 +1,4 @@
-"""Canonical seven-observation decision workflow.
+"""Canonical three-confirmation decision workflow.
 
 This module is deliberately independent of the UI and output transport.  The
 PC reference demo and the Windows detection demo both import it, so a change
@@ -29,12 +29,27 @@ class WindowResult:
     """The immutable result of one complete observation window."""
 
     observations: tuple[str | None, ...]
+    confidences: tuple[float | None, ...]
     counts: dict[str, int]
     decision: str | None
 
     @property
     def complete(self) -> bool:
         return True
+
+    @property
+    def average_confidence(self) -> float | None:
+        """Average confidence for observations that voted for the winner."""
+        if self.decision is None:
+            return None
+        values = [
+            confidence
+            for observation, confidence in zip(self.observations, self.confidences)
+            if observation == self.decision and confidence is not None
+        ]
+        if not values:
+            return None
+        return sum(values) / len(values)
 
 
 class ExactWindowVoter:
@@ -46,7 +61,7 @@ class ExactWindowVoter:
     from becoming a machine command.
     """
 
-    def __init__(self, labels: Iterable[str], size: int = 7, quorum: int = 4):
+    def __init__(self, labels: Iterable[str], size: int = 3, quorum: int = 3):
         self.labels = frozenset(str(label) for label in labels)
         self.size = int(size)
         self.quorum = int(quorum)
@@ -56,6 +71,7 @@ class ExactWindowVoter:
 
     def reset(self) -> None:
         self._observations: list[str | None] = []
+        self._confidences: list[float | None] = []
         self._result: WindowResult | None = None
 
     @property
@@ -70,7 +86,7 @@ class ExactWindowVoter:
     def result(self) -> WindowResult | None:
         return self._result
 
-    def add(self, observation: str | None) -> WindowResult | None:
+    def add(self, observation: str | None, confidence: float | None = None) -> WindowResult | None:
         if self.complete:
             raise RuntimeError("exact observation window is already complete")
         if observation is not None:
@@ -78,6 +94,7 @@ class ExactWindowVoter:
             if observation not in self.labels:
                 raise ValueError(f"unsupported observation: {observation!r}")
         self._observations.append(observation)
+        self._confidences.append(None if confidence is None else max(0.0, min(1.0, float(confidence))))
         if len(self._observations) != self.size:
             return None
         counts = Counter(value for value in self._observations if value is not None)
@@ -88,6 +105,7 @@ class ExactWindowVoter:
         # Sort keys to make diagnostics and serialized tests deterministic.
         self._result = WindowResult(
             observations=tuple(self._observations),
+            confidences=tuple(self._confidences),
             counts={label: counts[label] for label in sorted(self.labels)},
             decision=decision,
         )
@@ -109,7 +127,7 @@ class WorkflowStep:
 
 
 class CanonicalWorkflow:
-    """M1 seven-frame gate followed by the M2 seven-frame gate.
+    """M1 three-frame gate followed by the M2 three-frame quality gate.
 
     ``m1`` and ``m2`` are inference adapters.  They are intentionally passed
     in, which keeps this state machine deterministic in tests and lets both
@@ -123,12 +141,17 @@ class CanonicalWorkflow:
         gate = cfg.get("gate", {})
         m1_cfg = cfg.get("m1", {})
         m2_cfg = cfg.get("m2", {})
-        self.window_size = int(runtime.get("decision_window", gate.get("vote_window", 7)))
-        self.quorum = int(runtime.get("decision_quorum", gate.get("vote_need", 4)))
-        if self.window_size != 7 or self.quorum != 4:
-            raise ValueError("the production decision contract requires a 7/4 window")
+        self.window_size = int(runtime.get("decision_window", gate.get("vote_window", 3)))
+        self.quorum = int(runtime.get("decision_quorum", gate.get("vote_need", 3)))
+        if self.window_size != 3 or self.quorum != 3:
+            raise ValueError("the production decision contract requires a 3/3 window")
         self.warmup_s = float(gate.get("warmup_s", 0.5))
         self.m2_violation_conf = float(m2_cfg.get("violation_conf", 0.50))
+        configured_thresholds = m2_cfg.get("violation_conf_by_class", {})
+        self.m2_violation_conf_by_class = {
+            name: float(configured_thresholds.get(name, self.m2_violation_conf))
+            for name in ("cap", "label", "ring")
+        }
         self.result_hold_s = float(runtime.get("result_hold_s", gate.get("verdict_hold_s", 1.5)))
         self.clear_frames_needed = int(runtime.get("clear_frames", 8))
         if self.clear_frames_needed < 8:
@@ -146,6 +169,7 @@ class CanonicalWorkflow:
         self.clear_frames = 0
         self.warmup_since: float | None = None
         self.last_pet_poly = None
+        self.accepted_m1_window: WindowResult | None = None
         self.last_step = WorkflowStep("READY")
 
     def reset(self) -> None:
@@ -162,12 +186,19 @@ class CanonicalWorkflow:
         self.clear_frames = 0
         self.warmup_since = None
         self.last_pet_poly = None
+        self.accepted_m1_window = None
 
     @staticmethod
     def _m1_observation(raw: M1FrameResult | None) -> str | None:
         if raw is None or raw.poly is None:
             return None
         return M1_PET if raw.is_pet else M1_ALUMINUM
+
+    @staticmethod
+    def _m1_confidence(raw: M1FrameResult | None) -> float | None:
+        if raw is None or raw.poly is None:
+            return None
+        return float(raw.confidence)
 
     def _emit(self, signal: int, now: float, *, m1_window=None, m2_window=None, detail="") -> WorkflowStep:
         if signal not in FINAL_SIGNALS:
@@ -199,6 +230,7 @@ class CanonicalWorkflow:
         self.m1_vote.reset()
         self.m2_vote.reset()
         self.last_pet_poly = None
+        self.accepted_m1_window = None
         self.signal_emitted = False
         self.signal = None
         self.result = ""
@@ -220,7 +252,10 @@ class CanonicalWorkflow:
         if raw is None or raw.poly is None or not raw.is_pet:
             return None, []
         hits = self.m2.run(frame, raw.poly)
-        bad = any(float(hit.confidence) >= self.m2_violation_conf for hit in hits)
+        bad = any(
+            float(hit.confidence) >= self.m2_violation_conf_by_class.get(hit.name, self.m2_violation_conf)
+            for hit in hits
+        )
         return (M2_BAD if bad else M2_GOOD), hits
 
     def update(self, frame, now: float | None = None) -> WorkflowStep:
@@ -240,13 +275,13 @@ class CanonicalWorkflow:
         if self.phase == "READY":
             if self._m1_observation(raw) is not None:
                 self.phase = "M1_VOTING"
-                self.m1_vote.add(self._m1_observation(raw))
+                self.m1_vote.add(self._m1_observation(raw), self._m1_confidence(raw))
             step = WorkflowStep(self.phase, m1_raw=raw, detail=f"M1 {len(self.m1_vote.observations)}/{self.window_size}")
             self.last_step = step
             return step
 
         if self.phase == "M1_VOTING":
-            result = self.m1_vote.add(self._m1_observation(raw))
+            result = self.m1_vote.add(self._m1_observation(raw), self._m1_confidence(raw))
             if raw is not None and raw.poly is not None and raw.is_pet:
                 self.last_pet_poly = raw.poly
             if result is None:
@@ -265,6 +300,7 @@ class CanonicalWorkflow:
                 self.last_step = step
                 return step
             self.phase = "M2_WARMUP"
+            self.accepted_m1_window = result
             self.warmup_since = now
             self.m2_vote.reset()
             step = WorkflowStep("M2_WARMUP", m1_raw=raw, m1_window=result, detail="PET quorum; Model 2 warmup")
@@ -288,9 +324,21 @@ class CanonicalWorkflow:
                 self.last_step = step
                 return step
             if result.decision == M2_GOOD:
-                step = self._emit(SIGNAL_GOOD_PET, now, m2_window=result, detail="M2 good-PET quorum")
+                step = self._emit(
+                    SIGNAL_GOOD_PET,
+                    now,
+                    m1_window=self.accepted_m1_window,
+                    m2_window=result,
+                    detail="M2 good-PET quorum",
+                )
             elif result.decision == M2_BAD:
-                step = self._emit(SIGNAL_BAD_PET, now, m2_window=result, detail="M2 bad-PET quorum")
+                step = self._emit(
+                    SIGNAL_BAD_PET,
+                    now,
+                    m1_window=self.accepted_m1_window,
+                    m2_window=result,
+                    detail="M2 bad-PET quorum",
+                )
             else:
                 step = self._wait_clear(now, "M2 window complete without quorum")
                 step.m2_window = result

@@ -1,8 +1,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-delete process.env.EXPO_PUBLIC_DEMO_MODE;
+process.env.EXPO_PUBLIC_DEMO_MODE = 'true';
 const { dashboardQuery } = require('../src/services/dashboardQueries.ts');
-test('default presentation mode stays populated and does not poll', async () => {
+test('explicit presentation mode stays populated and does not poll', async () => {
   const options=dashboardQuery();
   assert.equal(options.initialData.overview.todayDetections,128);
   assert.equal(options.refetchInterval,false);

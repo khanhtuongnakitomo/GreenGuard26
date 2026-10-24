@@ -58,9 +58,10 @@ class SerialModule:
         return instance
 
 
-def transport(cfg, ports, *, serial=None):
+def transport(cfg, ports, *, serial=None, output_mode="auto"):
     return SerialTransport(
         cfg,
+        output_mode=output_mode,
         stdout=io.StringIO(),
         stderr=io.StringIO(),
         serial_module=serial,
@@ -69,6 +70,7 @@ def transport(cfg, ports, *, serial=None):
 
 
 def test_result_mapping_is_name_only_and_exact_ascii_byte():
+    assert command_byte("EMERGENCY_STOP") == b"0"
     assert command_byte("CANS") == b"1"
     assert command_byte("GOOD") == b"2"
     assert command_byte("BAD") == b"3"
@@ -125,3 +127,73 @@ def test_write_failure_closes_and_falls_back_once_without_retry():
     assert module.instances[0].closed is True
     assert len(module.instances) == 1
     assert "write failed" in item.stderr.getvalue()
+
+
+def test_terminal_mode_emits_signal_without_enumerating_serial_devices():
+    calls = []
+    item = transport(
+        {},
+        [Port("COM4", vid=123)],
+        output_mode="terminal",
+    )
+    item.port_enumerator = lambda: calls.append(True) or []
+    outcome = item.send("ALUMINUM")
+    assert outcome.transport == "terminal"
+    assert outcome.payload == b"1"
+    assert item.stdout.getvalue() == "1\n"
+    assert calls == []
+
+
+def test_strict_serial_mode_preflights_explicit_port_and_sends_ascii_signal():
+    module = SerialModule()
+    item = transport(
+        {"serial": {"port": "COM7"}},
+        [],
+        serial=module,
+        output_mode="serial",
+    )
+    assert item.check_ready() == "COM7"
+    outcome = item.send("GOOD PET")
+    assert outcome.transport == "serial"
+    assert outcome.payload == b"2"
+    assert module.instances[0].writes == [b"2"]
+
+
+def test_strict_serial_mode_keeps_the_connection_and_sends_every_result():
+    module = SerialModule()
+    item = transport(
+        {"serial": {"port": "COM7"}},
+        [],
+        serial=module,
+        output_mode="serial",
+    )
+    item.check_ready()
+    item.send("BAD PET")
+    item.send("ALUMINUM")
+
+    assert len(module.instances) == 1
+    assert module.instances[0].writes == [b"3", b"1"]
+    assert module.instances[0].flushes == 2
+
+
+def test_strict_serial_mode_fails_without_device_and_never_falls_back_to_terminal():
+    item = transport({}, [], output_mode="serial")
+    with pytest.raises(RuntimeError, match="no usable USB serial controller"):
+        item.check_ready()
+    with pytest.raises(RuntimeError, match="serial controller is unavailable"):
+        item.send("BAD PET")
+    assert item.stdout.getvalue() == ""
+
+
+def test_strict_serial_write_failure_raises_without_terminal_fallback():
+    module = SerialModule(fail=True)
+    item = transport(
+        {"serial": {"port": "COM7"}},
+        [],
+        serial=module,
+        output_mode="serial",
+    )
+    item.check_ready()
+    with pytest.raises(RuntimeError, match="serial write failed"):
+        item.send("BAD PET")
+    assert item.stdout.getvalue() == ""

@@ -50,6 +50,14 @@ def test_candidate_config_is_isolated_from_active_config():
     assert candidate["m1"]["detector"]["classes"] == ["metal_can", "pet_bottle"]
     assert candidate["runtime"]["decision_window"] == 7
     assert candidate["runtime"]["decision_quorum"] == 4
+    assert active["runtime"]["decision_window"] == 3
+    assert active["runtime"]["decision_quorum"] == 3
+    assert active["decision_contract"]["version"] == "three-confirmation-v1"
+    assert active["m1"]["detector"]["decision_conf_by_class"] == {
+        "metal_can": 0.4,
+        "pet_bottle": 0.5,
+    }
+    assert active["m2"]["violation_conf_by_class"] == {"cap": 0.5, "label": 0.5, "ring": 0.2}
 
 
 def test_candidate_and_compare_sources_do_not_construct_m2_or_serial():

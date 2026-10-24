@@ -7,12 +7,16 @@ from typing import Any, Callable
 
 
 RESULT_TO_BYTE = {
+    "EMERGENCY_STOP": b"0",
     "CANS": b"1",
     "ALUMINUM_CAN": b"1",
+    "ALUMINUM": b"1",
     "GOOD": b"2",
     "PET_CLEAN": b"2",
+    "GOOD PET": b"2",
     "BAD": b"3",
     "PET_REJECT": b"3",
+    "BAD PET": b"3",
 }
 
 
@@ -51,12 +55,16 @@ class SerialTransport:
         self,
         cfg: dict | None = None,
         *,
+        output_mode: str = "auto",
         stdout=None,
         stderr=None,
         serial_module=None,
         port_enumerator: Callable[[], list[Any]] | None = None,
     ):
         self.cfg = cfg or {}
+        if output_mode not in {"auto", "terminal", "serial"}:
+            raise ValueError(f"unsupported serial output mode: {output_mode!r}")
+        self.output_mode = output_mode
         self.stdout = sys.stdout if stdout is None else stdout
         self.stderr = sys.stderr if stderr is None else stderr
         self.serial_module = serial_module
@@ -110,6 +118,9 @@ class SerialTransport:
 
     def refresh_idle(self) -> str | None:
         """Re-evaluate selection during idle without producing a command."""
+        if self.output_mode == "terminal":
+            self._close()
+            return None
         selected = self.select_port()
         if selected is None:
             self._close()
@@ -137,6 +148,18 @@ class SerialTransport:
             print(f"serial unavailable on {selected}: {exc}", file=self.stderr)
             return None
 
+    def check_ready(self) -> str:
+        """Open a strict serial connection before inference starts."""
+        if self.output_mode != "serial":
+            raise RuntimeError("serial readiness is only valid in serial output mode")
+        selected = self.refresh_idle()
+        if self.connection is None or selected is None:
+            raise RuntimeError(
+                "no usable USB serial controller found; provide --controller-port COMx "
+                "or connect exactly one USB serial device"
+            )
+        return selected
+
     def _fallback(self, result_name: str, payload: bytes) -> SendOutcome:
         self.stdout.write(payload.decode("ascii") + "\n")
         self.stdout.flush()
@@ -145,16 +168,26 @@ class SerialTransport:
     def send(self, result_name: str) -> SendOutcome:
         """Recheck immediately before result and emit exactly one byte/line."""
         payload = command_byte(result_name)
+        if self.output_mode == "terminal":
+            return self._fallback(result_name, payload)
         selected = self.refresh_idle()
         if self.connection is None:
+            if self.output_mode == "serial":
+                raise RuntimeError(f"serial controller is unavailable on {selected or 'no selected port'}")
             return self._fallback(result_name, payload)
         try:
             self.connection.write(payload)
             self.connection.flush()
             return SendOutcome(result_name, payload, "serial", selected)
         except Exception as exc:  # one failed write is terminal for this event.
-            print(f"serial write failed on {selected}: {exc}; terminal fallback", file=self.stderr)
+            print(
+                f"serial write failed on {selected}: {exc}"
+                + ("; terminal fallback" if self.output_mode != "serial" else ""),
+                file=self.stderr,
+            )
             self._close()
+            if self.output_mode == "serial":
+                raise RuntimeError(f"serial write failed on {selected}: {exc}") from exc
             return self._fallback(result_name, payload)
 
     def close(self) -> None:

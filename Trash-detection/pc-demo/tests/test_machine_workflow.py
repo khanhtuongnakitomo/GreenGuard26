@@ -20,8 +20,8 @@ POLY = np.asarray([[0, 0], [100, 0], [100, 100], [0, 100]], dtype=np.int32)
 
 def cfg():
     return {
-        "runtime": {"decision_window": 7, "decision_quorum": 4, "clear_frames": 8, "result_hold_s": 1.5},
-        "gate": {"warmup_s": 0.5, "vote_window": 7, "vote_need": 4},
+        "runtime": {"decision_window": 3, "decision_quorum": 3, "clear_frames": 8, "result_hold_s": 1.5},
+        "gate": {"warmup_s": 0.5, "vote_window": 3, "vote_need": 3},
         "m1": {"miss_hold": 3, "box_smooth": 0.35},
         "m2": {"infer_conf": 0.10, "violation_conf": 0.50},
     }
@@ -71,48 +71,48 @@ def updates(workflow, count, start=0.0, step=0.01):
     return [workflow.update(object(), now=start + index * step) for index in range(count)]
 
 
-def test_start_waits_for_object_and_consumes_exactly_seven_can_observations():
-    m1 = FakeM1([can()] * 7 + [missing()] * 8)
+def test_start_waits_for_object_and_consumes_exactly_three_can_observations():
+    m1 = FakeM1([can()] * 3 + [missing()] * 8)
     workflow = MachineWorkflow(cfg(), m1, FakeM2())
     assert workflow.view().state == "WAITING TO START"
     workflow.start()
     assert workflow.view().state == "WAITING FOR OBJECT"
-    steps = updates(workflow, 7)
+    steps = updates(workflow, 3)
     assert steps[-1].state == "CANS"
     assert steps[-1].command == "CANS"
     assert workflow.core.m1_vote.result is not None
-    assert len(workflow.core.m1_vote.result.observations) == 7
-    assert m1.calls == 7
+    assert len(workflow.core.m1_vote.result.observations) == 3
+    assert m1.calls == 3
     assert updates(workflow, 1, start=0.1)[0].command is None
 
 
 @pytest.mark.parametrize("defect", ["cap", "label", "ring"])
 def test_each_defect_at_or_above_half_is_bad(defect):
-    m1 = FakeM1([pet()] * 14)
+    m1 = FakeM1([pet()] * 6)
     workflow = MachineWorkflow(cfg(), m1, FakeM2([hit(defect, 0.50)]))
     workflow.start()
-    updates(workflow, 7)
-    steps = updates(workflow, 7, start=0.6)
+    updates(workflow, 3)
+    steps = updates(workflow, 3, start=0.6)
     assert steps[-1].state == "BAD"
     assert steps[-1].command == "BAD"
 
 
-def test_four_clean_pet_observations_after_warmup_are_good():
-    workflow = MachineWorkflow(cfg(), FakeM1([pet()] * 14), FakeM2())
+def test_three_clean_pet_observations_after_warmup_are_good():
+    workflow = MachineWorkflow(cfg(), FakeM1([pet()] * 6), FakeM2())
     workflow.start()
-    updates(workflow, 7)
-    steps = updates(workflow, 7, start=0.6)
+    updates(workflow, 3)
+    steps = updates(workflow, 3, start=0.6)
     assert steps[-1].state == "GOOD"
     assert steps[-1].command == "GOOD"
 
 
 def test_missing_m1_during_m2_is_abstention_and_no_quorum_has_no_command():
-    m2_rows = ([[]] * 3) + ([[hit("cap", 0.9)]] * 3) + ([[]])
-    m1 = FakeM1([pet()] * 13 + [missing()])
+    m2_rows = ([[]]) + ([[hit("cap", 0.9)]]) + ([[]])
+    m1 = FakeM1([pet()] * 5 + [missing()])
     workflow = MachineWorkflow(cfg(), m1, FakeM2(rows=m2_rows))
     workflow.start()
-    updates(workflow, 7)
-    steps = updates(workflow, 7, start=0.6)
+    updates(workflow, 3)
+    steps = updates(workflow, 3, start=0.6)
     assert steps[-1].state == "REMOVE OBJECT"
     assert steps[-1].command is None
 
@@ -132,16 +132,16 @@ def test_pause_invalidates_unfinished_vote_and_resume_requires_clear():
 
 
 def test_hold_remove_rearm_and_one_command_per_item():
-    m1 = FakeM1([can()] * 7 + [missing()] * 8 + [can()] * 7)
+    m1 = FakeM1([can()] * 3 + [missing()] * 8 + [can()] * 3)
     workflow = MachineWorkflow(cfg(), m1, FakeM2())
     workflow.start()
-    first = updates(workflow, 7)
+    first = updates(workflow, 3)
     assert [step.command for step in first if step.command] == ["CANS"]
     assert workflow.update(object(), now=1.0).state == "CANS"
     assert workflow.update(object(), now=1.6).state == "REMOVE OBJECT"
     assert all(step.command is None for step in updates(workflow, 6, start=1.7))
     assert workflow.update(object(), now=1.8).state == "WAITING FOR OBJECT"
-    second = updates(workflow, 7, start=1.9)
+    second = updates(workflow, 3, start=1.9)
     assert [step.command for step in second if step.command] == ["CANS"]
 
 

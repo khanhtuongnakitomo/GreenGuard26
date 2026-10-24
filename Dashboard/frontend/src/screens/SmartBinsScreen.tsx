@@ -7,7 +7,7 @@ import { View, Text, ScrollView, StyleSheet, Dimensions, TouchableOpacity } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Camera, Cpu, Zap, Settings2, Brain, Plus } from 'lucide-react-native';
 
-import { DashboardSidebar } from '@/components/DashboardSidebar';
+import { DashboardSidebar, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from '@/components/DashboardSidebar';
 import { DashboardTopNav } from '@/components/DashboardTopNav';
 import { SectionCard } from '@/components/SectionCard';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -19,7 +19,11 @@ const { width: SW } = Dimensions.get('window');
 const SIDEBAR_W = 240;
 const CONTENT_W = SW - SIDEBAR_W;
 
-interface Props { onNavigate: (route: DashboardRoute) => void; }
+interface Props {
+  onNavigate: (route: DashboardRoute) => void;
+  sidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
+}
 
 // ─── Bin Map Placeholder ──────────────────────────────────────────────────────
 const BinMapView = memo(({ bins, selectedBin }: { bins: typeof SMART_BINS; selectedBin: SmartBin | null }) => {
@@ -161,15 +165,16 @@ const fbS = StyleSheet.create({
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
-export default function SmartBinsScreen({ onNavigate }: Props) {
+export default function SmartBinsScreen({ onNavigate, sidebarCollapsed, onToggleSidebar }: Props) {
+  const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
   const [selectedBin, setSelectedBin] = useState<SmartBin>(SMART_BINS[0]);
 
   const hw = selectedBin.hardware;
 
   return (
     <SafeAreaView style={S.safe} edges={['top', 'bottom']}>
-      <DashboardSidebar activeRoute="smartbins" onNavigate={onNavigate} />
-      <View style={S.main}>
+      <DashboardSidebar activeRoute="smartbins" onNavigate={onNavigate} collapsed={sidebarCollapsed} onToggle={onToggleSidebar} />
+      <View style={[S.main, { marginLeft: sidebarWidth }]}>
         <DashboardTopNav title="Smart Bins" subtitle="Welcome back, Mark" />
 
         <DataStatus demo error={false} />
@@ -271,7 +276,7 @@ export default function SmartBinsScreen({ onNavigate }: Props) {
 
 const S = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.dashboardBg },
-  main: { flex: 1, marginLeft: SIDEBAR_W },
+  main: { flex: 1 },
   scroll: { flex: 1 },
   content: { padding: 16, gap: 12 },
 

@@ -7,7 +7,7 @@ import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   LayoutDashboard, BarChart2, Trash2, FileText, Bell,
-  Headphones, Settings, HelpCircle, TicketPercent,
+  ChevronLeft, ChevronRight, Headphones, Settings, HelpCircle, TicketPercent,
 } from 'lucide-react-native';
 import { Colors } from '@/theme/colors';
 import { DashboardRoute } from '@/types/dashboard.types';
@@ -36,11 +36,14 @@ const BOTTOM_NAV: NavItem[] = [
 interface Props {
   activeRoute: DashboardRoute;
   onNavigate: (route: DashboardRoute) => void;
+  collapsed: boolean;
+  onToggle: () => void;
 }
 
 export const SIDEBAR_WIDTH = 176;
+export const SIDEBAR_COLLAPSED_WIDTH = 64;
 
-export const DashboardSidebar = memo<Props>(({ activeRoute, onNavigate }) => {
+export const DashboardSidebar = memo<Props>(({ activeRoute, onNavigate, collapsed, onToggle }) => {
   const insets = useSafeAreaInsets();
 
   const NavButton = ({ item }: { item: NavItem }) => {
@@ -48,57 +51,72 @@ export const DashboardSidebar = memo<Props>(({ activeRoute, onNavigate }) => {
     const isDashRoute = ['dashboard','analytics','smartbins','reports','alerts','vouchers'].includes(item.route);
     return (
       <TouchableOpacity
-        style={[styles.navItem, isActive && styles.navItemActive]}
+        style={[styles.navItem, collapsed && styles.navItemCollapsed, isActive && styles.navItemActive]}
         onPress={() => isDashRoute && onNavigate(item.route as DashboardRoute)}
         activeOpacity={0.75}
+        accessibilityLabel={item.label}
       >
         <item.Icon
           size={17}
           strokeWidth={isActive ? 2.2 : 1.8}
           color={isActive ? Colors.sidebarActiveText : Colors.sidebarText}
         />
-        <Text style={[styles.navLabel, isActive && styles.navLabelActive]} numberOfLines={1}>
-          {item.label}
-        </Text>
+        {!collapsed && (
+          <Text style={[styles.navLabel, isActive && styles.navLabelActive]} numberOfLines={1}>
+            {item.label}
+          </Text>
+        )}
       </TouchableOpacity>
     );
   };
 
   return (
-    <View style={[styles.sidebar, { paddingTop: Math.max(insets.top, 14) }]}>
+    <View style={[styles.sidebar, collapsed && styles.sidebarCollapsed, { paddingTop: Math.max(insets.top, 14) }]}>
       {/* Logo */}
-      <View style={styles.logoWrap}>
-        <Image
+      <View style={[styles.logoWrap, collapsed && styles.logoWrapCollapsed]}>
+        {!collapsed && <Image
           source={require('../../assets/logo/White On Dark.png')}
           style={styles.logo}
           resizeMode="contain"
-        />
+        />}
+        <TouchableOpacity
+          style={styles.collapseButton}
+          onPress={onToggle}
+          accessibilityLabel={collapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
+          accessibilityHint="Bật hoặc tắt thanh điều hướng"
+        >
+          {collapsed
+            ? <ChevronRight size={18} color={Colors.sidebarActiveText} />
+            : <ChevronLeft size={18} color={Colors.sidebarActiveText} />}
+        </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.scroll, collapsed && styles.scrollCollapsed]} showsVerticalScrollIndicator={false}>
         {/* MAIN section */}
-        <Text style={styles.sectionLabel}>MAIN</Text>
+        {!collapsed && <Text style={styles.sectionLabel}>MAIN</Text>}
         {MAIN_NAV.map(item => <NavButton key={item.route} item={item} />)}
 
         {/* Divider */}
-        <View style={styles.divider} />
+        {!collapsed && <View style={styles.divider} />}
 
         {/* TOOLS section */}
-        <Text style={styles.sectionLabel}>TOOLS</Text>
+        {!collapsed && <Text style={styles.sectionLabel}>TOOLS</Text>}
         {BOTTOM_NAV.map(item => <NavButton key={item.route} item={item} />)}
       </ScrollView>
 
       {/* Neutral workspace label; account state is shown only after real auth in the voucher screen. */}
-      <View style={[styles.profile, { paddingBottom: Math.max(insets.bottom, 14) }]}>
+      <View style={[styles.profile, collapsed && styles.profileCollapsed, { paddingBottom: Math.max(insets.bottom, 14) }]}>
         <View style={styles.profileDivider} />
-        <View style={styles.profileRow}>
+        <View style={[styles.profileRow, collapsed && styles.profileRowCollapsed]}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>G</Text>
           </View>
-          <View style={styles.profileMeta}>
-            <Text style={styles.profileName}>GreenGuard</Text>
-            <Text style={styles.profileRole}>Workspace</Text>
-          </View>
+          {!collapsed && (
+            <View style={styles.profileMeta}>
+              <Text style={styles.profileName}>GreenGuard</Text>
+              <Text style={styles.profileRole}>Workspace</Text>
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -117,14 +135,23 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: Colors.sidebarBorder,
   },
+  sidebarCollapsed: { width: SIDEBAR_COLLAPSED_WIDTH },
   logoWrap: {
     paddingHorizontal: 8,
     paddingBottom: 14,
     paddingTop: 16,
     alignItems: 'center',
   },
+  logoWrapCollapsed: { paddingHorizontal: 0, paddingVertical: 8, minHeight: 48 },
   logo: { width: 156, height: 50, transform: [{ scale: 1.08 }] },
+  collapseButton: {
+    position: 'absolute', top: 4, right: 6,
+    width: 30, height: 30, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.sidebarActiveBg,
+  },
   scroll: { flex: 1, paddingHorizontal: 8 },
+  scrollCollapsed: { paddingHorizontal: 8 },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '600' as const,
@@ -144,6 +171,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     gap: 9,
   },
+  navItemCollapsed: { justifyContent: 'center', paddingHorizontal: 0 },
   navItemActive: { backgroundColor: Colors.sidebarActiveBg },
   navLabel: {
     fontSize: 13,
@@ -162,6 +190,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   profile: { paddingHorizontal: 8 },
+  profileCollapsed: { paddingHorizontal: 8 },
   profileDivider: {
     height: 1,
     backgroundColor: Colors.sidebarDivider,
@@ -173,6 +202,7 @@ const styles = StyleSheet.create({
     gap: 7,
     paddingBottom: 4,
   },
+  profileRowCollapsed: { justifyContent: 'center' },
   avatar: {
     width: 34,
     height: 34,

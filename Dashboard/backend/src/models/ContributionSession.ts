@@ -1,7 +1,4 @@
-/**
- * READ-ONLY SCHEMA MIRROR — Contract belongs to GreenPoint-Backend.
- * Do not perform mutations or change schema structure here.
- */
+/** Recycling session assembled by the local demo ingestion endpoint. */
 import mongoose, { Schema } from 'mongoose';
 
 const ContributionItemSchema = new Schema(
@@ -16,20 +13,31 @@ const ContributionItemSchema = new Schema(
 
 const ContributionSessionSchema = new Schema(
   {
-    sessionCode: { type: String, required: true },
+    sessionCode: { type: String, required: true, unique: true, index: true },
     machineId: { type: Schema.Types.ObjectId, ref: 'Machine', required: true },
+    machineCode: String,
     machineName: String,
     items: { type: [ContributionItemSchema], required: true },
     totalItems: { type: Number, required: true },
     totalPoints: { type: Number, required: true },
+    finalizationMode: {
+      type: String,
+      enum: ['manual', 'inactivity'],
+      default: 'inactivity',
+      index: true
+    },
     status: {
       type: String,
-      enum: ['unclaimed', 'claimed', 'expired', 'cancelled'],
+      enum: ['collecting', 'unclaimed', 'claimed', 'expired', 'cancelled'],
       default: 'unclaimed'
     },
     claimedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     claimedAt: Date,
-    expiresAt: { type: Date, required: true }
+    expiresAt: { type: Date, required: true },
+    lastDetectionAt: Date,
+    closedAt: Date,
+    claimTokenHash: { type: String, index: true, select: false },
+    qrPayload: String
   },
   { timestamps: true, collection: 'contributionsessions' }
 );

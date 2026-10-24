@@ -22,17 +22,24 @@ export const DashboardTopNav = memo<Props>(({ title, subtitle, onExportPress }) 
         <Text style={[styles.title, isCompact && styles.titleCompact]} numberOfLines={1}>{title}</Text>
         {subtitle ? <Text style={[styles.sub, isCompact && styles.subCompact]} numberOfLines={1}>{subtitle}</Text> : null}
       </View>
-      {!isCompact ? (
+      {(!isCompact || onExportPress) ? (
         <View style={styles.right}>
-          {[Search, Bell, Settings].map((Icon, i) => (
-            <TouchableOpacity key={i} style={styles.iconBtn} activeOpacity={0.7}>
-              <Icon size={17} color={Colors.textMuted} strokeWidth={1.8} />
+          {!isCompact ? [Search, Bell, Settings].map((Icon, i) => (
+              <TouchableOpacity key={i} style={styles.iconBtn} activeOpacity={0.7}>
+                <Icon size={17} color={Colors.textMuted} strokeWidth={1.8} />
+              </TouchableOpacity>
+            )) : null}
+          {onExportPress ? (
+            <TouchableOpacity
+              accessibilityLabel="Export Report"
+              style={[styles.exportBtn, isCompact && styles.exportBtnCompact]}
+              onPress={onExportPress}
+              activeOpacity={0.85}
+            >
+              <Download size={14} color="#fff" />
+              <Text style={styles.exportText}>{isCompact ? 'PDF' : 'Export Report'}</Text>
             </TouchableOpacity>
-          ))}
-          <TouchableOpacity style={styles.exportBtn} onPress={onExportPress} activeOpacity={0.85}>
-            <Download size={14} color="#fff" />
-            <Text style={styles.exportText}>Export Report</Text>
-          </TouchableOpacity>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -53,12 +60,12 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.dashboardBorder,
   },
   barCompact: { paddingHorizontal: 16, paddingVertical: 12 },
-  left: { flex: 1 },
+  left: { flex: 1, minWidth: 0 },
   title: { fontSize: 21, fontWeight: '700' as const, color: Colors.textPrimary, letterSpacing: -0.3 },
   titleCompact: { fontSize: 18 },
   sub: { fontSize: 13, color: Colors.textMuted, marginTop: 3, flexShrink: 1 },
   subCompact: { fontSize: 10, marginTop: 2 },
-  right: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  right: { flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 0 },
   iconBtn: {
     width: 34, height: 34, borderRadius: 7,
     borderWidth: 1, borderColor: Colors.dashboardBorder,
@@ -70,5 +77,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     paddingHorizontal: 13, paddingVertical: 9, borderRadius: 7,
   },
+  exportBtnCompact: { paddingHorizontal: 10, paddingVertical: 8 },
   exportText: { fontSize: 13, fontWeight: '600' as const, color: '#fff' },
 });

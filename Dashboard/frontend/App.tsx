@@ -20,8 +20,10 @@ const queryClient = new QueryClient();
 
 export default function App() {
   const [route, setRoute] = useState<DashboardRoute>('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const navigate = useCallback((r: DashboardRoute) => setRoute(r), []);
+  const toggleSidebar = useCallback(() => setSidebarCollapsed((collapsed) => !collapsed), []);
 
   const Screen = {
     dashboard: DashboardScreen,
@@ -37,7 +39,11 @@ export default function App() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <StatusBar style="dark" />
-          <Screen onNavigate={navigate} />
+          <Screen
+            onNavigate={navigate}
+            sidebarCollapsed={sidebarCollapsed}
+            onToggleSidebar={toggleSidebar}
+          />
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -10,7 +10,7 @@ import {
   Search, Eye, Trash2, ChevronDown,
 } from 'lucide-react-native';
 
-import { DashboardSidebar } from '@/components/DashboardSidebar';
+import { DashboardSidebar, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from '@/components/DashboardSidebar';
 import { DashboardTopNav } from '@/components/DashboardTopNav';
 import { SectionCard } from '@/components/SectionCard';
 import { Colors } from '@/theme/colors';
@@ -21,7 +21,11 @@ const { width: SW } = Dimensions.get('window');
 const SIDEBAR_W = 240;
 const CONTENT_W = SW - SIDEBAR_W;
 
-interface Props { onNavigate: (route: DashboardRoute) => void; }
+interface Props {
+  onNavigate: (route: DashboardRoute) => void;
+  sidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
+}
 
 // ─── Quick Report Card ────────────────────────────────────────────────────────
 const QuickReportCard = memo(({ title }: { title: string }) => (
@@ -102,7 +106,8 @@ const tbS = StyleSheet.create({
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
-export default function ReportsScreen({ onNavigate }: Props) {
+export default function ReportsScreen({ onNavigate, sidebarCollapsed, onToggleSidebar }: Props) {
+  const sidebarWidth = sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
   const [searchText, setSearchText] = useState('');
   const filtered = REPORT_HISTORY.filter(r =>
     r.name.toLowerCase().includes(searchText.toLowerCase())
@@ -110,8 +115,8 @@ export default function ReportsScreen({ onNavigate }: Props) {
 
   return (
     <SafeAreaView style={S.safe} edges={['top', 'bottom']}>
-      <DashboardSidebar activeRoute="reports" onNavigate={onNavigate} />
-      <View style={S.main}>
+      <DashboardSidebar activeRoute="reports" onNavigate={onNavigate} collapsed={sidebarCollapsed} onToggle={onToggleSidebar} />
+      <View style={[S.main, { marginLeft: sidebarWidth }]}>
         <DashboardTopNav title="Reports" subtitle="Welcome back, Mark" />
 
         <DataStatus demo error={false} />
@@ -188,7 +193,7 @@ export default function ReportsScreen({ onNavigate }: Props) {
 
 const S = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.dashboardBg },
-  main: { flex: 1, marginLeft: SIDEBAR_W },
+  main: { flex: 1 },
   scroll: { flex: 1 },
   content: { padding: 16, gap: 12 },
   section: {},

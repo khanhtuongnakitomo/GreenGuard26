@@ -27,7 +27,7 @@ export function projectMachine(value: unknown): Row | null {
 export function projectSession(value: unknown): Row | null {
   const row = asRow(value);
   if (!row) return value == null ? null : { _id: String(value) };
-  const session = pick(row, ['_id', 'sessionCode', 'machineName', 'items', 'totalItems', 'totalPoints', 'status', 'claimedAt', 'expiresAt', 'createdAt', 'updatedAt'])!;
+  const session = pick(row, ['_id', 'sessionCode', 'machineCode', 'machineName', 'items', 'totalItems', 'totalPoints', 'status', 'finalizationMode', 'lastDetectionAt', 'closedAt', 'claimedAt', 'expiresAt', 'createdAt', 'updatedAt'])!;
   if (Array.isArray(row.items)) {
     session.items = row.items.map((item: unknown) => pick(item, ['itemType', 'quantity', 'pointsPerItem', 'avgConfidence']));
   }

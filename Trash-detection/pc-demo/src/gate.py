@@ -18,6 +18,7 @@ M2_COLORS = {0: (0, 0, 255), 1: (0, 255, 255), 2: (255, 0, 255)}
 class M1FrameResult:
     poly: np.ndarray | None = None
     is_pet: bool = False
+    confidence: float = 0.0
     color: tuple[int, int, int] = (160, 160, 160)
     legend: str = ""
 
@@ -35,6 +36,7 @@ class GateState:
     vote: deque = field(default_factory=deque)
     held_box: np.ndarray | None = None
     held_is_pet: bool = False
+    held_confidence: float = 0.0
     held_color: tuple[int, int, int] = (160, 160, 160)
     held_legend: str = ""
     miss_frames: int = 0
@@ -81,6 +83,11 @@ class PetGate:
         self.box_alpha = float(m1["box_smooth"])
         self.m2_infer_conf = float(m2["infer_conf"])
         self.m2_violation_conf = float(m2["violation_conf"])
+        configured_thresholds = m2.get("violation_conf_by_class", {})
+        self.m2_violation_conf_by_class = {
+            name: float(configured_thresholds.get(name, self.m2_violation_conf))
+            for name in M2_NAMES.values()
+        }
         self.state = GateState(vote=deque(maxlen=self.vote_window))
 
     def reset(self) -> None:
@@ -92,6 +99,7 @@ class PetGate:
             st.miss_frames = 0
             st.held_box = smooth_poly(st.held_box, raw.poly, self.box_alpha)
             st.held_is_pet = raw.is_pet
+            st.held_confidence = raw.confidence
             st.held_color = raw.color
             st.held_legend = raw.legend
         elif st.held_box is not None and st.miss_frames < self.miss_hold:
@@ -99,6 +107,7 @@ class PetGate:
         else:
             st.held_box = None
             st.held_is_pet = False
+            st.held_confidence = 0.0
             st.held_legend = ""
             st.miss_frames = 0
             st.pet_since = None
@@ -113,6 +122,7 @@ class PetGate:
         return M1FrameResult(
             poly=st.held_box.astype(np.int32),
             is_pet=st.held_is_pet,
+            confidence=st.held_confidence,
             color=st.held_color,
             legend=st.held_legend,
         )
@@ -167,7 +177,8 @@ class PetGate:
             color = M2_COLORS.get(hit.class_id, (255, 255, 255))
             legend.append((f"{hit.name} {hit.confidence * 100:.0f}%", color))
             visible.append(hit)
-            if hit.confidence >= self.m2_violation_conf:
+            threshold = self.m2_violation_conf_by_class.get(hit.name, self.m2_violation_conf)
+            if hit.confidence >= threshold:
                 hits.append((hit.name, hit.confidence))
 
         if warming:

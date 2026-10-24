@@ -1,18 +1,25 @@
-import { queryOptions } from '@tanstack/react-query';
-import { DEMO_MODE, fetchOverview, fetchLiveFeed, fetchMachines, fetchQuality } from './api';
-import { DEMO_OVERVIEW, DEMO_LIVE_FEED, DEMO_MACHINES, DEMO_QUALITY } from './demoData';
+import { keepPreviousData, queryOptions } from '@tanstack/react-query';
+import { DEMO_MODE, fetchOverview, fetchLatestSession, fetchMachines, fetchQuality, type DashboardRange } from './api';
+import { DEMO_OVERVIEW, DEMO_MACHINES, DEMO_QUALITY } from './demoData';
 
-export const dashboardQuery = () => queryOptions({
-  queryKey: ['dashboard', 'snapshot', DEMO_MODE],
+export const dashboardQuery = (range: DashboardRange = 'today') => queryOptions({
+  queryKey: ['dashboard', 'snapshot', range, DEMO_MODE],
   queryFn: async ({ signal }) => {
-    const [overview, liveFeed, machines] = await Promise.all([
-      fetchOverview('today', signal), fetchLiveFeed(30, signal), fetchMachines(signal),
+    const [overview, machines, latestSession] = await Promise.all([
+      fetchOverview(range, signal), fetchMachines(signal), fetchLatestSession('0001', signal),
     ]);
-    return { overview, liveFeed, machines };
+    return { overview, machines, latestSession };
   },
-  initialData: DEMO_MODE ? { overview: DEMO_OVERVIEW, liveFeed: DEMO_LIVE_FEED, machines: DEMO_MACHINES } : undefined,
+  initialData: DEMO_MODE
+    ? { overview: DEMO_OVERVIEW, machines: DEMO_MACHINES, latestSession: null }
+    : undefined,
+  // Range changes should update only the measurements, not blank the entire
+  // dashboard while the next overview response is being fetched.
+  placeholderData: keepPreviousData,
   retry: false,
-  refetchInterval: DEMO_MODE ? false : 3500,
+  // Live updates are delivered through the dashboard event stream. Polling
+  // this aggregate every second causes visible loading churn in the UI.
+  refetchInterval: false,
 });
 
 export const analyticsQuery = () => queryOptions({
@@ -23,5 +30,5 @@ export const analyticsQuery = () => queryOptions({
   },
   initialData: DEMO_MODE ? { overview: DEMO_OVERVIEW, quality: DEMO_QUALITY } : undefined,
   retry: false,
-  refetchInterval: DEMO_MODE ? false : 4000,
+  refetchInterval: false,
 });

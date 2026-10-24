@@ -8,8 +8,8 @@ Analytics, Smart Bins and Reports using local navigation state.
 
 ## Start locally
 
-Use the package manager matching the checked-in lockfile for each folder.
-With dependencies installed, run `npm run dev` in `backend` and `npm run web`
+Use pnpm in both Dashboard folders. With dependencies installed, run
+`pnpm dev` in `backend` and `pnpm web`
 in `frontend`. Copy each `.env.example` to `.env` only when `.env` does not
 already exist. Set the backend's MONGODB_URI to the authorized database.
 
@@ -18,13 +18,37 @@ the frontend's default API URL. Expo prints its frontend URL on startup.
 Public frontend environment variables are bundled at build time; restart or
 re-export after changing them.
 
+For the one-laptop workflow, configure MongoDB and install dependencies once:
+
+```powershell
+# D:\Coding\Prj\BKI\GreenGuard26\Dashboard\backend
+Copy-Item .env.example .env
+# Edit .env and set MONGODB_URI, then:
+pnpm install
+
+# D:\Coding\Prj\BKI\GreenGuard26\Dashboard\frontend
+pnpm install
+
+# D:\Coding\Prj\BKI\GreenGuard26\Dashboard
+.\run-dashboard.bat
+
+# D:\Coding\Prj\BKI\GreenGuard26\Trash-detection
+.\demo-day.bat terminal
+```
+
+`run-dashboard.bat` repairs broken frontend dependencies when requested with
+`run-dashboard.bat repair`, starts or reuses the backend and live-mode frontend
+in visible monitoring windows, and opens the web Dashboard. It defaults to API
+port 3003 and web port 8081. Service logs are copied to
+`%TEMP%\greenguard-dashboard-local`.
+
 ## Presentation and live data
 
 - EXPO_PUBLIC_DEMO_MODE=true (also the default when unset) keeps presentation
   data populated without a backend. Dashboard and Analytics do not poll in
   this mode. Presentation data is labelled.
 - EXPO_PUBLIC_DEMO_MODE=false uses EXPO_PUBLIC_API_URL (default
-  http://localhost:3003). Dashboard polls every 3.5 seconds and Analytics every
+  http://localhost:3003). Dashboard polls every second and Analytics every
   4 seconds. Requests have a 15-second timeout and support cancellation.
 - Failed live refreshes retain the last complete snapshot and show a stale-data
   message with its last successful update time. Initial failure displays
@@ -35,16 +59,23 @@ re-export after changing them.
 `frontend/src/services/dashboardQueries.ts` owns polling/cache behavior;
 `api.ts` owns HTTP requests and `demoData.ts` holds examples.
 
-## Backend ownership
+## Local demo ingestion
 
-This is a read-oriented backend. Models are schema mirrors: GreenPoint-Backend
-owns their contracts and database writes. Do not add local telemetry ingestion
-or change mirrored schema structure here.
+The Dashboard backend owns the laptop-demo write path. `demo-day.bat` checks the
+live services, calls the parallel `full_demo.bat` workflow, and posts each
+completed result once to `POST /api/dashboard/detections`; result-hold frames are
+deduplicated and GreenPoint is not required. The
+backend persists detection logs and collecting/completed recycling sessions in
+MongoDB. Machine `0001` is created automatically when absent.
+
+Each item resets a 10-second inactivity timer. On timeout, the backend finalizes
+the session, calculates points, and stores a QR payload. A collecting session is
+rescheduled on backend startup, so a restart does not permanently strand it.
 
 Routes mounted in `backend/src/app.ts`:
 
-- /api/dashboard: overview, live feed, quality, impact, machine/user lifetime,
-  and event stream.
+- /api/dashboard: local detection ingestion, overview, live feed, quality,
+  impact, machine/user lifetime, and event stream.
 - /api/machines, /api/sessions, /api/stats: fleet/session/statistic reads.
 - /health: process health, not full telemetry-ingestion readiness.
 
@@ -71,17 +102,17 @@ updated; review external consumers before deploying this backend change.
 Run in both frontend and backend:
 
 ```powershell
-npm run typecheck
-npm test
+pnpm typecheck
+pnpm test
 ```
 
 Frontend web build:
 
 ```powershell
-npx expo export --platform web --output-dir .expo/verify-web
+pnpm exec expo export --platform web --output-dir .expo/verify-web
 ```
 
-Backend production build: `npm run build`, then `npm start` with environment
+Backend production build: `pnpm build`, then `pnpm start` with environment
 configured. Tests use Node's test runner and the installed TypeScript compiler,
 with fixtures and no live database requests. Type checking excludes generated
 dist and .expo output. Check desktop/narrow layouts, presentation navigation,

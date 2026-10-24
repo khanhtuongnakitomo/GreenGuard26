@@ -118,19 +118,28 @@ def test_public_testing_launchers_share_pc_app_and_do_not_initialize_serial():
     root = Path(__file__).resolve().parents[2]
     launchers = {path.name for path in root.glob("*.bat")}
     assert launchers == {
+        "Demo-day-run.bat",
         "demo_model1.bat",
         "demo_model1_candidate.bat",
         "demo-model1-b.bat",
         "compare_model1.bat",
         "demo_model2.bat",
+        "demo-day.bat",
         "full_demo.bat",
+        "full_demo_model1_b.bat",
         "full-workflow-machine.bat",
     }
-    for name in ("demo_model1.bat", "demo_model2.bat", "full_demo.bat"):
+    for name in ("demo_model1.bat", "demo_model2.bat", "full_demo.bat", "full_demo_model1_b.bat"):
         text = (root / name).read_text(encoding="utf-8").lower()
         assert "pc-demo" in text
         assert "src\\app.py" in text
         assert "serial" not in text
+    active_preview = (root / "full_demo.bat").read_text(encoding="utf-8").lower()
+    candidate_preview = (root / "full_demo_model1_b.bat").read_text(encoding="utf-8").lower()
+    assert "--mode parallel-preview --config default --auto-start" in active_preview
+    assert "--m1-config m1_candidate" not in active_preview
+    assert "--mode parallel-preview --config default --m1-config m1_candidate --auto-start" in candidate_preview
+    assert "not sent" not in active_preview
     for name in ("demo_model1_candidate.bat", "demo-model1-b.bat", "compare_model1.bat"):
         text = (root / name).read_text(encoding="utf-8").lower()
         assert "serial" not in text
@@ -144,3 +153,50 @@ def test_model1_b_is_a_standalone_challenger_launcher():
     assert "mode full" not in text
     assert "mode model2" not in text
     assert "serial" not in text
+
+    demo_day = "\n".join(
+        (root / name).read_text(encoding="utf-8")
+        for name in ("Demo-day-run.bat", "Demo-day-run.ps1", "demo-day.bat", "demo-day.ps1")
+    )
+    assert "full_demo.bat" in demo_day
+    assert "--publish-dashboard" in demo_day
+    assert "--require-dashboard" in demo_day
+    assert "DASHBOARD_API_URL" in demo_day
+    assert "DASHBOARD_MACHINE_CODE" in demo_day
+    assert "Start-Process $webUrl" in demo_day
+    assert "--mode full" not in demo_day
+    assert "GREENPOINT" not in demo_day
+
+
+def test_dashboard_and_demo_day_launcher_contracts():
+    root = Path(__file__).resolve().parents[2]
+    dashboard_root = root.parent / "Dashboard"
+    dashboard = "\n".join(
+        (dashboard_root / name).read_text(encoding="utf-8")
+        for name in ("run-dashboard.bat", "run-dashboard.ps1")
+    ).lower()
+    assert "node_modules\\.bin\\expo.cmd" in dashboard
+    assert "install --frozen-lockfile" in dashboard
+    assert "start --web --port" in dashboard
+    assert "pnpm exec expo" not in dashboard
+    assert "appdata\\roaming\\npm\\pnpm" in dashboard
+    assert "windowstyle normal" in dashboard
+    assert "greenguard-dashboard-local" in dashboard
+
+    demo = "\n".join(
+        (root / name).read_text(encoding="utf-8")
+        for name in ("demo-day.bat", "demo-day.ps1")
+    ).lower()
+    assert "full_demo.bat" in demo
+    assert "--publish-dashboard" in demo
+    assert "--require-dashboard" in demo
+    assert "--controller-output" in demo
+    assert "--start-paused" in demo
+    assert "--pause-after-result" in demo
+    assert "--session-mode" in demo
+    assert "'manual'" in demo
+    assert "if ($mode -eq 'esp') { 'serial' }" in demo
+    assert "demo_camera_source" in demo
+    assert "'--source', $camerasource" in demo
+    assert "terminal" in demo
+    assert "serial" in demo
